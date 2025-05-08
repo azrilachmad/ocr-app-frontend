@@ -5,16 +5,10 @@ import styles from './style';
 const Home = () => {
     return (
         <Container className='flex items-center justify-center'>
-            <Box>
-                <Link
-                    href='https://reactjs.org/'
-                    target='_blank'
-                    underline="none"
-                >
-                    <Typography className='py-4' variant='h4' color='primary.title'>
-                        Create React App + Vite + Mui + Tailwind
-                    </Typography>
-                </Link>
+            <Box className='mt-4'>
+                <Typography className='text-red-500'>
+                    Create React App + Vite + Mui + Tailwind
+                </Typography>
             </Box>
             <Modal
                 open={false}
