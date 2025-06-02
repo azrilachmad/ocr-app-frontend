@@ -10,22 +10,44 @@ const FileUpload = ({ onSubmitFile, isProcessing }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState('');
   const [fileName, setFileName] = useState('');
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(''); // State for image preview URL
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
+
+    // Clear previous preview if any
+    if (imagePreviewUrl) {
+      setImagePreviewUrl('');
+    }
+
     if (file) {
       if (file.type === "application/pdf" || file.type.startsWith("image/")) {
         setSelectedFile(file);
         setFileName(file.name);
         setError('');
+
+        // If the file is an image, create a preview URL
+        if (file.type.startsWith("image/")) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreviewUrl(reader.result);
+          };
+          reader.readAsDataURL(file);
+        } else {
+          setImagePreviewUrl(''); // Not an image, ensure no preview
+        }
       } else {
         setSelectedFile(null);
         setFileName('');
+        setImagePreviewUrl(''); // Clear preview for invalid file type
         setError('Tipe file tidak valid. Harap pilih file gambar atau PDF.');
       }
     } else {
+      // No file selected (e.g., user cancelled the dialog)
       setSelectedFile(null);
       setFileName('');
+      setImagePreviewUrl(''); // Clear preview
+      // setError(''); // Optionally clear error or decide based on context
     }
   };
 
@@ -47,6 +69,24 @@ const FileUpload = ({ onSubmitFile, isProcessing }) => {
 
       {error && <Alert severity="error" className="mb-4">{error}</Alert>}
 
+      {/* Image Preview Section */}
+      {imagePreviewUrl && (
+        <Box className="mb-4 flex justify-center">
+          <img
+            src={imagePreviewUrl}
+            alt="Preview"
+            style={{
+              maxHeight: '600px', // Adjust as needed
+              maxWidth: '100%',
+              height: 'auto',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              objectFit: 'contain',
+            }}
+          />
+        </Box>
+      )}
+
       <Box className="flex flex-col items-center">
         <Button
           component="label"
@@ -61,11 +101,13 @@ const FileUpload = ({ onSubmitFile, isProcessing }) => {
             hidden
             onChange={handleFileChange}
             accept="image/*,application/pdf"
-            key={selectedFile ? 'file-selected' : 'no-file'} // Untuk mereset input file
+            // Using a key that changes when no file is selected helps in resetting the input
+            // This allows the onChange to fire even if the same file is re-selected after being cleared.
+            key={fileName || 'no-file-input'}
           />
         </Button>
         {fileName && (
-          <Typography variant="body2" className="text-gray-600">
+          <Typography variant="body2" className="text-gray-600 mt-1">
             File terpilih: {fileName}
           </Typography>
         )}
