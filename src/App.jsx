@@ -1,26 +1,26 @@
 // src/App.jsx
 import React from 'react';
-import { CssBaseline, AppBar, Toolbar, Typography, Box } from '@mui/material';
-import HomePage from './pages/Home'; // Sesuaikan path
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/Layout'; // Sesuaikan path jika berbeda
+import InvoiceListPage from './pages/InvoiceList'; // Halaman yang sudah kita buat
+import InvoiceUploadPage from './pages/InvoiceUpload'; // Contoh halaman lain untuk nanti
+import InvoiceDetailPage from './pages/InvoiceDetail'; // Contoh halaman lain untuk nanti
+import InvoiceEditPage from './pages/InvoiceEdit'; // Impor halaman baru
 
 function App() {
   return (
-    <>
-      <CssBaseline />
-      <AppBar position="static" className="bg-slate-700"> {/* Contoh styling AppBar dengan Tailwind */}
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Aplikasi OCR Invoice
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <HomePage />
-      <Box component="footer" sx={{ bgcolor: 'background.paper', p: 6 }} className="mt-auto text-center">
-         <Typography variant="body2" color="text.secondary">
-             © {new Date().getFullYear()} POC OCR Invoice App.
-         </Typography>
-      </Box>
-    </>
+    <Router>
+      <Layout> {/* Layout sekarang membungkus semua Routes */}
+        <Routes>
+          <Route path="/" element={<Navigate replace to="/invoices" />} /> {/* Redirect halaman utama ke /invoices */}
+          <Route path="/invoices" element={<InvoiceListPage />} />
+          <Route path="/upload-invoice" element={<InvoiceUploadPage />} />
+          <Route path="/invoice/:id" element={<InvoiceDetailPage />} />
+          <Route path="/invoice/:id/edit" element={<InvoiceEditPage />} />
+          {/* Tambahkan rute lainnya di sini */}
+        </Routes>
+      </Layout>
+    </Router>
   );
 }
 
