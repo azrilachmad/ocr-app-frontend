@@ -33,7 +33,7 @@ const Layout = ({ children }) => {
         }}
       >
         <Toolbar /> {/* Spacer untuk konten agar tidak tertutup AppBar */}
-        {children} {/* Di sini konten halaman (misalnya InvoiceListPage) akan dirender */}
+        {children} {/* Di sini konten halaman akan dirender */}
       </Box>
     </Box>
   );

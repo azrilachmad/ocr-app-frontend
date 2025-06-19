@@ -24,7 +24,7 @@ const Header = ({ handleDrawerToggle, drawerWidth }) => {
           <MenuIcon />
         </IconButton>
         <Typography variant="h6" noWrap component="div">
-          Aplikasi OCR Invoice
+          OCR APPS
         </Typography>
       </Toolbar>
     </AppBar>
