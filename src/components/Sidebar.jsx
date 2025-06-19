@@ -8,11 +8,9 @@ import { Link as RouterLink } from 'react-router-dom';
 
 const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
   const drawerItems = [
-    { text: 'Daftar Invoice', path: '/invoices', icon: <DashboardIcon /> },
-    { text: 'Upload Invoice', path: '/upload-invoice', icon: <CloudUploadIcon /> },
-    // Tambahkan item navigasi lain di sini
-    // { text: 'Pengaturan', path: '/settings', icon: <SettingsIcon /> },
-  ];
+    { text: 'Daftar Dokumen', path: '/documents', icon: <DashboardIcon /> }, // <-- Tambahkan/Ubah ini
+    { text: 'Upload Dokumen', path: '/upload', icon: <CloudUploadIcon /> },
+];
 
   const drawerContent = (
     <div>
