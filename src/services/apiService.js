@@ -40,16 +40,29 @@ export const processDocuments = async (files) => {
  * @param {object} dataToSubmit - Objek berisi { document_type, content }.
  * @returns {Promise<object>} - Objek data dari record yang baru dibuat di database.
  */
-export const submitProcessedData = async (dataToSubmit) => {
-    if (!dataToSubmit || !dataToSubmit.document_type || !dataToSubmit.content) {
-        throw new Error('Data yang akan disimpan tidak lengkap atau formatnya salah.');
+export const submitProcessedData = async (submissionPayload) => {
+    const { document_type, content, userDefinedFilename, documentFiles } = submissionPayload;
+    if (!document_type || !content || !userDefinedFilename || !documentFiles || documentFiles.length === 0) {
+        throw new Error('Data untuk disimpan tidak lengkap.');
     }
 
+    const formData = new FormData();
+    formData.append('document_type', document_type);
+    formData.append('content', JSON.stringify(content)); // Kirim JSON sebagai string
+    formData.append('userDefinedFilename', userDefinedFilename);
+
+    // Tambahkan semua file (atau file pertama jika hanya butuh satu)
+    documentFiles.forEach(file => {
+        formData.append('documentFiles', file);
+    });
+    
     try {
-        const response = await axios.post(`${API_BASE_URL}/submit`, dataToSubmit);
+        const response = await axios.post(`${API_BASE_URL}/submit`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
         return response.data.data;
     } catch (err) {
-        throw new Error(err.response?.data?.message || err.message || 'Terjadi kesalahan pada server saat menyimpan data.');
+        throw new Error(err.response?.data?.message || 'Gagal menyimpan data.');
     }
 };
 
@@ -112,3 +125,5 @@ export const getBpkbById = async (id) => {
         throw new Error(err.response?.data?.message || 'Gagal mengambil detail BPKB.');
     }
 };
+
+
