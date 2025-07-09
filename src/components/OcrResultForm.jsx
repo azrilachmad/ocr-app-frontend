@@ -16,6 +16,8 @@ const OcrResultForm = ({ ocrResponse, handleDataChange, handleItemChange }) => {
             return <StnkForm data={content} handleDataChange={handleDataChange} />;
         case 'BPKB':
             return <BpkbForm data={content} handleDataChange={handleDataChange} />;
+        case 'DOKUMEN_UMUM':
+            return <GeneralInsightDisplay data={content} />;
         default:
             return (
                 <Box>
