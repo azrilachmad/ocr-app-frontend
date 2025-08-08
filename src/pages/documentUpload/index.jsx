@@ -38,10 +38,14 @@ function DocumentUploadPage() {
     const [openDialog, setOpenDialog] = React.useState(false);
 
     const handleOpenDialog = () => {
+        if(ocrResponse?.document_type === 'KTP') {
+            setUserDefinedFilename(`${ocrResponse?.content.data_penduduk.nik}`);
+        } 
         setOpenDialog(true);
     };
 
     const handleCloseDialog = () => {
+        setUserDefinedFilename(null);
         setOpenDialog(false);
     };
 
@@ -198,12 +202,14 @@ function DocumentUploadPage() {
                             name="userDefinedFilename"
                             label="File Name"
                             fullWidth
+                            value={userDefinedFilename || ''}
                             variant="standard"
                             onChange={(e) => setUserDefinedFilename(e.target.value)}
+                            disabled={isSubmitting || ocrResponse?.document_type === 'KTP'}
                         />
                         <DialogActions>
                             <Button onClick={handleCloseDialog}>Batal</Button>
-                            <Button type="submit">Simpan</Button>
+                            <Button type="submit" disabled={isSubmitting} startIcon={isSubmitting ? <CircularProgress size={20} /> : <SaveIcon />}>Simpan</Button>
                         </DialogActions>
                     </form>
                 </DialogContent>

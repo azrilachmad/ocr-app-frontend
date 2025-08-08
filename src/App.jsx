@@ -7,6 +7,7 @@ import DocumentListPage from './pages/documentList'; // Impor halaman baru
 import InvoiceDetailPage from './pages/InvoiceDetail';
 import StnkDetailPage from './pages/stnkDetail';
 import BpkbDetailPage from './pages/bpkbDetail';
+import KtpDetailPage from './pages/ktpDetail';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/invoice/:id" element={<InvoiceDetailPage />} />
           <Route path="/stnk/:id" element={<StnkDetailPage />} />
           <Route path="/bpkb/:id" element={<BpkbDetailPage />} />
+          <Route path="/ktp/:id" element={<KtpDetailPage />} />
         </Routes>
       </Layout>
     </Router>

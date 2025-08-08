@@ -126,4 +126,21 @@ export const getBpkbById = async (id) => {
     }
 };
 
+export const getAllKtp = async () => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/ktp`);
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Gagal mengambil daftar KTP.');
+    }
+};
+
+export const getKtpById = async (id) => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/ktp/${id}`);
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Gagal mengambil detail KTP.');
+    }
+};
 

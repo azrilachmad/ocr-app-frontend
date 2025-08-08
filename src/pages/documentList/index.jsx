@@ -5,7 +5,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import { Link as RouterLink } from 'react-router-dom';
 
 // Impor fungsi-fungsi API
-import { getAllInvoices, getAllStnks, getAllBpkbs } from '../../services/apiService';
+import { getAllInvoices, getAllStnks, getAllBpkbs, getAllKtp } from '../../services/apiService';
 
 // Helper fungsi untuk format mata uang yang lebih aman
 const formatNumber = (value, defaultValue = '-') => {
@@ -69,6 +69,19 @@ const bpkbColumns = [
     },
 ];
 
+const ktpColumns = [
+    { field: 'id', headerName: 'ID', width: 90 },
+    { field: 'nik', headerName: 'NIK', flex: 1 },
+    { field: 'nama', headerName: 'Nama', width: 150 },
+    { field: 'tempat_tgl_lahir', headerName: 'TTL', flex: 1 },
+    {
+        field: 'actions', headerName: 'Aksi', width: 150, sortable: false,
+        renderCell: (params) => (
+            <Button variant="outlined" size="small" component={RouterLink} to={`/ktp/${params.row.id}`}>Detail</Button>
+        ),
+    },
+];
+
 function DocumentListPage() {
     const [tabIndex, setTabIndex] = useState(0);
     const [rows, setRows] = useState([]);
@@ -92,6 +105,9 @@ function DocumentListPage() {
                 } else if (tabIndex === 2) {
                     setColumns(bpkbColumns);
                     data = await getAllBpkbs();
+                } else if (tabIndex === 3) {
+                    setColumns(ktpColumns);
+                    data = await getAllKtp();
                 }
                 setRows(data || []); // Pastikan data adalah array
             } catch (err) {
@@ -129,6 +145,7 @@ function DocumentListPage() {
                         <Tab label="Invoice" />
                         <Tab label="STNK" />
                         <Tab label="BPKB" />
+                        <Tab label="KTP" />
                     </Tabs>
                 </Box>
                 <Box sx={{ p: 0, height: 600, width: '100%' }}>
