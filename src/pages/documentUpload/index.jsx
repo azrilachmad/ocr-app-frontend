@@ -2,7 +2,9 @@
 import React, { useState, useRef } from 'react';
 import {
     Container, Typography, Button, Box, Paper, CircularProgress, Alert,
-    List, ListItem, ListItemText, Chip
+    List, ListItem, ListItemText, Chip,
+    useTheme,
+    useMediaQuery
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SendIcon from '@mui/icons-material/Send';
@@ -21,7 +23,12 @@ import GeneralInsightDisplay from '../../components/GeneralInsightDisplay';
 // Nanti kita akan buat komponen ini untuk menampilkan form yang bisa diedit
 // import OcrResultForm from '../../components/OcrResultForm';
 
+
+
 function DocumentUploadPage() {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [ocrResponse, setOcrResponse] = useState(null); // Akan berisi { document_type, content }
     const [userDefinedFilename, setUserDefinedFilename] = useState(null);
@@ -38,9 +45,9 @@ function DocumentUploadPage() {
     const [openDialog, setOpenDialog] = React.useState(false);
 
     const handleOpenDialog = () => {
-        if(ocrResponse?.document_type === 'KTP') {
+        if (ocrResponse?.document_type === 'KTP') {
             setUserDefinedFilename(`${ocrResponse?.content.data_penduduk.nik}`);
-        } 
+        }
         setOpenDialog(true);
     };
 
@@ -116,8 +123,8 @@ function DocumentUploadPage() {
 
     return (
         <>
-            <Container sx={{ mt: 3, mb: 3 }}>
-                <Typography variant="h4" component="h1" gutterBottom>
+            <Container sx={{ mt: 3, mb: 3, alignItems: isMobile ? 'center': '', textAlign: isMobile ? 'center' : '' }}>
+                <Typography variant={isMobile ? "h5" : "h4"} component="h1" gutterBottom>
                     Upload dan Proses Dokumen
                 </Typography>
 
@@ -156,9 +163,9 @@ function DocumentUploadPage() {
 
                 {ocrResponse && (
                     <Paper elevation={3} sx={{ p: 3 }}>
-                        <Chip label={ocrResponse.document_type === 'DOKUMEN_UMUM'  ? 'DOKUMEN UMUM' : ocrResponse.document_type} color="success" sx={{ mb: 2, fontWeight: 'bold' }} />
-                        <Typography variant="h5" gutterBottom>
-                            {ocrResponse.document_type === 'DOKUMEN_UMUM' ? 'Hasil Ekstraksi Data' : 'Hasil Ekstraksi Data (Verifikasi & Simpan'}
+                        <Chip label={ocrResponse.document_type === 'DOKUMEN_UMUM' ? 'DOKUMEN UMUM' : ocrResponse.document_type} color="success" sx={{ mb: 2, fontWeight: 'bold' }} />
+                        <Typography variant={isMobile ? "h5" : "h"} gutterBottom>
+                            {ocrResponse.document_type === 'DOKUMEN_UMUM' ? 'Hasil Ekstraksi Data' : 'Hasil Ekstraksi Data (Verifikasi & Simpan)'}
                         </Typography>
 
                         {/* Untuk sekarang, kita tampilkan JSON mentah untuk verifikasi */}
@@ -167,8 +174,8 @@ function DocumentUploadPage() {
                         {ocrResponse.document_type === 'DOKUMEN_UMUM' ? (<>
                             <GeneralInsightDisplay data={ocrResponse.content} />
                         </>) : (<>
-                            <Box sx={{ maxHeight: '400px', overflowY: 'auto', p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, mt: 2 }}>
-                                <pre>{JSON.stringify(ocrResponse.content, null, 2)}</pre>
+                            <Box sx={{ width: isMobile ? 300 : null, maxHeight: '400px', overflowY: 'auto', p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, mt: 2 }}>
+                                <pre style={{textAlign: isMobile ? 'start' : null}} className={isMobile ? 'text-sm' : ''}>{JSON.stringify(ocrResponse.content, null, 2)}</pre>
                             </Box>
                         </>)}
 
