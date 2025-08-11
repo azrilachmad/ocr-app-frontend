@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, List, ListItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemIcon, ListItemText, Divider, useTheme, useMediaQuery } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
 const DetailRow = ({ label, value }) => (
@@ -11,6 +11,8 @@ const DetailRow = ({ label, value }) => (
 );
 
 const GeneralInsightDisplay = ({ data }) => {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     return (
         <Box>
             <Typography variant="h6" gutterBottom>Ringkasan</Typography>
@@ -21,7 +23,7 @@ const GeneralInsightDisplay = ({ data }) => {
             <List dense>
                 {(data.poin_kunci || data.key_points)?.map((point, index) => (
                     <ListItem key={index} disableGutters>
-                        <ListItemIcon sx={{minWidth: '32px'}}><CheckCircleOutlineIcon color="primary" fontSize="small"/></ListItemIcon>
+                        <ListItemIcon sx={{ minWidth: '32px' }}><CheckCircleOutlineIcon color="primary" fontSize="small" /></ListItemIcon>
                         <ListItemText primary={point} />
                     </ListItem>
                 ))}
