@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
-import { getKtpById } from '../../services/apiService';
+import { getFileById, getKtpById } from '../../services/apiService';
 import {
     Container, Typography, Paper, CircularProgress, Alert,
     Box, Grid, Divider, Button
@@ -31,6 +31,7 @@ function KtpDetailPage() {
     const [ktp, setKtp] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [file, setFile] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -38,8 +39,9 @@ function KtpDetailPage() {
             setLoading(true);
             try {
                 const data = await getKtpById(id);
-                // const image = await getFileById(id)
+                const image = await getFileById('ktp', id);
                 setKtp(data);
+                setFile(image);
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -52,7 +54,6 @@ function KtpDetailPage() {
     if (loading) return <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Container>;
     if (error) return <Container sx={{ mt: 5 }}><Alert severity="error">{error}</Alert></Container>;
     if (!ktp) return <Container sx={{ mt: 5 }}><Typography>Data KTP tidak ditemukan.</Typography></Container>;
-    console.log(ktp);
 
     return (
         <Container sx={{ mt: 3, mb: 3 }}>
@@ -91,7 +92,7 @@ function KtpDetailPage() {
                             <DetailRow label="Tanggal Diproses" value={ktp.tanggal_diproses} />
                             <DetailRow label="File" value={<img
                                 // Gunakan endpoint baru yang kita buat di backend sebagai src
-                                src={`${API_BASE_URL}/files/?documentType=ktp&documentId=${ktp.id}`}
+                                src={`${file.file_data}`}
                                 alt={ktp.user_defilned_filename}
                                 style={{
                                     width: '400px',
