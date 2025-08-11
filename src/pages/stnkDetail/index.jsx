@@ -1,7 +1,7 @@
 // src/pages/stnkDetail/index.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
-import { getStnkById } from '../../services/apiService';
+import { getFileById, getStnkById } from '../../services/apiService';
 import {
     Container, Typography, Paper, CircularProgress, Alert,
     Box, Grid, Divider, Button
@@ -30,6 +30,7 @@ function StnkDetailPage() {
     const [stnk, setStnk] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [file, setFile] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -37,6 +38,8 @@ function StnkDetailPage() {
             setLoading(true);
             try {
                 const data = await getStnkById(id);
+                const image = await getFileById('stnk', id);
+                setFile(image);
                 setStnk(data);
             } catch (err) {
                 setError(err.message);
@@ -63,6 +66,29 @@ function StnkDetailPage() {
                 <Divider sx={{ mb: 3 }} />
 
                 <Grid container spacing={2}>
+                    <Grid item xs={12} >
+                        <Typography variant="h6" gutterBottom>Data File</Typography>
+                        <Grid container spacing={1}>
+                            <Grid item xs={12} >
+                                <img
+                                    // Gunakan endpoint baru yang kita buat di backend sebagai src
+                                    src={`${file.file_data}`}
+                                    alt={stnk.user_defilned_filename}
+                                    style={{
+                                        width: '400px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '4px',
+                                        marginTop: '4px'
+                                    }}
+                                />
+                            </Grid>
+                            <Grid item xs={12} >
+                                <DetailRow label="Tanggal Diproses" value={stnk.tanggal_diproses} />
+                            </Grid>
+                        </Grid>
+                        <Divider sx={{ mt: 3 }} />
+                    </Grid>
+
                     <Grid item xs={12} >
                         <Typography variant="h6" gutterBottom>Data Pemilik</Typography>
                         <Grid container spacing={1}>
