@@ -11,8 +11,6 @@ import { getAllInvoices, getAllStnks, getAllBpkbs, getAllKtp } from '../../servi
 const formatNumber = (value, defaultValue = '-') => {
     // 1. Ubah input menjadi angka
     const number = parseInt(value * 1);
-    console.log(value)
-    console.log(number)
 
     // 2. Jika input bukan angka, kembalikan nilai default
     if (isNaN(number)) {
