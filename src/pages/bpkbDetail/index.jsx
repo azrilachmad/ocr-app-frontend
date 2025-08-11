@@ -1,7 +1,7 @@
 // src/pages/bpkbDetail/index.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
-import { getBpkbById } from '../../services/apiService';
+import { getBpkbById, getFileById } from '../../services/apiService';
 import { Container, Typography, Paper, CircularProgress, Alert, Box, Grid, Divider, Button } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
@@ -27,6 +27,7 @@ function BpkbDetailPage() {
     const [bpkb, setBpkb] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [file, setFile] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -34,6 +35,8 @@ function BpkbDetailPage() {
             setLoading(true);
             try {
                 const data = await getBpkbById(id);
+                const image = await getFileById('bpkb', id);
+                setFile(image);
                 setBpkb(data);
             } catch (err) {
                 setError(err.message);
@@ -58,6 +61,26 @@ function BpkbDetailPage() {
                     Detail BPKB No: {bpkb.nomorBpkb ?? '-'}
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
+
+                <Grid container spacing={1}>
+                    <Grid item xs={12} >
+                        <img
+                            // Gunakan endpoint baru yang kita buat di backend sebagai src
+                            src={`${file.file_data}`}
+                            alt={bpkb.user_defilned_filename}
+                            style={{
+                                width: '200px',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                marginTop: '4px'
+                            }}
+                        />
+                    </Grid>
+                    <Grid item xs={12} >
+                        <DetailRow label="Tanggal Diproses" value={bpkb.tanggal_diproses} />
+                    </Grid>
+                </Grid>
+                <Divider sx={{ mt: 3, mb: 2 }} />
 
                 <Typography variant="h6" gutterBottom>I. Identitas Pemilik</Typography>
                 <Grid container spacing={1} sx={{ pl: 2, mb: 2 }}>
@@ -117,7 +140,7 @@ function BpkbDetailPage() {
                 </Grid>
                 <Divider sx={{ my: 2 }} />
             </Paper>
-        </Container>
+        </Container >
     );
 }
 export default BpkbDetailPage;
