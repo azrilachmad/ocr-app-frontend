@@ -144,3 +144,13 @@ export const getKtpById = async (id) => {
     }
 };
 
+export const getFileById = async (documentType, documentId) => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/files/?documentType=${documentType}&documentId=${documentId}`);
+        return response.data.data[0];
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Gagal mengambil file dokumen.');
+    }
+}
+
+

@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Layout from './components/Layout'; // Sesuaikan path jika berbeda
 import DocumentUploadPage from './pages/documentUpload'; // Contoh halaman lain untuk nanti
 import DocumentListPage from './pages/documentList'; // Impor halaman baru
-import InvoiceDetailPage from './pages/InvoiceDetail';
+import InvoiceDetailPage from './pages/invoiceDetail';
 import StnkDetailPage from './pages/stnkDetail';
 import BpkbDetailPage from './pages/bpkbDetail';
 import KtpDetailPage from './pages/ktpDetail';
