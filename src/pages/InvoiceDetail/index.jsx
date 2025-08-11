@@ -1,7 +1,7 @@
 // src/pages/invoiceDetail/index.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
-import { getInvoiceById } from '../../services/apiService';
+import { getFileById, getInvoiceById } from '../../services/apiService';
 import { Container, Typography, Paper, CircularProgress, Alert, Box, Grid, Divider, Table, TableContainer, TableHead, TableRow, TableCell, TableBody, Button } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
@@ -18,6 +18,7 @@ function InvoiceDetailPage() {
     const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [file, setfiles] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -25,7 +26,9 @@ function InvoiceDetailPage() {
             setError(null);
             try {
                 const data = await getInvoiceById(id);
+                const image = await getFileById('invoice', id);
                 setInvoice(data);
+                setfiles(image);
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -39,6 +42,7 @@ function InvoiceDetailPage() {
     if (error) return <Container sx={{ mt: 5 }}><Alert severity="error">{error}</Alert></Container>;
     if (!invoice) return <Container sx={{ mt: 5 }}><Typography>Invoice tidak ditemukan.</Typography></Container>;
 
+
     return (
         <Container sx={{ mt: 3, mb: 3 }}>
             <Button component={RouterLink} to="/documents" startIcon={<ArrowBackIcon />} sx={{ mb: 2 }}>
@@ -49,7 +53,18 @@ function InvoiceDetailPage() {
                     Detail Invoice: {displayData(invoice.documentNumber)}
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
-
+                <img
+                    // Gunakan endpoint baru yang kita buat di backend sebagai src
+                    src={`${file.file_data}`}
+                    alt={invoice.user_defilned_filename}
+                    style={{
+                        width: '400px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        marginTop: '4px',
+                        marginBottom: '20px',
+                    }}
+                />
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                         <Typography variant="h6">Informasi Umum</Typography>
@@ -69,7 +84,6 @@ function InvoiceDetailPage() {
                         <Typography><strong>Alamat Pelanggan:</strong> {displayData(invoice.customerBillingAddress)}</Typography>
                         <Typography><strong>NPWP:</strong> {displayData(invoice.customerNpwp)}</Typography>
                         <Typography><strong>No. Telp:</strong> {displayData(invoice.customerPhone)}</Typography>
-
 
                     </Grid>
                 </Grid>
@@ -100,6 +114,10 @@ function InvoiceDetailPage() {
 
                     </Table>
                 </TableContainer>
+                <Divider sx={{ my: 2 }} />
+
+
+
             </Paper>
         </Container>
     );
