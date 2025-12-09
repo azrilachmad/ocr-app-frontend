@@ -1,199 +1,123 @@
-// src/pages/InvoiceDetail/index.jsx
+// src/pages/invoiceDetail/index.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import {
-    Container, Typography, Paper, CircularProgress, Alert, Box, Grid,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Divider
-} from '@mui/material';
+import { useParams, Link as RouterLink } from 'react-router-dom';
+import { getFileById, getInvoiceById } from '../../services/apiService';
+import { Container, Typography, Paper, CircularProgress, Alert, Box, Grid, Divider, Table, TableContainer, TableHead, TableRow, TableCell, TableBody, Button } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
 
-const API_BASE_URL = 'http://localhost:3001/api/invoice';
+// Helper fungsi untuk format data
+const displayData = (data, defaultValue = '-') => data ?? defaultValue;
+const displayDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('id-ID') : '-';
+const formatNumber = (value) => {
+    const number = parseFloat(value * 1);
+    return isNaN(number) ? '-' : number.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+};
 
 function InvoiceDetailPage() {
-    const { id: invoiceId } = useParams();
-    const navigate = useNavigate();
+    const { id } = useParams();
     const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [deleteError, setDeleteError] = useState(null);
-    const [isDeleting, setIsDeleting] = useState(false);
-
+    const [file, setfiles] = useState(null);
 
     useEffect(() => {
-        const fetchInvoiceDetail = async () => {
-            if (!invoiceId) return;
+        const fetchData = async () => {
             setLoading(true);
             setError(null);
             try {
-                const response = await axios.get(`${API_BASE_URL}/${invoiceId}`);
-                setInvoice(response.data.data.invoice);
+                const data = await getInvoiceById(id);
+                const image = await getFileById('invoice', id);
+                setInvoice(data);
+                setfiles(image);
             } catch (err) {
-                setError(err.response?.data?.message || err.message || 'Gagal mengambil detail invoice.');
-                console.error("Error fetching invoice detail:", err);
+                setError(err.message);
             } finally {
                 setLoading(false);
             }
         };
-        fetchInvoiceDetail();
-    }, [invoiceId]);
-
-    const handleDelete = async () => {
-        if (window.confirm(`Apakah Anda yakin ingin menghapus invoice #${invoiceId}?`)) {
-            setIsDeleting(true);
-            setDeleteError(null);
-            try {
-                await axios.delete(`${API_BASE_URL}/${invoiceId}`);
-                // Redirect ke halaman daftar invoice setelah berhasil hapus
-                navigate('/invoices', { state: { message: `Invoice #${invoiceId} berhasil dihapus.` } });
-            } catch (err) {
-                setDeleteError(err.response?.data?.message || err.message || 'Gagal menghapus invoice.');
-                console.error("Error deleting invoice:", err);
-                setIsDeleting(false);
-            }
-            // Tidak perlu setIsDeleting(false) jika navigasi berhasil, karena komponen akan unmount
-        }
-    };
-
-    const displayData = (data, defaultValue = '-') => data ?? defaultValue;
-    const displayDate = (dateString, defaultValue = '-') => dateString ? new Date(dateString).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : defaultValue;
-    const displayCurrency = (amount, currencyCode, defaultValue = '-') => {
-        const validAmount = parseFloat(amount);
-        if (isNaN(validAmount)) {
-            return defaultValue;
-        }
-
-        // JIKA currencyCode null, undefined, atau string kosong, gunakan 'IDR' sebagai default
-        const finalCurrencyCode = currencyCode || 'IDR';
-
-        try {
-            return validAmount.toLocaleString('id-ID', {
-                style: 'currency',
-                currency: finalCurrencyCode // Gunakan finalCurrencyCode yang sudah divalidasi
-            });
-        } catch (e) {
-            // Jika karena suatu alasan finalCurrencyCode masih tidak valid (sangat jarang jika sudah ada default 'IDR')
-            console.warn("Error saat format mata uang dengan kode:", finalCurrencyCode, e);
-            // Sebagai fallback, tampilkan hanya angkanya
-            return validAmount.toLocaleString('id-ID');
-        }
-    };
+        fetchData();
+    }, [id]);
 
     if (loading) return <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Container>;
     if (error) return <Container sx={{ mt: 5 }}><Alert severity="error">{error}</Alert></Container>;
     if (!invoice) return <Container sx={{ mt: 5 }}><Typography>Invoice tidak ditemukan.</Typography></Container>;
 
+
     return (
         <Container sx={{ mt: 3, mb: 3 }}>
-            <Button component={RouterLink} to="/invoices" startIcon={<ArrowBackIcon />} sx={{ mb: 2 }}>
-                Kembali ke Daftar
+            <Button component={RouterLink} to="/documents" startIcon={<ArrowBackIcon />} sx={{ mb: 2 }}>
+                Kembali ke Daftar Dokumen
             </Button>
-
-            <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 } }}>
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                    <Typography variant="h4" component="h1" gutterBottom>
-                        Detail Invoice: {displayData(invoice.documentNumber)}
-                    </Typography>
-                    <Box sx={{ mt: { xs: 2, sm: 0 } }}>
-                        <Button
-                            variant="outlined"
-                            startIcon={<EditIcon />}
-                            sx={{ mr: 1 }}
-                            component={RouterLink} // Tambahkan ini
-                            to={`/invoice/${invoiceId}/edit`} // Arahkan ke rute edit
-                        // disabled={false} // Hapus atau set ke false
-                        >
-                            Edit
-                        </Button>
-                        <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} disabled={isDeleting}>
-                            {isDeleting ? <CircularProgress size={20} color="inherit" /> : 'Hapus'}
-                        </Button>
-                    </Box>
-                </Box>
-                {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
+            <Paper elevation={3} sx={{ p: 3 }}>
+                <Typography variant="h4" gutterBottom>
+                    Detail Invoice: {displayData(invoice.documentNumber)}
+                </Typography>
                 <Divider sx={{ mb: 2 }} />
-
+                <img
+                    // Gunakan endpoint baru yang kita buat di backend sebagai src
+                    src={`${file.file_data}`}
+                    alt={invoice.user_defilned_filename}
+                    style={{
+                        width: '400px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        marginTop: '4px',
+                        marginBottom: '20px',
+                    }}
+                />
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                         <Typography variant="h6">Informasi Umum</Typography>
-                        <Typography><strong>Tipe Dokumen:</strong> {displayData(invoice.invoiceType)}</Typography>
                         <Typography><strong>Judul:</strong> {displayData(invoice.documentTitle)}</Typography>
-                        <Typography><strong>No. Faktur Pajak:</strong> {displayData(invoice.taxInvoiceNumber)}</Typography>
-                        <Typography><strong>No. PO:</strong> {displayData(invoice.purchaseOrderNumber)}</Typography>
-                        <Typography><strong>No. SO:</strong> {displayData(invoice.salesOrderNumber)}</Typography>
+                        <Typography><strong>Tipe Invoice:</strong> {displayData(invoice.penjualan)}</Typography>
                         <Typography><strong>Tanggal Terbit:</strong> {displayDate(invoice.issueDate)}</Typography>
-                        <Typography><strong>Tanggal Jatuh Tempo:</strong> {displayDate(invoice.dueDate)}</Typography>
-                        <Typography><strong>Salesman:</strong> {displayData(invoice.salespersonName)}</Typography>
+                        <Typography><strong>Issue Date:</strong> {displayDate(invoice.issueDate)}</Typography>
+                        <Typography><strong>Jatuh Tempo:</strong> {displayDate(invoice.dueDate)}</Typography>
+                        <Typography><strong></strong> </Typography>
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <Typography variant="h6">Pihak Terlibat</Typography>
                         <Typography><strong>Vendor:</strong> {displayData(invoice.vendorName)}</Typography>
-                        <Typography sx={{ fontSize: '0.9rem', pl: 1 }}>Alamat: {displayData(invoice.vendorAddress)}</Typography>
-                        <Typography sx={{ fontSize: '0.9rem', pl: 1 }}>NPWP: {displayData(invoice.vendorNpwp)}</Typography>
+                        <Typography><strong>Alamat Vendor:</strong> {displayData(invoice.vendorAddress)}</Typography>
+                        <Typography><strong></strong> { }</Typography>
                         <Typography><strong>Pelanggan:</strong> {displayData(invoice.customerName)}</Typography>
-                        <Typography sx={{ fontSize: '0.9rem', pl: 1 }}>Alamat: {displayData(invoice.customerBillingAddress)}</Typography>
-                    </Grid>
-                    <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
-                    <Grid item xs={12} md={6}>
-                        <Typography variant="h6">Rekapitulasi Finansial</Typography>
-                        <Typography><strong>Subtotal:</strong> {displayCurrency(invoice.subtotal, invoice.currency)}</Typography>
-                        <Typography><strong>Diskon Global:</strong> {displayCurrency(invoice.globalDiscountAmount, invoice.currency)}</Typography>
-                        <Typography><strong>DPP:</strong> {displayCurrency(invoice.taxableAmountDpp, invoice.currency)}</Typography>
-                        <Typography><strong>PPN:</strong> {displayCurrency(invoice.vatAmount, invoice.currency)}</Typography>
-                        <Typography><strong>Ongkos Kirim:</strong> {displayCurrency(invoice.shippingCost, invoice.currency)}</Typography>
-                        <Typography><strong>Total Tagihan:</strong> {displayCurrency(invoice.grandTotal, invoice.currency)}</Typography>
-                        <Typography><strong>Terbilang:</strong> {displayData(invoice.amountInWords)}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <Typography variant="h6">Detail Pembayaran</Typography>
-                        <Typography><strong>Metode:</strong> {displayData(invoice.paymentMethod)}</Typography>
-                        <Typography><strong>Bank:</strong> {displayData(invoice.paymentBankName)}</Typography>
-                        <Typography><strong>No. Rekening:</strong> {displayData(invoice.paymentAccountNumber)}</Typography>
-                    </Grid>
-                    <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
-                    <Grid item xs={12}>
-                        <Typography variant="h6">Informasi Legal & Catatan</Typography>
-                        <Typography><strong>Nama Penandatangan:</strong> {displayData(invoice.signerName)}</Typography>
-                        <Typography><strong>Jabatan:</strong> {displayData(invoice.signerPosition)}</Typography>
-                        <Typography><strong>No. SIPA:</strong> {displayData(invoice.sipaNumber)}</Typography>
-                        <Typography><strong>No. SIK:</strong> {displayData(invoice.sikNumber)}</Typography>
-                        <Typography><strong>Catatan:</strong> {displayData(invoice.notes)}</Typography>
+                        <Typography><strong>Alamat Pelanggan:</strong> {displayData(invoice.customerBillingAddress)}</Typography>
+                        <Typography><strong>NPWP:</strong> {displayData(invoice.customerNpwp)}</Typography>
+                        <Typography><strong>No. Telp:</strong> {displayData(invoice.customerPhone)}</Typography>
+
                     </Grid>
                 </Grid>
+                <Divider sx={{ my: 2 }} />
 
-                <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Item Invoice</Typography>
-                <TableContainer component={Paper} elevation={2}>
+                <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Rincian Item</Typography>
+                <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
-                        <TableHead sx={{ backgroundColor: 'grey.200' }}>
+                        <TableHead>
                             <TableRow>
                                 <TableCell>Deskripsi</TableCell>
                                 <TableCell align="right">Kuantitas</TableCell>
-                                <TableCell>Satuan</TableCell>
                                 <TableCell align="right">Harga Satuan</TableCell>
-                                <TableCell align="right">Diskon (%)</TableCell>
-                                <TableCell align="right">Total Harga</TableCell>
-                                <TableCell>Batch</TableCell>
-                                <TableCell>ED</TableCell>
+                                <TableCell align="right">Total</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {invoice.lineItems?.map((item, index) => (
-                                <TableRow key={item.id || index}>
+                            {invoice.lineItems?.map((item) => (
+                                <TableRow key={item.id}>
                                     <TableCell>{displayData(item.description)}</TableCell>
-                                    <TableCell align="right">{displayData(item.quantity)}</TableCell>
-                                    <TableCell>{displayData(item.unit)}</TableCell>
-                                    <TableCell align="right">{displayCurrency(item.unitPrice, invoice.currency)}</TableCell>
-                                    <TableCell align="right">{displayData(item.discountPercentage)}</TableCell>
-                                    <TableCell align="right">{displayCurrency(item.totalPrice, invoice.currency)}</TableCell>
-                                    <TableCell>{displayData(item.batchNumber)}</TableCell>
-                                    <TableCell>{displayDate(item.expiryDate)}</TableCell>
+                                    <TableCell align="right">{formatNumber(item.quantity)}</TableCell>
+                                    <TableCell align="right">{formatNumber(item.unitPrice)}</TableCell>
+                                    <TableCell align="right">{formatNumber(item.totalPrice)}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
+                        <Typography sx={{ p: 3 }}><strong>Grand Total:</strong> {displayData(formatNumber(invoice.grandTotal))}</Typography>
+
                     </Table>
                 </TableContainer>
+                <Divider sx={{ my: 2 }} />
+
+
+
             </Paper>
         </Container>
     );

@@ -4,7 +4,6 @@ import { Button, CircularProgress, Box, Typography, Alert } from '@mui/material'
 // import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 // Pastikan path ke apiService benar jika FileUpload melakukan API call sendiri
 // Untuk contoh kita, API call akan dilakukan di HomePage
-// import { uploadInvoice } from '../services/apiService';
 
 const FileUpload = ({ onSubmitFile, isProcessing }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -64,7 +63,7 @@ const FileUpload = ({ onSubmitFile, isProcessing }) => {
   return (
     <Box component="form" onSubmit={handleSubmit} className="w-full max-w-lg mx-auto p-4 space-y-4">
       <Typography variant="h5" component="h2" className="text-center text-gray-700 mb-6">
-        Unggah Dokumen Invoice
+        Unggah Dokumen
       </Typography>
 
       {error && <Alert severity="error" className="mb-4">{error}</Alert>}
@@ -121,7 +120,7 @@ const FileUpload = ({ onSubmitFile, isProcessing }) => {
         fullWidth
         className="mt-4 py-3"
       >
-        {isProcessing ? <CircularProgress size={24} color="inherit" /> : 'Proses Invoice'}
+        {isProcessing ? <CircularProgress size={24} color="inherit" /> : 'Proses Dokumen'}
       </Button>
     </Box>
   );
