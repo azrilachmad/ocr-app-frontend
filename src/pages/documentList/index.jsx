@@ -1,8 +1,7 @@
 // src/pages/documentList/index.jsx
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Tabs, Tab, Paper, CircularProgress, Alert, Button } from '@mui/material';
+import { Container, Typography, Box, Tabs, Tab, Paper, CircularProgress, Alert } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
-import { Link as RouterLink } from 'react-router-dom';
 
 // Impor fungsi-fungsi API
 import { getAllInvoices, getAllStnks, getAllBpkbs, getAllKtp } from '../../services/apiService';
@@ -30,13 +29,7 @@ const invoiceColumns = [
     { field: 'documentNumber', headerName: 'Nomor Dokumen', flex: 1 },
     { field: 'vendorName', headerName: 'Nama Vendor', flex: 1 },
     { field: 'issueDate', headerName: 'Tanggal Terbit', width: 150, type: 'date', valueGetter: (params) => params.value ? new Date(params.value) : null },
-    { field: 'grandTotal', headerName: 'Total', width: 180, type: 'number', valueFormatter: (params) => params?.value ? formatNumber(params?.value) : params?.value  },
-    {
-        field: 'actions', headerName: 'Aksi', width: 150, sortable: false,
-        renderCell: (params) => (
-            <Button variant="outlined" size="small" component={RouterLink} to={`/invoice/${params.row.id}`}>Detail</Button>
-        ),
-    },
+    { field: 'grandTotal', headerName: 'Total', width: 180, type: 'number', valueFormatter: (params) => params?.value ? formatNumber(params?.value) : params?.value },
 ];
 
 const stnkColumns = [
@@ -45,12 +38,6 @@ const stnkColumns = [
     { field: 'namaPemilik', headerName: 'Nama Pemilik', flex: 1 },
     { field: 'merk', headerName: 'Merk', width: 150 },
     { field: 'berlakuSampai', headerName: 'Berlaku Sampai', width: 150, type: 'date', valueGetter: (params) => params.value ? new Date(params.value) : null },
-    {
-        field: 'actions', headerName: 'Aksi', width: 150, sortable: false,
-        renderCell: (params) => (
-            <Button variant="outlined" size="small" component={RouterLink} to={`/stnk/${params.row.id}`}>Detail</Button>
-        ),
-    },
 ];
 
 const bpkbColumns = [
@@ -59,12 +46,6 @@ const bpkbColumns = [
     { field: 'nomorRegistrasi', headerName: 'Nomor Polisi', width: 150 },
     { field: 'namaPemilik', headerName: 'Nama Pemilik', flex: 1 },
     { field: 'merk', headerName: 'Merk', width: 150 },
-    {
-        field: 'actions', headerName: 'Aksi', width: 150, sortable: false,
-        renderCell: (params) => (
-            <Button variant="outlined" size="small" component={RouterLink} to={`/bpkb/${params.row.id}`}>Detail</Button>
-        ),
-    },
 ];
 
 const ktpColumns = [
@@ -72,12 +53,6 @@ const ktpColumns = [
     { field: 'nik', headerName: 'NIK', flex: 1 },
     { field: 'nama', headerName: 'Nama', width: 150 },
     { field: 'tempat_tgl_lahir', headerName: 'TTL', flex: 1 },
-    {
-        field: 'actions', headerName: 'Aksi', width: 150, sortable: false,
-        renderCell: (params) => (
-            <Button variant="outlined" size="small" component={RouterLink} to={`/ktp/${params.row.id}`}>Detail</Button>
-        ),
-    },
 ];
 
 function DocumentListPage() {
@@ -128,7 +103,7 @@ function DocumentListPage() {
             </Container>
         );
     }
-    
+
     // 2. Tampilkan pesan error jika terjadi kesalahan
     if (error) {
         return <Container sx={{ mt: 5 }}><Alert severity="error">{error}</Alert></Container>;
@@ -148,9 +123,9 @@ function DocumentListPage() {
                 </Box>
                 <Box sx={{ p: 0, height: 600, width: '100%' }}>
                     {loading ? (
-                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><CircularProgress /></Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><CircularProgress /></Box>
                     ) : error ? (
-                        <Alert severity="error" sx={{m: 2}}>{error}</Alert>
+                        <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>
                     ) : (
                         <DataGrid
                             rows={rows}
