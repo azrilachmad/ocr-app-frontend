@@ -55,7 +55,7 @@ export const submitProcessedData = async (submissionPayload) => {
     documentFiles.forEach(file => {
         formData.append('documentFiles', file);
     });
-    
+
     try {
         const response = await axios.post(`${API_BASE_URL}/submit`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
@@ -75,15 +75,6 @@ export const getAllInvoices = async () => {
     }
 };
 
-export const getInvoiceById = async (id) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/invoices/${id}`);
-        return response.data.data;
-    } catch (err) {
-        throw new Error(err.response?.data?.message || 'Gagal mengambil detail invoice.');
-    }
-};
-
 /**
  * Mengambil daftar semua STNK.
  */
@@ -93,15 +84,6 @@ export const getAllStnks = async () => {
         return response.data.data;
     } catch (err) {
         throw new Error(err.response?.data?.message || 'Gagal mengambil daftar STNK.');
-    }
-};
-
-export const getStnkById = async (id) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/stnks/${id}`);
-        return response.data.data;
-    } catch (err) {
-        throw new Error(err.response?.data?.message || 'Gagal mengambil detail STNK.');
     }
 };
 
@@ -117,15 +99,9 @@ export const getAllBpkbs = async () => {
     }
 };
 
-export const getBpkbById = async (id) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/bpkbs/${id}`);
-        return response.data.data;
-    } catch (err) {
-        throw new Error(err.response?.data?.message || 'Gagal mengambil detail BPKB.');
-    }
-};
-
+/**
+ * Mengambil daftar semua KTP.
+ */
 export const getAllKtp = async () => {
     try {
         const response = await axios.get(`${API_BASE_URL}/ktp`);
@@ -134,23 +110,5 @@ export const getAllKtp = async () => {
         throw new Error(err.response?.data?.message || 'Gagal mengambil daftar KTP.');
     }
 };
-
-export const getKtpById = async (id) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/ktp/${id}`);
-        return response.data.data;
-    } catch (err) {
-        throw new Error(err.response?.data?.message || 'Gagal mengambil detail KTP.');
-    }
-};
-
-export const getFileById = async (documentType, documentId) => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/files/?documentType=${documentType}&documentId=${documentId}`);
-        return response.data.data[0];
-    } catch (err) {
-        throw new Error(err.response?.data?.message || 'Gagal mengambil file dokumen.');
-    }
-}
 
 
