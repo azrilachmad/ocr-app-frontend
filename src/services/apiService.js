@@ -9,7 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001
  * @param {File[]} files - Array berisi file-file yang akan diunggah.
  * @returns {Promise<object>} - Objek data dari respons API, berisi { document_type, content }.
  */
-export const processDocuments = async (files) => {
+export const processDocuments = async (files, options = {}) => {
     if (!files || files.length === 0) {
         throw new Error('Tidak ada file yang dipilih untuk diproses.');
     }
@@ -20,6 +20,11 @@ export const processDocuments = async (files) => {
         // 'documentFiles' harus sama dengan key di backend: upload.array('documentFiles', ...)
         formData.append('documentFiles', file);
     });
+
+    // Append AI options if provided
+    if (options) {
+        formData.append('options', JSON.stringify(options));
+    }
 
     try {
         const response = await axios.post(`${API_BASE_URL}/process`, formData, {

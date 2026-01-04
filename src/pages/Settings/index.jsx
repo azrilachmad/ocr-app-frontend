@@ -129,13 +129,13 @@ const defaultDocumentTypes = [
 
 const SettingsPage = () => {
     // AI Configuration State
-    const [aiStatus, setAiStatus] = useState(true);
-    const [aiModel, setAiModel] = useState('gemini-3-pro');
-    const [apiKey, setApiKey] = useState('AIzaSyD••••••••••••••••••');
+    // AI Configuration State - Load from localStorage or use defaults
+    const [aiModel, setAiModel] = useState(localStorage.getItem('aiModel') || 'gemini-3-pro');
+    const [apiKey, setApiKey] = useState(localStorage.getItem('apiKey') || 'AIzaSyD••••••••••••••••••');
     const [showApiKey, setShowApiKey] = useState(false);
-    const [confidenceThreshold, setConfidenceThreshold] = useState(85);
-    const [languageDetection, setLanguageDetection] = useState('indonesian');
-    const [autoCorrect, setAutoCorrect] = useState(true);
+    const [confidenceThreshold, setConfidenceThreshold] = useState(parseInt(localStorage.getItem('confidenceThreshold')) || 85);
+    const [languageDetection, setLanguageDetection] = useState(localStorage.getItem('languageDetection') || 'indonesian');
+    const [autoCorrect, setAutoCorrect] = useState(localStorage.getItem('autoCorrect') === 'false' ? false : true);
 
     // Document Types State
     const [documentTypes, setDocumentTypes] = useState(defaultDocumentTypes);
@@ -144,6 +144,8 @@ const SettingsPage = () => {
     const [newDocType, setNewDocType] = useState({ name: '', description: '', fields: [] });
     const [newFieldName, setNewFieldName] = useState('');
     const [newFieldRequired, setNewFieldRequired] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [docTypeToDelete, setDocTypeToDelete] = useState(null);
 
     // Snackbar state
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -159,17 +161,32 @@ const SettingsPage = () => {
     };
 
     const handleResetToDefault = () => {
-        setAiStatus(true);
         setAiModel('gemini-3-pro');
         setConfidenceThreshold(85);
         setLanguageDetection('indonesian');
         setAutoCorrect(true);
+
+        // Save defaults to localStorage
+        localStorage.setItem('aiModel', 'gemini-3-pro');
+        localStorage.setItem('confidenceThreshold', '85');
+        localStorage.setItem('languageDetection', 'indonesian');
+        localStorage.setItem('autoCorrect', 'true');
+
         setSnackbar({ open: true, message: 'Settings reset to default values', severity: 'info' });
     };
 
     const handleSaveChanges = () => {
+        // Save settings to localStorage
+        localStorage.setItem('aiModel', aiModel);
+        if (apiKey !== 'AIzaSyD••••••••••••••••••') {
+            localStorage.setItem('apiKey', apiKey);
+        }
+        localStorage.setItem('confidenceThreshold', confidenceThreshold.toString());
+        localStorage.setItem('languageDetection', languageDetection);
+        localStorage.setItem('autoCorrect', autoCorrect.toString());
+        // Note: documentTypes persistence could be handled here too if needed, but keeping it simple for now as requested.
+
         console.log('Settings saved:', {
-            aiStatus,
             aiModel,
             apiKey,
             confidenceThreshold,
@@ -177,6 +194,7 @@ const SettingsPage = () => {
             autoCorrect,
             documentTypes
         });
+
         setSnackbar({ open: true, message: 'Settings saved successfully!', severity: 'success' });
     };
 
@@ -261,6 +279,18 @@ const SettingsPage = () => {
     const handleDeleteDocType = (id) => {
         setDocumentTypes(prev => prev.filter(dt => dt.id !== id));
         setSnackbar({ open: true, message: 'Document type deleted', severity: 'info' });
+        setDeleteConfirmOpen(false);
+        setDocTypeToDelete(null);
+    };
+
+    const handleOpenDeleteConfirm = (docType) => {
+        setDocTypeToDelete(docType);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleCloseDeleteConfirm = () => {
+        setDeleteConfirmOpen(false);
+        setDocTypeToDelete(null);
     };
 
     return (
@@ -339,17 +369,6 @@ const SettingsPage = () => {
                                             Configure Gemini AI settings for OCR processing
                                         </Typography>
                                     </Box>
-                                </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Typography sx={{ fontSize: '14px', color: '#6B7280' }}>AI Status</Typography>
-                                    <Switch
-                                        checked={aiStatus}
-                                        onChange={(e) => setAiStatus(e.target.checked)}
-                                        sx={{
-                                            '& .MuiSwitch-switchBase.Mui-checked': { color: '#6366F1' },
-                                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#6366F1' }
-                                        }}
-                                    />
                                 </Box>
                             </Box>
 
@@ -625,6 +644,9 @@ const SettingsPage = () => {
                                             <IconButton size="small" onClick={() => handleOpenDialog(docType)}>
                                                 <EditIcon fontSize="small" sx={{ color: '#6366F1' }} />
                                             </IconButton>
+                                            <IconButton size="small" onClick={() => handleOpenDeleteConfirm(docType)}>
+                                                <DeleteIcon fontSize="small" sx={{ color: '#DC2626' }} />
+                                            </IconButton>
                                         </Box>
                                     </Box>
 
@@ -776,6 +798,34 @@ const SettingsPage = () => {
                         sx={{ textTransform: 'none', bgcolor: '#6366F1', '&:hover': { bgcolor: '#5558E3' } }}
                     >
                         {editingDocType ? 'Save Changes' : 'Create Document Type'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteConfirmOpen} onClose={handleCloseDeleteConfirm} maxWidth="xs" fullWidth>
+                <DialogTitle sx={{ fontWeight: 600, color: '#DC2626' }}>
+                    Delete Document Type
+                </DialogTitle>
+                <DialogContent>
+                    <Typography sx={{ color: '#374151' }}>
+                        Are you sure you want to delete <strong>{docTypeToDelete?.name}</strong>? This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, pt: 0 }}>
+                    <Button onClick={handleCloseDeleteConfirm} sx={{ textTransform: 'none', color: '#6B7280' }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => handleDeleteDocType(docTypeToDelete?.id)}
+                        sx={{
+                            textTransform: 'none',
+                            bgcolor: '#DC2626',
+                            '&:hover': { bgcolor: '#B91C1C' }
+                        }}
+                    >
+                        Delete
                     </Button>
                 </DialogActions>
             </Dialog>

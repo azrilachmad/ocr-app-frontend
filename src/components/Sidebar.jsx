@@ -29,7 +29,6 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
     { text: 'Dashboard', path: '/', icon: <DashboardIcon /> },
     { text: 'Upload Document', path: '/upload', icon: <CloudUploadIcon /> },
     { text: 'Scan History', path: '/history', icon: <HistoryIcon /> },
-    { text: 'Saved Document', path: '/documents', icon: <FolderIcon />, highlighted: true },
     { text: 'Settings', path: '/settings', icon: <SettingsIcon /> },
   ];
 
@@ -122,48 +121,6 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
             );
           })}
         </List>
-      </Box>
-
-      {/* User Profile Section */}
-      <Box sx={{
-        p: 2,
-        borderTop: '1px solid #E5E7EB',
-        minHeight: 73
-      }}>
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-          position: 'relative'
-        }}>
-          <Avatar
-            sx={{ width: 40, height: 40 }}
-            src="https://api.builder.io/api/v1/image/assets/TEMP/0b145d2cab8ccc18471d7a25fcc40230b865abc5?width=80"
-            alt="John Anderson"
-          >
-            JA
-          </Avatar>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography sx={{
-              color: '#1F2937',
-              fontSize: '14px',
-              fontWeight: 500,
-              lineHeight: '20px'
-            }}>
-              John Anderson
-            </Typography>
-            <Typography sx={{
-              color: '#6B7280',
-              fontSize: '12px',
-              lineHeight: '16px'
-            }}>
-              john@synchro.app
-            </Typography>
-          </Box>
-          <IconButton size="small" sx={{ color: '#9CA3AF' }}>
-            <MoreVertIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Box>
       </Box>
     </Box>
   );

@@ -14,7 +14,13 @@ import {
   Checkbox,
   Menu,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   FilterList as FilterIcon,
@@ -31,9 +37,11 @@ import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
   Schedule as ScheduleIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 const ScanHistoryPage = () => {
   const [documentType, setDocumentType] = useState('all');
@@ -43,6 +51,11 @@ const ScanHistoryPage = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [scanData, setScanData] = useState([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const navigate = useNavigate();
 
   // Mock data for demonstration
   useEffect(() => {
@@ -59,6 +72,7 @@ const ScanHistoryPage = () => {
         time: '10:24 AM',
         processingTime: '2.3s',
         confidence: 98,
+        saved: true,
         icon: <DocumentIcon />
       },
       {
@@ -73,6 +87,7 @@ const ScanHistoryPage = () => {
         time: '09:15 AM',
         processingTime: '3.7s',
         confidence: 96,
+        saved: true,
         icon: <PeopleIcon />
       },
       {
@@ -87,6 +102,7 @@ const ScanHistoryPage = () => {
         time: '08:42 AM',
         processingTime: '-',
         confidence: null,
+        saved: false,
         icon: <CarIcon />
       },
       {
@@ -101,6 +117,7 @@ const ScanHistoryPage = () => {
         time: '04:18 PM',
         processingTime: '4.1s',
         confidence: 94,
+        saved: true,
         icon: <CardIcon />
       },
       {
@@ -115,6 +132,7 @@ const ScanHistoryPage = () => {
         time: '02:35 PM',
         processingTime: '1.8s',
         confidence: 34,
+        saved: false,
         icon: <CardIcon />
       },
       {
@@ -129,6 +147,7 @@ const ScanHistoryPage = () => {
         time: '11:20 AM',
         processingTime: '3.2s',
         confidence: 97,
+        saved: true,
         icon: <BadgeIcon />
       },
     ];
@@ -139,8 +158,6 @@ const ScanHistoryPage = () => {
     {
       label: 'Total Scans',
       value: '1,247',
-      change: '12% from last month',
-      changeType: 'positive',
       icon: <DocumentIcon sx={{ fontSize: 20 }} />,
       color: '#2563EB',
       bgColor: '#EFF6FF'
@@ -148,8 +165,6 @@ const ScanHistoryPage = () => {
     {
       label: 'Successful',
       value: '1,189',
-      change: '95.3% success rate',
-      changeType: 'positive',
       icon: <CheckCircleIcon sx={{ fontSize: 20 }} />,
       color: '#16A34A',
       bgColor: '#F0FDF4'
@@ -157,8 +172,6 @@ const ScanHistoryPage = () => {
     {
       label: 'Processing',
       value: '42',
-      change: 'In queue',
-      changeType: 'neutral',
       icon: <ScheduleIcon sx={{ fontSize: 20 }} />,
       color: '#CA8A04',
       bgColor: '#FEFCE8'
@@ -166,8 +179,6 @@ const ScanHistoryPage = () => {
     {
       label: 'Failed',
       value: '16',
-      change: '1.3% error rate',
-      changeType: 'negative',
       icon: <ErrorIcon sx={{ fontSize: 20 }} />,
       color: '#DC2626',
       bgColor: '#FEF2F2'
@@ -231,12 +242,31 @@ const ScanHistoryPage = () => {
     );
   };
 
-  const handleMenuClick = (event) => {
-    setAnchorEl(event.currentTarget);
+  // Removed Menu handlers as we are using direct buttons
+
+  const handleViewDetail = (id) => {
+    navigate(`/history/${id}`);
   };
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
+  const handleEditDetail = (id) => {
+    navigate(`/history/${id}?mode=edit`);
+  };
+
+  const handleDeleteClick = (item) => {
+    setItemToDelete(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    // Mock delete logic
+    setScanData(prev => prev.filter(item => item.id !== itemToDelete.id));
+    setDeleteDialogOpen(false);
+    setItemToDelete(null);
+    setSnackbar({ open: true, message: 'Item deleted successfully', severity: 'success' });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   return (
@@ -250,8 +280,8 @@ const ScanHistoryPage = () => {
         }}
       >
         <Container maxWidth="xl">
-          <Box sx={{ 
-            display: 'flex', 
+          <Box sx={{
+            display: 'flex',
             flexDirection: { xs: 'column', md: 'row' },
             justifyContent: 'space-between',
             alignItems: { xs: 'flex-start', md: 'center' },
@@ -280,8 +310,8 @@ const ScanHistoryPage = () => {
                 View and manage all your document scanning history
               </Typography>
             </Box>
-            <Box sx={{ 
-              display: 'flex', 
+            <Box sx={{
+              display: 'flex',
               gap: 1.5,
               flexWrap: 'wrap'
             }}>
@@ -348,8 +378,8 @@ const ScanHistoryPage = () => {
         }}
       >
         <Container maxWidth="xl">
-          <Box sx={{ 
-            display: 'flex', 
+          <Box sx={{
+            display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
             alignItems: { xs: 'stretch', sm: 'center' },
             gap: 2,
@@ -363,7 +393,7 @@ const ScanHistoryPage = () => {
                 <Select
                   value={documentType}
                   onChange={(e) => setDocumentType(e.target.value)}
-                  sx={{ 
+                  sx={{
                     fontSize: '14px',
                     bgcolor: 'white',
                     '& .MuiOutlinedInput-notchedOutline': {
@@ -388,7 +418,7 @@ const ScanHistoryPage = () => {
                 <Select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  sx={{ 
+                  sx={{
                     fontSize: '14px',
                     bgcolor: 'white',
                     '& .MuiOutlinedInput-notchedOutline': {
@@ -412,7 +442,7 @@ const ScanHistoryPage = () => {
                 <Select
                   value={dateRange}
                   onChange={(e) => setDateRange(e.target.value)}
-                  sx={{ 
+                  sx={{
                     fontSize: '14px',
                     bgcolor: 'white',
                     '& .MuiOutlinedInput-notchedOutline': {
@@ -486,27 +516,11 @@ const ScanHistoryPage = () => {
                       fontSize: '30px',
                       fontWeight: 700,
                       lineHeight: '36px',
-                      mb: 1
+                      mb: 0
                     }}
                   >
                     {stat.value}
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {stat.changeType === 'positive' && (
-                      <Box component="span" sx={{ color: stat.color }}>↑</Box>
-                    )}
-                    {stat.changeType === 'negative' && (
-                      <Box component="span" sx={{ color: stat.color }}>↓</Box>
-                    )}
-                    <Typography
-                      sx={{
-                        color: stat.changeType === 'neutral' ? '#2563EB' : stat.color,
-                        fontSize: '12px'
-                      }}
-                    >
-                      {stat.change}
-                    </Typography>
-                  </Box>
                 </Box>
                 <Box
                   sx={{
@@ -541,8 +555,8 @@ const ScanHistoryPage = () => {
             sx={{
               display: 'grid',
               gridTemplateColumns: {
-                xs: '40px 1fr 80px',
-                md: '40px 2fr 1fr 1.2fr 1fr 1fr 1.2fr 80px'
+                xs: '1fr 120px',
+                md: '2fr 1fr 1.2fr 1fr 1fr 80px 120px'
               },
               borderBottom: '1px solid #E5E7EB',
               bgcolor: '#F9FAFB',
@@ -551,14 +565,6 @@ const ScanHistoryPage = () => {
               gap: 2
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Checkbox
-                size="small"
-                checked={selectedRows.length === scanData.length}
-                indeterminate={selectedRows.length > 0 && selectedRows.length < scanData.length}
-                onChange={handleSelectAll}
-              />
-            </Box>
             <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', display: { xs: 'block', md: 'block' } }}>
               DOCUMENT
             </Typography>
@@ -574,8 +580,8 @@ const ScanHistoryPage = () => {
             <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', display: { xs: 'none', md: 'block' } }}>
               PROCESSING TIME
             </Typography>
-            <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', display: { xs: 'none', md: 'block' } }}>
-              CONFIDENCE
+            <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', display: { xs: 'none', md: 'block' }, textAlign: 'center' }}>
+              SAVED
             </Typography>
             <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', textAlign: 'center' }}>
               ACTIONS
@@ -589,8 +595,8 @@ const ScanHistoryPage = () => {
               sx={{
                 display: 'grid',
                 gridTemplateColumns: {
-                  xs: '40px 1fr 80px',
-                  md: '40px 2fr 1fr 1.2fr 1fr 1fr 1.2fr 80px'
+                  xs: '1fr 120px',
+                  md: '2fr 1fr 1.2fr 1fr 1fr 80px 120px'
                 },
                 borderBottom: index < scanData.length - 1 ? '1px solid #E5E7EB' : 'none',
                 py: 2,
@@ -602,13 +608,6 @@ const ScanHistoryPage = () => {
                 }
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Checkbox
-                  size="small"
-                  checked={selectedRows.includes(row.id)}
-                  onChange={() => handleSelectRow(row.id)}
-                />
-              </Box>
 
               {/* Document Info */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -679,43 +678,44 @@ const ScanHistoryPage = () => {
                 </Typography>
               </Box>
 
-              {/* Confidence */}
-              <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
-                {row.confidence !== null ? (
-                  <>
-                    <LinearProgress
-                      variant="determinate"
-                      value={row.confidence}
-                      sx={{
-                        flex: 1,
-                        height: 8,
-                        borderRadius: 1,
-                        bgcolor: '#E5E7EB',
-                        '& .MuiLinearProgress-bar': {
-                          bgcolor: '#16A34A',
-                          borderRadius: 1
-                        }
-                      }}
-                    />
-                    <Typography sx={{ color: '#111827', fontSize: '14px', fontWeight: 500, minWidth: 40 }}>
-                      {row.confidence}%
-                    </Typography>
-                  </>
+
+
+              {/* Saved Status */}
+              <Box sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
+                {row.saved ? (
+                  <CheckCircleIcon sx={{ fontSize: 20, color: '#10B981' }} />
                 ) : (
-                  <Typography sx={{ color: '#111827', fontSize: '14px' }}>-</Typography>
+                  <CloseIcon sx={{ fontSize: 20, color: '#9CA3AF' }} />
                 )}
               </Box>
 
               {/* Actions */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
-                <IconButton size="small" sx={{ color: '#4B5563' }}>
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-start' }}>
+                <IconButton
+                  size="small"
+                  onClick={() => handleViewDetail(row.id)}
+                  sx={{ color: '#3B82F6', bgcolor: '#EFF6FF', '&:hover': { bgcolor: '#DBEAFE' } }}
+                  title="View Details"
+                >
                   <ViewIcon sx={{ fontSize: 18 }} />
                 </IconButton>
-                <IconButton size="small" sx={{ color: '#4B5563' }}>
-                  <DownloadIcon sx={{ fontSize: 18 }} />
-                </IconButton>
-                <IconButton size="small" sx={{ color: '#4B5563' }} onClick={handleMenuClick}>
-                  <MoreVertIcon sx={{ fontSize: 16 }} />
+                {row.saved && (
+                  <IconButton
+                    size="small"
+                    onClick={() => handleEditDetail(row.id)}
+                    sx={{ color: '#F59E0B', bgcolor: '#FEF3C7', '&:hover': { bgcolor: '#FDE68A' } }}
+                    title="Edit"
+                  >
+                    <EditIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                )}
+                <IconButton
+                  size="small"
+                  onClick={() => handleDeleteClick(row)}
+                  sx={{ color: '#EF4444', bgcolor: '#FEE2E2', '&:hover': { bgcolor: '#FECACA' } }}
+                  title="Delete"
+                >
+                  <DeleteIcon sx={{ fontSize: 18 }} />
                 </IconButton>
               </Box>
             </Box>
@@ -814,16 +814,49 @@ const ScanHistoryPage = () => {
         </Box>
       </Container>
 
-      {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 600, color: '#DC2626' }}>
+          Delete Item
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#374151' }}>
+            Are you sure you want to delete <strong>{itemToDelete?.fileName}</strong>? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={() => setDeleteDialogOpen(false)} sx={{ textTransform: 'none', color: '#6B7280' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmDelete}
+            sx={{
+              textTransform: 'none',
+              bgcolor: '#DC2626',
+              '&:hover': { bgcolor: '#B91C1C' }
+            }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <MenuItem onClick={handleMenuClose}>View Details</MenuItem>
-        <MenuItem onClick={handleMenuClose}>Download</MenuItem>
-        <MenuItem onClick={handleMenuClose}>Delete</MenuItem>
-      </Menu>
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
