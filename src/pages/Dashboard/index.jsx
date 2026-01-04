@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -18,51 +18,148 @@ import {
   Select,
   MenuItem,
   Button,
-  Toolbar
+  Toolbar,
+  TextField
 } from '@mui/material';
 import {
   Description as DescriptionIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
   Storage as StorageIcon,
-  CloudUpload as CloudUploadIcon,
   PermIdentity,
   Groups,
   TwoWheeler,
-  Help,
-  Bolt,
   Visibility,
   Save,
   Download,
   FilterList,
-  Settings as SettingsIcon
+  CalendarMonth
 } from '@mui/icons-material';
 
+// Helper untuk format tanggal
+const formatDate = (date) => {
+  return date.toISOString().split('T')[0];
+};
+
+// Generate dummy scan activity data (30 hari terakhir)
+const generateDummyScanData = () => {
+  const data = [];
+  const today = new Date();
+
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    data.push({
+      date: formatDate(date),
+      displayDate: date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
+      scans: Math.floor(Math.random() * 50) + 10, // Random 10-60 scans per hari
+    });
+  }
+  return data;
+};
+
+const allScanData = generateDummyScanData();
+
+// Dummy data untuk stats cards (dihitung dari scan data)
+const totalScans = allScanData.reduce((sum, d) => sum + d.scans, 0);
+const successRate = 0.95;
+const successfulScans = Math.floor(totalScans * successRate);
+const processingScans = Math.floor(Math.random() * 20) + 5;
+const savedRecords = Math.floor(totalScans * 0.85);
+
+// Document type distribution
+const documentTypeData = [
+  { name: 'KTP', count: Math.floor(totalScans * 0.30), color: '#3B82F6', percentage: '30%' },
+  { name: 'STNK', count: Math.floor(totalScans * 0.25), color: '#22C55E', percentage: '25%' },
+  { name: 'BPKB', count: Math.floor(totalScans * 0.20), color: '#F59E0B', percentage: '20%' },
+  { name: 'KK', count: Math.floor(totalScans * 0.25), color: '#8B5CF6', percentage: '25%' },
+];
+
+// Recent scans dummy data
+const recentScansData = [
+  { doc: 'KTP_20260104_001', type: 'KTP', status: 'Completed', confidence: 98, time: '2 mins ago', user: 'John Anderson', size: '3.2 MB', typeColor: '#3B82F6', statusColor: '#16A34A' },
+  { doc: 'KK_20260104_002', type: 'KK', status: 'Processing', confidence: 45, time: '5 mins ago', user: 'John Anderson', size: '4.1 MB', typeColor: '#8B5CF6', statusColor: '#D97706' },
+  { doc: 'STNK_20260104_003', type: 'STNK', status: 'Completed', confidence: 96, time: '12 mins ago', user: 'John Anderson', size: '2.8 MB', typeColor: '#22C55E', statusColor: '#16A34A' },
+  { doc: 'BPKB_20260104_004', type: 'BPKB', status: 'Completed', confidence: 94, time: '25 mins ago', user: 'John Anderson', size: '5.2 MB', typeColor: '#F59E0B', statusColor: '#16A34A' },
+  { doc: 'KTP_20260104_005', type: 'KTP', status: 'Failed', confidence: 32, time: '1 hour ago', user: 'John Anderson', size: '1.8 MB', typeColor: '#3B82F6', statusColor: '#DC2626' },
+];
+
 const Dashboard = () => {
+  // Date range state - default 7 hari terakhir
+  const today = new Date();
+  const defaultStartDate = new Date(today);
+  defaultStartDate.setDate(defaultStartDate.getDate() - 6);
+
+  const [startDate, setStartDate] = useState(formatDate(defaultStartDate));
+  const [endDate, setEndDate] = useState(formatDate(today));
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+
+  // Filter scan data berdasarkan date range
+  const filteredScanData = useMemo(() => {
+    return allScanData.filter(d => d.date >= startDate && d.date <= endDate);
+  }, [startDate, endDate]);
+
+  // Hitung total scans dalam range
+  const rangeTotal = filteredScanData.reduce((sum, d) => sum + d.scans, 0);
+
+  // Stats cards data
   const statsCards = [
-    { title: 'Total Scans', value: '1,247', change: '+12%', icon: <DescriptionIcon />, color: '#2563EB', positive: true },
-    { title: 'Successful', value: '1,189', change: '+8%', icon: <CheckCircleIcon />, color: '#9333EA', positive: true },
-    { title: 'Processing', value: '23', badge: 'Pending', icon: <ScheduleIcon />, color: '#D97706', warning: true },
-    { title: 'Saved Records', value: '533', badge: 'Total', icon: <StorageIcon />, color: '#059669' },
+    { title: 'Total Scans', value: totalScans.toLocaleString(), change: '+12%', icon: <DescriptionIcon />, color: '#2563EB', positive: true },
+    { title: 'Successful', value: successfulScans.toLocaleString(), change: '+8%', icon: <CheckCircleIcon />, color: '#16A34A', positive: true },
+    { title: 'Processing', value: processingScans.toString(), badge: 'Pending', icon: <ScheduleIcon />, color: '#D97706', warning: true },
+    { title: 'Saved Records', value: savedRecords.toLocaleString(), badge: 'Total', icon: <StorageIcon />, color: '#9333EA' },
   ];
 
-  const documentTypes = [
-    { name: 'KTP', icon: <PermIdentity />, color: '#6366F1' },
-    { name: 'KK', icon: <Groups />, color: '#6366F1' },
-    { name: 'STNK', icon: <TwoWheeler />, color: '#6366F1' },
-    { name: 'BPKB', icon: <Help />, color: '#6366F1' },
-  ];
+  // Generate SVG path untuk line chart
+  const generateChartPath = () => {
+    if (filteredScanData.length === 0) return { linePath: '', areaPath: '', points: [] };
 
-  const recentScans = [
-    { doc: 'KTP_20240115_001', type: 'KTP', status: 'Completed', confidence: 98, time: '2 mins ago', user: 'Ahmad Rizki', size: '3.2 MB', typeColor: '#1E40AF', statusColor: '#166534' },
-    { doc: 'KK_20240115_002', type: 'KK', status: 'Processing', confidence: 45, time: '5 mins ago', user: 'Ahmad Rizki', size: '4.1 MB', typeColor: '#6B21A8', statusColor: '#92400E' },
-    { doc: 'STNK_20240115_003', type: 'STNK', status: 'Completed', confidence: 96, time: '12 mins ago', user: 'Ahmad Rizki', size: '2.8 MB', typeColor: '#065F46', statusColor: '#166534' },
-  ];
+    const maxScans = Math.max(...filteredScanData.map(d => d.scans));
+    const chartHeight = 180;
+    const chartWidth = 600;
+    const padding = 20;
+
+    const points = filteredScanData.map((d, i) => {
+      const x = padding + (i / (filteredScanData.length - 1 || 1)) * (chartWidth - padding * 2);
+      const y = chartHeight - padding - (d.scans / maxScans) * (chartHeight - padding * 2);
+      return { x, y, scans: d.scans, date: d.displayDate };
+    });
+
+    const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x},${p.y}`).join(' ');
+    const areaPath = `${linePath} L ${points[points.length - 1].x},${chartHeight - padding} L ${points[0].x},${chartHeight - padding} Z`;
+
+    return { linePath, areaPath, points, maxScans };
+  };
+
+  const { linePath, areaPath, points, maxScans } = generateChartPath();
+
+  // Validate date range (max 1 month)
+  const handleStartDateChange = (e) => {
+    const newStart = e.target.value;
+    const start = new Date(newStart);
+    const end = new Date(endDate);
+    const diffDays = (end - start) / (1000 * 60 * 60 * 24);
+
+    if (diffDays <= 30 && diffDays >= 0) {
+      setStartDate(newStart);
+    }
+  };
+
+  const handleEndDateChange = (e) => {
+    const newEnd = e.target.value;
+    const start = new Date(startDate);
+    const end = new Date(newEnd);
+    const diffDays = (end - start) / (1000 * 60 * 60 * 24);
+
+    if (diffDays <= 30 && diffDays >= 0) {
+      setEndDate(newEnd);
+    }
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
       <Toolbar sx={{ minHeight: { xs: 56, sm: 89 } }} />
-      
+
       <Container maxWidth="xl" sx={{ py: 4 }}>
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -123,176 +220,247 @@ const Dashboard = () => {
         </Grid>
 
         <Grid container spacing={3}>
-          {/* Quick Scan Section */}
+          {/* Scan Activity Chart */}
           <Grid item xs={12} md={8}>
             <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3 }}>
               <CardContent sx={{ p: 4 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                   <Box>
-                    <Typography sx={{ color: '#111827', fontSize: '20px', fontWeight: 700, mb: 0.5 }}>
-                      Quick Scan
+                    <Typography sx={{ color: '#111827', fontSize: '20px', fontWeight: 700 }}>
+                      Scan Activity
                     </Typography>
                     <Typography sx={{ color: '#6B7280', fontSize: '14px' }}>
-                      Upload and process documents instantly
+                      {rangeTotal} scans in selected period
                     </Typography>
                   </Box>
-                  <IconButton size="small" sx={{ color: '#6366F1' }}>
-                    <SettingsIcon />
-                  </IconButton>
-                </Box>
-
-                {/* Drop Zone */}
-                <Box
-                  sx={{
-                    border: '2px dashed #D1D5DB',
-                    borderRadius: 3,
-                    p: 6,
-                    textAlign: 'center',
-                    bgcolor: '#FAFAFA',
-                    mb: 2,
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: '#F5F5F5' }
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: '50%',
-                      bgcolor: '#EEF2FF',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto',
-                      mb: 2
-                    }}
-                  >
-                    <CloudUploadIcon sx={{ fontSize: 40, color: '#6366F1' }} />
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CalendarMonth sx={{ color: '#6B7280', fontSize: 20 }} />
+                      <TextField
+                        type="date"
+                        size="small"
+                        value={startDate}
+                        onChange={handleStartDateChange}
+                        sx={{
+                          width: 150,
+                          '& .MuiOutlinedInput-root': { fontSize: '13px' }
+                        }}
+                      />
+                      <Typography sx={{ color: '#6B7280' }}>to</Typography>
+                      <TextField
+                        type="date"
+                        size="small"
+                        value={endDate}
+                        onChange={handleEndDateChange}
+                        sx={{
+                          width: 150,
+                          '& .MuiOutlinedInput-root': { fontSize: '13px' }
+                        }}
+                      />
+                    </Box>
                   </Box>
-                  <Typography sx={{ fontSize: '18px', fontWeight: 600, color: '#111827', mb: 1 }}>
-                    Drop your document here
-                  </Typography>
-                  <Typography sx={{ fontSize: '14px', color: '#6B7280', mb: 0.5 }}>
-                    or click to browse from your computer
-                  </Typography>
-                  <Typography sx={{ fontSize: '12px', color: '#9CA3AF' }}>
-                    Supports: JPG, PNG, PDF (Max 10MB)
-                  </Typography>
                 </Box>
 
-                {/* Document Type Buttons */}
-                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                  {documentTypes.map((doc) => (
-                    <Button
-                      key={doc.name}
-                      variant="outlined"
-                      startIcon={doc.icon}
-                      sx={{
-                        borderColor: '#E5E7EB',
-                        color: '#374151',
-                        textTransform: 'none',
-                        px: 2,
-                        py: 1.5,
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        '&:hover': { borderColor: doc.color, color: doc.color, bgcolor: `${doc.color}08` }
-                      }}
-                    >
-                      {doc.name}
-                    </Button>
-                  ))}
+                {/* Line Chart */}
+                <Box sx={{ height: 220, position: 'relative', overflow: 'hidden' }}>
+                  {/* Y-axis labels */}
+                  <Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 20, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    {[maxScans, Math.floor(maxScans * 0.75), Math.floor(maxScans * 0.5), Math.floor(maxScans * 0.25), 0].map((val, i) => (
+                      <Typography key={i} sx={{ fontSize: '11px', color: '#9CA3AF', width: 30, textAlign: 'right' }}>
+                        {val || 0}
+                      </Typography>
+                    ))}
+                  </Box>
+
+                  {/* Chart Area */}
+                  <Box sx={{ ml: 5, height: '100%', position: 'relative' }}>
+                    {/* Grid lines */}
+                    <Box sx={{ position: 'absolute', top: 20, left: 0, right: 0, bottom: 20 }}>
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <Box key={i} sx={{ position: 'absolute', left: 0, right: 0, top: `${i * 25}%`, borderBottom: '1px dashed #E5E7EB' }} />
+                      ))}
+                    </Box>
+
+                    {/* SVG Chart */}
+                    <svg width="100%" height="200" viewBox="0 0 600 200" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0 }}>
+                      <defs>
+                        <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#6366F1" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="#6366F1" stopOpacity="0.05" />
+                        </linearGradient>
+                      </defs>
+                      {areaPath && <path d={areaPath} fill="url(#areaGradient)" />}
+                      {linePath && (
+                        <path
+                          d={linePath}
+                          fill="none"
+                          stroke="#6366F1"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      )}
+                      {points.map((p, i) => (
+                        <g key={i}>
+                          {/* Invisible larger circle for easier hover */}
+                          <circle
+                            cx={p.x}
+                            cy={p.y}
+                            r="12"
+                            fill="transparent"
+                            style={{ cursor: 'pointer' }}
+                            onMouseEnter={() => setHoveredPoint({ ...p, index: i })}
+                            onMouseLeave={() => setHoveredPoint(null)}
+                          />
+                          {/* Visible circle */}
+                          <circle
+                            cx={p.x}
+                            cy={p.y}
+                            r={hoveredPoint?.index === i ? 6 : 4}
+                            fill="#6366F1"
+                            style={{ transition: 'r 0.15s ease' }}
+                          />
+                        </g>
+                      ))}
+                    </svg>
+
+                    {/* Tooltip */}
+                    {hoveredPoint && (() => {
+                      const isNearTop = hoveredPoint.y < 60;
+                      const isNearRight = hoveredPoint.x > 520;
+                      const isNearLeft = hoveredPoint.x < 80;
+
+                      // Calculate horizontal position
+                      let leftPos = `calc(${(hoveredPoint.x / 600) * 100}% + 40px)`;
+                      let transformX = 'translateX(-50%)';
+                      let arrowLeft = '50%';
+                      let arrowTransform = 'translateX(-50%)';
+
+                      if (isNearRight) {
+                        leftPos = `calc(${(hoveredPoint.x / 600) * 100}% + 20px)`;
+                        transformX = 'translateX(-90%)';
+                        arrowLeft = '85%';
+                        arrowTransform = 'translateX(-50%)';
+                      } else if (isNearLeft) {
+                        leftPos = `calc(${(hoveredPoint.x / 600) * 100}% + 60px)`;
+                        transformX = 'translateX(-10%)';
+                        arrowLeft = '15%';
+                        arrowTransform = 'translateX(-50%)';
+                      }
+
+                      return (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            left: leftPos,
+                            top: isNearTop
+                              ? `calc(${(hoveredPoint.y / 200) * 100}% + 20px)`
+                              : `calc(${(hoveredPoint.y / 200) * 100}% - 60px)`,
+                            transform: transformX,
+                            bgcolor: '#1F2937',
+                            color: 'white',
+                            px: 1.5,
+                            py: 1,
+                            borderRadius: 1,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            zIndex: 10,
+                            pointerEvents: 'none',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          <Typography sx={{ fontSize: '13px', fontWeight: 600, mb: 0.25 }}>
+                            {hoveredPoint.scans} scans
+                          </Typography>
+                          <Typography sx={{ fontSize: '11px', color: '#9CA3AF' }}>
+                            {hoveredPoint.date}
+                          </Typography>
+                          {/* Arrow */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              ...(isNearTop ? {
+                                top: -6,
+                                borderBottom: '6px solid #1F2937',
+                                borderTop: 'none'
+                              } : {
+                                bottom: -6,
+                                borderTop: '6px solid #1F2937',
+                                borderBottom: 'none'
+                              }),
+                              left: arrowLeft,
+                              transform: arrowTransform,
+                              width: 0,
+                              height: 0,
+                              borderLeft: '6px solid transparent',
+                              borderRight: '6px solid transparent',
+                            }}
+                          />
+                        </Box>
+                      );
+                    })()}
+
+                    {/* X-axis labels */}
+                    <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', px: 2 }}>
+                      {filteredScanData.filter((_, i) => i % Math.ceil(filteredScanData.length / 7) === 0 || i === filteredScanData.length - 1).map((d, i) => (
+                        <Typography key={i} sx={{ fontSize: '11px', color: '#9CA3AF' }}>{d.displayDate}</Typography>
+                      ))}
+                    </Box>
+                  </Box>
                 </Box>
               </CardContent>
             </Card>
           </Grid>
 
-          {/* AI Status Card */}
+          {/* Document Types Donut Chart */}
           <Grid item xs={12} md={4}>
-            <Card 
-              elevation={0} 
-              sx={{ 
-                background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
-                borderRadius: 3,
-                color: 'white',
-                height: '100%'
-              }}
-            >
+            <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, height: '100%' }}>
               <CardContent sx={{ p: 4 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <Typography sx={{ fontSize: '18px', fontWeight: 700 }}>
-                    AI Status
-                  </Typography>
-                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#10B981', opacity: 0.9 }} />
-                </Box>
+                <Typography sx={{ color: '#111827', fontSize: '20px', fontWeight: 700, mb: 3 }}>
+                  Document Types
+                </Typography>
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-                  <Box
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 1,
-                      bgcolor: 'rgba(255,255,255,0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <Bolt sx={{ color: 'white' }} />
-                  </Box>
-                  <Box>
-                    <Typography sx={{ fontSize: '14px' }}>Gemini AI</Typography>
-                    <Typography sx={{ fontSize: '12px', opacity: 0.8 }}>Model: Pro Vision</Typography>
-                  </Box>
-                </Box>
+                {/* Donut Chart */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                  <Box sx={{ position: 'relative', width: 160, height: 160 }}>
+                    <svg width="160" height="160" viewBox="0 0 160 160">
+                      {documentTypeData.map((item, index) => {
+                        const circumference = 2 * Math.PI * 55;
+                        const percentage = parseInt(item.percentage) / 100;
+                        const strokeDasharray = `${circumference * percentage} ${circumference * (1 - percentage)}`;
+                        const previousPercentages = documentTypeData.slice(0, index).reduce((sum, d) => sum + parseInt(d.percentage) / 100, 0);
+                        const strokeDashoffset = -circumference * previousPercentages;
 
-                {/* Processing Power */}
-                <Box sx={{ bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1, p: 2, mb: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography sx={{ fontSize: '14px' }}>Processing Power</Typography>
-                    <Typography sx={{ fontSize: '14px', fontWeight: 600 }}>92%</Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={92} 
-                    sx={{ 
-                      height: 8, 
-                      borderRadius: 1,
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                      '& .MuiLinearProgress-bar': { bgcolor: '#10B981' }
-                    }} 
-                  />
-                </Box>
-
-                {/* Stats */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography sx={{ fontSize: '14px' }}>Avg. Processing Time</Typography>
-                    <Typography sx={{ fontSize: '14px', fontWeight: 600 }}>2.3s</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography sx={{ fontSize: '14px' }}>Accuracy Rate</Typography>
-                    <Typography sx={{ fontSize: '14px', fontWeight: 600 }}>98.7%</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography sx={{ fontSize: '14px' }}>Today's Scans</Typography>
-                    <Typography sx={{ fontSize: '14px', fontWeight: 600 }}>147</Typography>
+                        return (
+                          <circle
+                            key={item.name}
+                            cx="80" cy="80" r="55"
+                            fill="none"
+                            stroke={item.color}
+                            strokeWidth="20"
+                            strokeDasharray={strokeDasharray}
+                            strokeDashoffset={strokeDashoffset}
+                            transform="rotate(-90 80 80)"
+                          />
+                        );
+                      })}
+                    </svg>
+                    <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                      <Typography sx={{ fontSize: '22px', fontWeight: 700, color: '#111827' }}>{totalScans.toLocaleString()}</Typography>
+                      <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>Total</Typography>
+                    </Box>
                   </Box>
                 </Box>
 
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  sx={{
-                    mt: 3,
-                    borderColor: 'rgba(255,255,255,0.3)',
-                    color: 'white',
-                    textTransform: 'none',
-                    py: 1.5,
-                    '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' }
-                  }}
-                >
-                  View AI Analytics
-                </Button>
+                {/* Legend */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  {documentTypeData.map((item) => (
+                    <Box key={item.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.color }} />
+                      <Typography sx={{ fontSize: '13px', color: '#374151' }}>{item.name}</Typography>
+                      <Typography sx={{ fontSize: '13px', color: '#6B7280', ml: 'auto' }}>{item.percentage}</Typography>
+                    </Box>
+                  ))}
+                </Box>
               </CardContent>
             </Card>
           </Grid>
@@ -300,33 +468,13 @@ const Dashboard = () => {
           {/* Recent Scans Table */}
           <Grid item xs={12}>
             <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3 }}>
-              <Box sx={{ p: 3, borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                  <Typography sx={{ fontSize: '20px', fontWeight: 700, color: '#111827', mb: 0.5 }}>
-                    Recent Scans
-                  </Typography>
-                  <Typography sx={{ fontSize: '14px', color: '#6B7280' }}>
-                    Latest OCR processing results
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1.5 }}>
-                  <Select
-                    size="small"
-                    defaultValue="all"
-                    sx={{ minWidth: 120, fontSize: '14px' }}
-                  >
-                    <MenuItem value="all">All Types</MenuItem>
-                    <MenuItem value="ktp">KTP</MenuItem>
-                    <MenuItem value="kk">KK</MenuItem>
-                  </Select>
-                  <Button
-                    variant="outlined"
-                    startIcon={<FilterList />}
-                    sx={{ textTransform: 'none', fontSize: '14px', color: '#374151', borderColor: '#D1D5DB' }}
-                  >
-                    Filter
-                  </Button>
-                </Box>
+              <Box sx={{ p: 3, borderBottom: '1px solid #E5E7EB' }}>
+                <Typography sx={{ fontSize: '20px', fontWeight: 700, color: '#111827', mb: 0.5 }}>
+                  Recent Scans
+                </Typography>
+                <Typography sx={{ fontSize: '14px', color: '#6B7280' }}>
+                  Latest OCR processing results
+                </Typography>
               </Box>
 
               <TableContainer>
@@ -336,18 +484,19 @@ const Dashboard = () => {
                       <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Document</TableCell>
                       <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Type</TableCell>
                       <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Confidence</TableCell>
                       <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Scanned</TableCell>
-                      <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {recentScans.map((scan, index) => (
+                    {recentScansData.map((scan, index) => (
                       <TableRow key={index} hover>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box sx={{ width: 40, height: 40, borderRadius: 1, bgcolor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <PermIdentity sx={{ color: '#2563EB', fontSize: 20 }} />
+                            <Box sx={{ width: 40, height: 40, borderRadius: 1, bgcolor: `${scan.typeColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {scan.type === 'KTP' && <PermIdentity sx={{ color: scan.typeColor, fontSize: 20 }} />}
+                              {scan.type === 'KK' && <Groups sx={{ color: scan.typeColor, fontSize: 20 }} />}
+                              {scan.type === 'STNK' && <TwoWheeler sx={{ color: scan.typeColor, fontSize: 20 }} />}
+                              {scan.type === 'BPKB' && <DescriptionIcon sx={{ color: scan.typeColor, fontSize: 20 }} />}
                             </Box>
                             <Box>
                               <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{scan.doc}</Typography>
@@ -357,7 +506,6 @@ const Dashboard = () => {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            icon={<PermIdentity sx={{ fontSize: 14 }} />}
                             label={scan.type}
                             size="small"
                             sx={{ bgcolor: `${scan.typeColor}15`, color: scan.typeColor, fontWeight: 500 }}
@@ -365,32 +513,14 @@ const Dashboard = () => {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            icon={<CheckCircleIcon sx={{ fontSize: 14 }} />}
+                            icon={scan.status === 'Completed' ? <CheckCircleIcon sx={{ fontSize: 14 }} /> : scan.status === 'Processing' ? <ScheduleIcon sx={{ fontSize: 14 }} /> : undefined}
                             label={scan.status}
                             size="small"
                             sx={{ bgcolor: `${scan.statusColor}15`, color: scan.statusColor, fontWeight: 500 }}
                           />
                         </TableCell>
                         <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <LinearProgress
-                              variant="determinate"
-                              value={scan.confidence}
-                              sx={{ width: 60, height: 8, borderRadius: 1, bgcolor: '#E5E7EB', '& .MuiLinearProgress-bar': { bgcolor: '#10B981' } }}
-                            />
-                            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{scan.confidence}%</Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
                           <Typography sx={{ fontSize: '14px', color: '#111827' }}>{scan.time}</Typography>
-                          <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>by {scan.user}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton size="small" sx={{ color: '#6366F1' }}><Visibility fontSize="small" /></IconButton>
-                            <IconButton size="small" sx={{ color: '#059669' }}><Save fontSize="small" /></IconButton>
-                            <IconButton size="small" sx={{ color: '#4B5563' }}><Download fontSize="small" /></IconButton>
-                          </Box>
                         </TableCell>
                       </TableRow>
                     ))}
