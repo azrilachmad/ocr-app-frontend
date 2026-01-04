@@ -1,12 +1,12 @@
 import React from 'react';
-import { 
-  Drawer, 
-  Box, 
-  List, 
-  ListItem, 
-  ListItemButton, 
-  ListItemIcon, 
-  ListItemText, 
+import {
+  Drawer,
+  Box,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
   Typography,
   Avatar,
   IconButton
@@ -16,7 +16,6 @@ import {
   CloudUpload as CloudUploadIcon,
   History as HistoryIcon,
   Folder as FolderIcon,
-  ShowChart as AnalyticsIcon,
   Settings as SettingsIcon,
   MoreVert as MoreVertIcon,
   Help as HelpIcon
@@ -31,26 +30,25 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
     { text: 'Upload Document', path: '/upload', icon: <CloudUploadIcon /> },
     { text: 'Scan History', path: '/history', icon: <HistoryIcon /> },
     { text: 'Saved Document', path: '/documents', icon: <FolderIcon />, highlighted: true },
-    { text: 'Analytics', path: '/analytics', icon: <AnalyticsIcon /> },
     { text: 'Settings', path: '/settings', icon: <SettingsIcon /> },
   ];
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'white' }}>
       {/* Logo/Branding Section */}
-      <Box sx={{ 
-        px: 3, 
-        py: 2.5, 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 1.5, 
+      <Box sx={{
+        px: 3,
+        py: 2.5,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
         borderBottom: '1px solid #E5E7EB',
         minHeight: 64
       }}>
-        <Box 
-          sx={{ 
-            width: 34, 
-            height: 44, 
+        <Box
+          sx={{
+            width: 34,
+            height: 44,
             borderRadius: 1,
             bgcolor: '#6366F1',
             display: 'flex',
@@ -60,13 +58,13 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
         >
           <HelpIcon sx={{ color: 'white', fontSize: 18 }} />
         </Box>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#1F2937', 
-            fontWeight: 700, 
-            fontSize: '20px', 
-            lineHeight: '28px' 
+        <Typography
+          variant="h6"
+          sx={{
+            color: '#1F2937',
+            fontWeight: 700,
+            fontSize: '20px',
+            lineHeight: '28px'
           }}
         >
           Synchro Scan
@@ -78,8 +76,7 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
         <List sx={{ px: 1.5 }}>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
-            const isHighlighted = item.highlighted;
-            
+
             return (
               <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
                 <ListItemButton
@@ -88,16 +85,16 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
                   onClick={mobileOpen ? handleDrawerToggle : null}
                   sx={{
                     borderRadius: 1,
-                    color: isHighlighted ? 'white' : '#374151',
-                    background: isHighlighted 
+                    color: isActive ? 'white' : '#374151',
+                    background: isActive
                       ? 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
                       : 'transparent',
-                    boxShadow: isHighlighted 
+                    boxShadow: isActive
                       ? '0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.1)'
                       : 'none',
                     '&:hover': {
-                      bgcolor: isHighlighted ? undefined : '#F9FAFB',
-                      background: isHighlighted 
+                      bgcolor: isActive ? undefined : '#F9FAFB',
+                      background: isActive
                         ? 'linear-gradient(135deg, #5558E3 0%, #7C3AED 100%)'
                         : undefined,
                     },
@@ -105,18 +102,18 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
                     px: 2,
                   }}
                 >
-                  <ListItemIcon sx={{ 
-                    color: 'inherit', 
+                  <ListItemIcon sx={{
+                    color: 'inherit',
                     minWidth: 40,
                     '& svg': { fontSize: 20 }
                   }}>
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText 
-                    primary={item.text} 
-                    primaryTypographyProps={{ 
+                  <ListItemText
+                    primary={item.text}
+                    primaryTypographyProps={{
                       fontSize: '16px',
-                      fontWeight: 500,
+                      fontWeight: isActive ? 600 : 500,
                       lineHeight: '24px'
                     }}
                   />
@@ -128,18 +125,18 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
       </Box>
 
       {/* User Profile Section */}
-      <Box sx={{ 
-        p: 2, 
+      <Box sx={{
+        p: 2,
         borderTop: '1px solid #E5E7EB',
         minHeight: 73
       }}>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
           gap: 1.5,
           position: 'relative'
         }}>
-          <Avatar 
+          <Avatar
             sx={{ width: 40, height: 40 }}
             src="https://api.builder.io/api/v1/image/assets/TEMP/0b145d2cab8ccc18471d7a25fcc40230b865abc5?width=80"
             alt="John Anderson"
@@ -147,16 +144,16 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
             JA
           </Avatar>
           <Box sx={{ flexGrow: 1 }}>
-            <Typography sx={{ 
-              color: '#1F2937', 
-              fontSize: '14px', 
+            <Typography sx={{
+              color: '#1F2937',
+              fontSize: '14px',
               fontWeight: 500,
               lineHeight: '20px'
             }}>
               John Anderson
             </Typography>
-            <Typography sx={{ 
-              color: '#6B7280', 
+            <Typography sx={{
+              color: '#6B7280',
               fontSize: '12px',
               lineHeight: '16px'
             }}>
@@ -185,8 +182,8 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', sm: 'none' },
-          '& .MuiDrawer-paper': { 
-            boxSizing: 'border-box', 
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
             width: drawerWidth,
             bgcolor: 'white',
             borderRight: '1px solid #E5E7EB'
@@ -201,8 +198,8 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
         variant="permanent"
         sx={{
           display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': { 
-            boxSizing: 'border-box', 
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
             width: drawerWidth,
             bgcolor: 'white',
             borderRight: '1px solid #E5E7EB'
