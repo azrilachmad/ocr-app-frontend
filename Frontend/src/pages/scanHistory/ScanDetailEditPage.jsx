@@ -46,6 +46,9 @@ import { getDocumentById, updateDocument, deleteDocument, saveDocument } from '.
 
 // Document type icons
 // Helper function to construct image URL from filePath
+// Use environment variable for API base URL (strip /api suffix for uploads)
+const API_HOST = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
+
 const getImageUrl = (filePath) => {
     if (!filePath) return null;
 
@@ -68,7 +71,7 @@ const getImageUrl = (filePath) => {
         normalizedPath = `uploads/${normalizedPath}`;
     }
 
-    return `http://localhost:3001/${normalizedPath}`;
+    return `${API_HOST}/${normalizedPath}`;
 };
 
 const getDocumentTypeConfig = (type) => {
