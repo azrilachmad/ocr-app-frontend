@@ -1,0 +1,47 @@
+{
+    "apps": [
+        {
+            "name": "synchro-scan-backend",
+            "cwd": "./Backend",
+            "script": "server.js",
+            "instances": "max",
+            "exec_mode": "cluster",
+            "env": {
+                "NODE_ENV": "development",
+                "PORT": 3001
+            },
+            "env_production": {
+                "NODE_ENV": "production",
+                "PORT": 3001
+            },
+            "error_file": "./logs/backend-error.log",
+            "out_file": "./logs/backend-out.log",
+            "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+            "merge_logs": true,
+            "max_memory_restart": "500M",
+            "watch": false,
+            "autorestart": true,
+            "restart_delay": 1000,
+            "max_restarts": 10
+        },
+        {
+            "name": "synchro-scan-frontend",
+            "cwd": "./Frontend",
+            "script": "serve",
+            "args": "-s dist -l 3004",
+            "interpreter": "npx",
+            "env_production": {
+                "NODE_ENV": "production"
+            },
+            "error_file": "./logs/frontend-error.log",
+            "out_file": "./logs/frontend-out.log",
+            "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+            "merge_logs": true,
+            "max_memory_restart": "200M",
+            "watch": false,
+            "autorestart": true,
+            "restart_delay": 1000,
+            "max_restarts": 10
+        }
+    ]
+}
