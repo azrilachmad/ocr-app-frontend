@@ -61,16 +61,56 @@ const ocrLimiter = rateLimit({
     legacyHeaders: false
 });
 
-// CORS configuration
-const corsOptions = {
-    origin: process.env.NODE_ENV === 'production'
-        ? process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000']
-        : true, // Allow all origins in development
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+// CORS configuration with enhanced logging and validation
+const getAllowedOrigins = () => {
+    const origins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) || [];
+    console.log('[CORS] Environment:', process.env.NODE_ENV);
+    console.log('[CORS] Allowed origins:', origins.length > 0 ? origins : 'ALL (development mode)');
+    return origins;
 };
+
+const allowedOrigins = getAllowedOrigins();
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, curl, Postman, etc.)
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        // In development, allow all origins
+        if (process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+
+        // In production, check against allowed origins
+        if (allowedOrigins.length === 0) {
+            console.warn('[CORS] WARNING: No ALLOWED_ORIGINS configured in production!');
+            return callback(new Error('CORS not configured. Set ALLOWED_ORIGINS in .env'));
+        }
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        // Log blocked origin for debugging
+        console.warn(`[CORS] Blocked request from origin: ${origin}`);
+        console.warn(`[CORS] Allowed origins are: ${allowedOrigins.join(', ')}`);
+        return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Set-Cookie'],
+    maxAge: 86400, // 24 hours - cache preflight requests
+    optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
+// Apply CORS middleware
 app.use(cors(corsOptions));
+
+// Explicit OPTIONS preflight handler for all routes (belt and suspenders approach)
+app.options('*', cors(corsOptions));
 
 // Cookie parser
 app.use(cookieParser());
