@@ -67,7 +67,8 @@ const FileResultCard = ({
     onContentChange,
     isSaving,
     isExpanded,
-    onToggleExpand
+    onToggleExpand,
+    expectedType
 }) => {
     const [previewUrl, setPreviewUrl] = useState(null);
 
@@ -201,6 +202,25 @@ const FileResultCard = ({
                                         Confidence: {fileResult.result?.confidenceScore || 95}%
                                     </Typography>
                                 </Box>
+                                {/* Type Mismatch Warning */}
+                                {expectedType && expectedType !== 'auto' && fileResult.result?.documentType &&
+                                    fileResult.result.documentType.toLowerCase() !== expectedType.toLowerCase() && (
+                                        <Box sx={{
+                                            mt: 2, p: 2, bgcolor: '#FEF3C7', borderRadius: 2,
+                                            display: 'flex', alignItems: 'flex-start', gap: 1
+                                        }}>
+                                            <WarningIcon sx={{ fontSize: 18, color: '#D97706', mt: 0.25 }} />
+                                            <Box>
+                                                <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#92400E' }}>
+                                                    Type Mismatch
+                                                </Typography>
+                                                <Typography sx={{ fontSize: '11px', color: '#92400E' }}>
+                                                    Expected "{expectedType}" but detected "{fileResult.result.documentType}".
+                                                    Please verify the document.
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    )}
                             </Grid>
 
                             {/* Form Fields Column */}
@@ -275,30 +295,17 @@ const UploadPhase = ({
 }) => {
     const fileInputRef = useRef();
 
+    // Auto-force Auto Detect when multiple files are selected
+    const isMultipleFiles = selectedFiles.length > 1;
+    const effectiveDocumentType = isMultipleFiles ? 'auto' : documentType;
+    const isTypeDisabled = selectedFiles.length === 0 || isMultipleFiles;
+
     return (
         <Fade in timeout={500}>
             <Box>
                 <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, mb: 3 }}>
                     <CardContent sx={{ p: 4 }}>
-                        <Typography sx={{ fontSize: '16px', fontWeight: 600, mb: 2, color: '#111827' }}>
-                            Select Document Type
-                        </Typography>
-                        <FormControl fullWidth size="small" sx={{ mb: 4 }}>
-                            <Select
-                                value={documentType}
-                                onChange={(e) => setDocumentType(e.target.value)}
-                                displayEmpty
-                                sx={{ bgcolor: '#F9FAFB' }}
-                            >
-                                <MenuItem value="auto">Auto Detect</MenuItem>
-                                <MenuItem value="KTP">KTP</MenuItem>
-                                <MenuItem value="KK">KK</MenuItem>
-                                <MenuItem value="STNK">STNK</MenuItem>
-                                <MenuItem value="BPKB">BPKB</MenuItem>
-                                <MenuItem value="Invoice">Invoice</MenuItem>
-                            </Select>
-                        </FormControl>
-
+                        {/* Upload Instructions - First */}
                         <Typography sx={{ fontSize: '14px', fontWeight: 600, mb: 1.5, color: '#374151' }}>
                             Upload Instructions
                         </Typography>
@@ -316,6 +323,7 @@ const UploadPhase = ({
                             ))}
                         </Box>
 
+                        {/* Upload Area - Second */}
                         <Box
                             sx={{
                                 border: '2px dashed #E5E7EB',
@@ -360,6 +368,7 @@ const UploadPhase = ({
                     </CardContent>
                 </Card>
 
+                {/* Selected Files List */}
                 {selectedFiles.length > 0 && (
                     <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, mb: 3 }}>
                         <CardContent sx={{ p: 2 }}>
@@ -408,6 +417,50 @@ const UploadPhase = ({
                     </Card>
                 )}
 
+                {/* Document Type Selection - After Upload */}
+                <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, mb: 3, opacity: isTypeDisabled && selectedFiles.length === 0 ? 0.6 : 1 }}>
+                    <CardContent sx={{ p: 3 }}>
+                        <Typography sx={{ fontSize: '16px', fontWeight: 600, mb: 1, color: '#111827' }}>
+                            Select Document Type Template
+                        </Typography>
+                        <Typography sx={{ fontSize: '13px', color: '#6B7280', mb: 2 }}>
+                            {selectedFiles.length === 0
+                                ? 'Upload files first to select document type'
+                                : isMultipleFiles
+                                    ? 'Multiple files detected - Auto Detect will be used for each file'
+                                    : 'Choose a template or let AI auto-detect the document type'
+                            }
+                        </Typography>
+                        <FormControl fullWidth size="small" disabled={isTypeDisabled}>
+                            <Select
+                                value={effectiveDocumentType}
+                                onChange={(e) => setDocumentType(e.target.value)}
+                                displayEmpty
+                                sx={{
+                                    bgcolor: isTypeDisabled ? '#F3F4F6' : '#F9FAFB',
+                                    '& .Mui-disabled': { color: '#9CA3AF' }
+                                }}
+                            >
+                                <MenuItem value="auto">Auto Detect</MenuItem>
+                                <MenuItem value="KTP">KTP</MenuItem>
+                                <MenuItem value="KK">KK</MenuItem>
+                                <MenuItem value="STNK">STNK</MenuItem>
+                                <MenuItem value="BPKB">BPKB</MenuItem>
+                                <MenuItem value="Invoice">Invoice</MenuItem>
+                            </Select>
+                        </FormControl>
+                        {isMultipleFiles && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, p: 1.5, bgcolor: '#FEF3C7', borderRadius: 2 }}>
+                                <InfoIcon sx={{ fontSize: 18, color: '#D97706' }} />
+                                <Typography sx={{ fontSize: '12px', color: '#92400E' }}>
+                                    When uploading multiple files, each file will be auto-detected individually for best accuracy.
+                                </Typography>
+                            </Box>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Process Button */}
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <Button
                         variant="contained"
@@ -425,13 +478,14 @@ const UploadPhase = ({
                             '&:hover': { bgcolor: '#4F46E5' }
                         }}
                     >
-                        {isProcessing ? 'Processing...' : `Process ${selectedFiles.length} File${selectedFiles.length > 1 ? 's' : ''} with AI`}
+                        {isProcessing ? 'Processing...' : `Process ${selectedFiles.length || ''} File${selectedFiles.length > 1 ? 's' : ''} with AI`}
                     </Button>
                 </Box>
             </Box>
         </Fade>
     );
 };
+
 
 // --- Main Page Component ---
 function DocumentUploadPage() {
@@ -824,6 +878,7 @@ function DocumentUploadPage() {
                                     isSaving={savingIndex === index}
                                     isExpanded={expandedIndex === index}
                                     onToggleExpand={() => setExpandedIndex(expandedIndex === index ? -1 : index)}
+                                    expectedType={documentType}
                                 />
                             ))}
                         </Box>
