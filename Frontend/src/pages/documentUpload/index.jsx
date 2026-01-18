@@ -22,7 +22,7 @@ import {
     Error as ErrorIcon,
     ExpandMore as ExpandMoreIcon,
     ExpandLess as ExpandLessIcon,
-    SaveAll as SaveAllIcon,
+    PlaylistAddCheck as SaveAllIcon,
     Close as CloseIcon
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
