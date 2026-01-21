@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const uploadMiddleware = require('../middleware/upload');
-const { Document, Settings } = require('../models');
+const { Document, Settings, DocumentType } = require('../models');
 const { processDocument } = require('../services/ocrService');
 const { cleanupOldScans } = require('../controllers/documentController');
 const path = require('path');
@@ -35,10 +35,17 @@ router.post('/process', authenticate, uploadMiddleware.multiple, async (req, res
         const options = req.body.options ? JSON.parse(req.body.options) : {};
         const documentType = options.documentType || 'auto';
 
-        // AI options from user settings
+        // Fetch available document type templates for better auto-detection
+        const availableTemplates = await DocumentType.findAll({
+            where: { active: true },
+            attributes: ['name', 'description', 'fields']
+        });
+
+        // AI options from user settings + available templates
         const aiOptions = {
             apiKey: userSettings.apiKey,
-            aiModel: userSettings.aiModel || 'gemini-2.5-flash'
+            aiModel: userSettings.aiModel || 'gemini-2.5-flash',
+            availableTemplates: availableTemplates.map(t => t.toJSON())
         };
 
         // Process each file
@@ -47,7 +54,7 @@ router.post('/process', authenticate, uploadMiddleware.multiple, async (req, res
 
         for (const file of files) {
             try {
-                // Call Gemini AI for OCR processing with user settings
+                // Call Gemini AI for OCR processing with user settings and available templates
                 const ocrResult = await processDocument(file.path, documentType, aiOptions);
 
                 const processingTime = ((Date.now() - startTime) / 1000).toFixed(1) + 's';

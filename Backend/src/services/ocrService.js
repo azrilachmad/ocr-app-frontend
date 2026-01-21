@@ -4,8 +4,10 @@ const path = require('path');
 
 /**
  * Get the document type specific prompt
+ * @param {string} documentType - The document type
+ * @param {Array} availableTemplates - List of available document type templates from settings
  */
-const getPromptForDocumentType = (documentType) => {
+const getPromptForDocumentType = (documentType, availableTemplates = []) => {
     const prompts = {
         'KTP': `Analyze this Indonesian ID Card (KTP) image and extract all visible information.
 Return the data in JSON format with these exact fields:
@@ -111,32 +113,69 @@ Return the data in JSON format with these exact fields:
     "total": "Grand total",
     "metode_pembayaran": "Payment method"
 }
-Only return the JSON object, no additional text.`,
-
-        'auto': `Analyze this document image. First, identify what type of document it is (KTP, KK, STNK, BPKB, Invoice, or other).
-Then extract all visible text and data from the document.
-Return the data in JSON format with:
-{
-    "detected_type": "The document type you detected",
-    "fields": {
-        // All extracted fields as key-value pairs
-    }
-}
 Only return the JSON object, no additional text.`
     };
 
-    return prompts[documentType] || prompts['auto'];
+    // Build auto-detect prompt with available templates
+    if (documentType === 'auto' || !prompts[documentType]) {
+        // Get list of known templates (built-in + custom from settings)
+        const builtInTypes = ['KTP', 'KK', 'STNK', 'BPKB', 'Invoice'];
+        const customTypes = availableTemplates
+            .filter(t => t.active && !builtInTypes.includes(t.name))
+            .map(t => t.name);
+        const allAvailableTypes = [...builtInTypes, ...customTypes];
+
+        // Build custom template descriptions if available
+        let customTemplateInfo = '';
+        if (customTypes.length > 0) {
+            const customDescriptions = availableTemplates
+                .filter(t => t.active && !builtInTypes.includes(t.name))
+                .map(t => {
+                    const fieldsDesc = t.fields && t.fields.length > 0
+                        ? ` with fields: ${t.fields.map(f => f.name || f).join(', ')}`
+                        : '';
+                    return `- ${t.name}: ${t.description || 'Custom document type'}${fieldsDesc}`;
+                })
+                .join('\n');
+            customTemplateInfo = `\n\nAdditional custom document templates available:\n${customDescriptions}`;
+        }
+
+        return `Analyze this document image. First, identify what type of document it is.
+
+Available document types in the system (prioritize matching with these):
+${allAvailableTypes.map(t => `- ${t}`).join('\n')}${customTemplateInfo}
+
+Instructions:
+1. Identify the document type - try to match with one of the available types above
+2. If it matches a known type (KTP, KK, STNK, BPKB, Invoice), extract fields according to that template
+3. If it matches a custom type, extract the specified fields
+4. If no match, classify as "Other" and extract all visible data
+
+Return the data in JSON format:
+{
+    "detected_type": "The document type (must be one from the list above if it matches, otherwise 'Other')",
+    "confidence": "HIGH/MEDIUM/LOW - how confident you are about the type match",
+    "fields": {
+        // All extracted fields as key-value pairs
+        // Use snake_case for field names
+    }
+}
+Only return the JSON object, no additional text.`;
+    }
+
+    return prompts[documentType];
 };
+
 
 /**
  * Process a document image with Gemini AI OCR
  * @param {string} filePath - Path to the image file
  * @param {string} documentType - Type of document (KTP, KK, STNK, BPKB, Invoice, auto)
- * @param {object} options - { apiKey, aiModel } from user settings
+ * @param {object} options - { apiKey, aiModel, availableTemplates } from user settings
  * @returns {Promise<object>} - Extracted data
  */
 const processDocument = async (filePath, documentType = 'auto', options = {}) => {
-    const { apiKey, aiModel = 'gemini-2.5-flash' } = options;
+    const { apiKey, aiModel = 'gemini-2.5-flash', availableTemplates = [] } = options;
 
     if (!apiKey) {
         throw new Error('API key is required. Please configure your API key in settings.');
@@ -165,8 +204,8 @@ const processDocument = async (filePath, documentType = 'auto', options = {}) =>
         // Get the model from user settings
         const model = genAI.getGenerativeModel({ model: aiModel });
 
-        // Prepare the prompt
-        const prompt = getPromptForDocumentType(documentType);
+        // Prepare the prompt with available templates for better auto-detection
+        const prompt = getPromptForDocumentType(documentType, availableTemplates);
 
         // Generate content with the image
         const result = await model.generateContent([
