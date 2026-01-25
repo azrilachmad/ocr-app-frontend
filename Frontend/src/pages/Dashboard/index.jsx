@@ -129,9 +129,9 @@ const Dashboard = () => {
         getStatsRecent(5)
       ]);
 
-      setOverview(overviewData);
-      setTypeData(typeStats);
-      setRecentScans(recent);
+      setOverview(overviewData || {});
+      setTypeData(Array.isArray(typeStats) ? typeStats : []);
+      setRecentScans(Array.isArray(recent) ? recent : []);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
       setSnackbar({ open: true, message: 'Failed to load dashboard data', severity: 'error' });
@@ -143,7 +143,7 @@ const Dashboard = () => {
   const fetchChartData = async () => {
     try {
       const data = await getStatsChart(startDate, endDate);
-      setChartData(data);
+      setChartData(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch chart data:', error);
     }
@@ -162,7 +162,7 @@ const Dashboard = () => {
 
   // Process chart data for visualization
   const processedChartData = useMemo(() => {
-    if (!chartData || chartData.length === 0) return [];
+    if (!Array.isArray(chartData) || chartData.length === 0) return [];
     return chartData.map(d => ({
       date: d.date,
       displayDate: formatDisplayDate(d.date),
@@ -175,7 +175,7 @@ const Dashboard = () => {
 
   // Generate SVG path untuk line chart
   const generateChartPath = () => {
-    if (processedChartData.length === 0) return { linePath: '', areaPath: '', points: [], maxScans: 0 };
+    if (!Array.isArray(processedChartData) || processedChartData.length === 0) return { linePath: '', areaPath: '', points: [], maxScans: 0 };
 
     const maxScans = Math.max(...processedChartData.map(d => d.scans), 1);
     const chartHeight = 180;
