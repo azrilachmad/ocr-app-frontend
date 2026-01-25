@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (use npm install for flexibility)
-RUN npm install --omit=dev
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Stage 2: Production
 FROM node:20-alpine
