@@ -5,7 +5,8 @@ const { User, Settings } = require('../models');
 const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
+    path: '/',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours in milliseconds
 };
 
@@ -159,11 +160,12 @@ const getProfile = async (req, res, next) => {
  */
 const logout = async (req, res, next) => {
     try {
-        // Clear the token cookie
+        // Clear the token cookie with same options used when setting it
         res.clearCookie('token', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/'
         });
 
         res.json({
