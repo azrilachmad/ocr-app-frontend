@@ -43,6 +43,7 @@ services:
       DB_USER: ${MYSQL_USER:-synchro_user}
       DB_PASS: ${MYSQL_PASSWORD:-synchro_pass}
       JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_at_least_32_characters}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-.synchro.co.id}
       UPLOAD_PATH: ./uploads
       MAX_FILE_SIZE: 10485760
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost,http://localhost:3000}

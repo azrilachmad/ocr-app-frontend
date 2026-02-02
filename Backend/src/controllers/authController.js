@@ -1,12 +1,16 @@
 const jwt = require('jsonwebtoken');
 const { User, Settings } = require('../models');
 
+// Cookie domain for cross-subdomain sharing (e.g., '.synchro.co.id' for *.synchro.co.id)
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
+
 // Cookie options for 24 hours
 const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
     path: '/',
+    ...(COOKIE_DOMAIN && { domain: COOKIE_DOMAIN }), // Only set domain if configured
     maxAge: 24 * 60 * 60 * 1000 // 24 hours in milliseconds
 };
 
@@ -165,7 +169,8 @@ const logout = async (req, res, next) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            path: '/'
+            path: '/',
+            ...(COOKIE_DOMAIN && { domain: COOKIE_DOMAIN })
         });
 
         res.json({
