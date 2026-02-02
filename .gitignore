@@ -55,7 +55,7 @@ coverage/
 tmp/
 temp/
 *.tmp
-docs/ 
+docs/  
 
 # Debug
 .npm
