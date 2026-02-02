@@ -68,14 +68,14 @@ const Header = ({ handleDrawerToggle, drawerWidth }) => {
 
   // Get user initials
   const getInitials = (name, email) => {
-    if (name) {
+    if (name && typeof name === 'string') {
       const parts = name.split(' ');
-      if (parts.length >= 2) {
+      if (parts.length >= 2 && parts[0] && parts[1]) {
         return (parts[0][0] + parts[1][0]).toUpperCase();
       }
       return name.substring(0, 2).toUpperCase();
     }
-    if (email) {
+    if (email && typeof email === 'string') {
       return email.substring(0, 2).toUpperCase();
     }
     return 'U';
@@ -146,10 +146,10 @@ const Header = ({ handleDrawerToggle, drawerWidth }) => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  const displayName = user?.name || user?.email?.split('@')[0] || 'User';
+  const displayName = (user?.name || (user?.email && typeof user.email === 'string' ? user.email.split('@')[0] : null)) || 'User';
   const displayEmail = user?.email || '';
   const displayRole = user?.role === 'admin' ? 'Administrator' : 'User';
-  const initials = getInitials(user?.name, user?.email);
+  const initials = getInitials(user?.name || '', user?.email || '');
 
   return (
     <>
