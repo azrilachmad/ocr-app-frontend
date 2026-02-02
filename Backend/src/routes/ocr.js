@@ -170,15 +170,22 @@ router.post('/rescan/:id', authenticate, async (req, res, next) => {
             });
         }
 
-        // AI options from user settings
+        // Fetch available document type templates for better auto-detection
+        const availableTemplates = await DocumentType.findAll({
+            where: { active: true },
+            attributes: ['name', 'description', 'fields']
+        });
+
+        // AI options from user settings + available templates
         const aiOptions = {
             apiKey: userSettings.apiKey,
-            aiModel: userSettings.aiModel || 'gemini-2.5-flash'
+            aiModel: userSettings.aiModel || 'gemini-2.5-flash',
+            availableTemplates: availableTemplates.map(t => t.toJSON())
         };
 
         const startTime = Date.now();
 
-        // Re-process with OCR
+        // Re-process with OCR using templates
         const ocrResult = await processDocument(existingDoc.filePath, 'auto', aiOptions);
         const processingTime = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
 
