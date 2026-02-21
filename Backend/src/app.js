@@ -12,6 +12,7 @@ const documentRoutes = require('./routes/documents');
 const statsRoutes = require('./routes/stats');
 const settingsRoutes = require('./routes/settings');
 const ocrRoutes = require('./routes/ocr');
+const adminRoutes = require('./routes/admin');
 
 // Import middleware
 const { errorHandler, notFound } = require('./middleware/errorHandler');
@@ -146,6 +147,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/ocr', ocrRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use(notFound);
