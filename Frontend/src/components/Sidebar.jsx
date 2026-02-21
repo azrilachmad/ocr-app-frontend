@@ -8,29 +8,43 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
-  Avatar,
-  IconButton
+  Divider,
+  Chip
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
   CloudUpload as CloudUploadIcon,
   History as HistoryIcon,
-  Folder as FolderIcon,
   Settings as SettingsIcon,
-  MoreVert as MoreVertIcon,
-  Help as HelpIcon
+  People as PeopleIcon,
+  ToggleOn as ToggleOnIcon,
+  Timeline as TimelineIcon,
+  AdminPanelSettings as AdminIcon,
+  Shield as ShieldIcon
 } from '@mui/icons-material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
-const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
+const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle, user }) => {
   const location = useLocation();
 
-  const navItems = [
+  // Regular user navigation
+  const userNavItems = [
     { text: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
     { text: 'Upload Document', path: '/upload', icon: <CloudUploadIcon /> },
     { text: 'Scan History', path: '/history', icon: <HistoryIcon /> },
     { text: 'Settings', path: '/settings', icon: <SettingsIcon /> },
   ];
+
+  // Superadmin navigation
+  const adminNavItems = [
+    { text: 'Admin Dashboard', path: '/admin/dashboard', icon: <DashboardIcon /> },
+    { text: 'User Management', path: '/admin/users', icon: <PeopleIcon /> },
+    { text: 'Feature Toggle', path: '/admin/features', icon: <ToggleOnIcon /> },
+    { text: 'Activity Log', path: '/admin/activity', icon: <TimelineIcon /> },
+  ];
+
+  const isSuperAdmin = user?.role === 'superadmin';
+  const navItems = isSuperAdmin ? adminNavItems : userNavItems;
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'white' }}>
@@ -67,8 +81,31 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
         </Typography>
       </Box>
 
+      {/* Role Badge */}
+      {isSuperAdmin && (
+        <Box sx={{ px: 3, py: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ShieldIcon sx={{ color: '#7C3AED', fontSize: 18 }} />
+          <Chip
+            label="Super Admin"
+            size="small"
+            sx={{
+              bgcolor: '#F3E8FF',
+              color: '#7C3AED',
+              fontWeight: 600,
+              fontSize: '11px',
+              height: 24,
+            }}
+          />
+        </Box>
+      )}
+
       {/* Navigation Items */}
-      <Box sx={{ flexGrow: 1, py: 3 }}>
+      <Box sx={{ flexGrow: 1, py: isSuperAdmin ? 1 : 3 }}>
+        {isSuperAdmin && (
+          <Typography sx={{ px: 3, py: 1, fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Administration
+          </Typography>
+        )}
         <List sx={{ px: 1.5 }}>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -83,7 +120,9 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
                     borderRadius: 1,
                     color: isActive ? 'white' : '#374151',
                     background: isActive
-                      ? 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
+                      ? isSuperAdmin
+                        ? 'linear-gradient(135deg, #7C3AED 0%, #9333EA 100%)'
+                        : 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
                       : 'transparent',
                     boxShadow: isActive
                       ? '0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.1)'
@@ -91,7 +130,9 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle }) => {
                     '&:hover': {
                       bgcolor: isActive ? undefined : '#F9FAFB',
                       background: isActive
-                        ? 'linear-gradient(135deg, #5558E3 0%, #7C3AED 100%)'
+                        ? isSuperAdmin
+                          ? 'linear-gradient(135deg, #6D28D9 0%, #7E22CE 100%)'
+                          : 'linear-gradient(135deg, #5558E3 0%, #7C3AED 100%)'
                         : undefined,
                     },
                     py: 1.5,
