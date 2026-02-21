@@ -63,15 +63,43 @@ const authenticate = async (req, res, next) => {
 };
 
 /**
- * Middleware to check if user is admin
+ * Middleware to check if user is admin or superadmin
  */
 const isAdmin = (req, res, next) => {
-    if (req.user && req.user.role === 'admin') {
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
         next();
     } else {
         return res.status(403).json({
             success: false,
             message: 'Access denied. Admin privileges required.'
+        });
+    }
+};
+
+/**
+ * Middleware to check if user is superadmin
+ */
+const isSuperAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'superadmin') {
+        next();
+    } else {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. Superadmin privileges required.'
+        });
+    }
+};
+
+/**
+ * Middleware to check if user account is active
+ */
+const isActiveUser = (req, res, next) => {
+    if (req.user && req.user.isActive) {
+        next();
+    } else {
+        return res.status(403).json({
+            success: false,
+            message: 'Account is deactivated. Please contact administrator.'
         });
     }
 };
@@ -105,4 +133,5 @@ const optionalAuth = async (req, res, next) => {
     }
 };
 
-module.exports = { authenticate, isAdmin, optionalAuth };
+module.exports = { authenticate, isAdmin, isSuperAdmin, isActiveUser, optionalAuth };
+
