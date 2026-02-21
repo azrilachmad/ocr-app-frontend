@@ -149,17 +149,9 @@ const UserManagement = () => {
     };
 
     return (
-        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 10, md: 12 } }}>
-            {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-                <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#1F2937' }}>
-                        User Management
-                    </Typography>
-                    <Typography sx={{ color: '#6B7280', fontSize: '14px' }}>
-                        Manage all user accounts and their access
-                    </Typography>
-                </Box>
+        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 8, md: 10 } }}>
+            {/* Header Actions */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
                 <Button
                     variant="contained"
                     startIcon={<AddIcon />}
