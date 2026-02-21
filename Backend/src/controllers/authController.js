@@ -61,6 +61,17 @@ const login = async (req, res, next) => {
             });
         }
 
+        // Check if account is active
+        if (!user.isActive) {
+            return res.status(403).json({
+                success: false,
+                message: 'Account is deactivated. Please contact administrator.'
+            });
+        }
+
+        // Update last login timestamp
+        await user.update({ lastLoginAt: new Date() });
+
         // Generate token
         const token = generateToken(user.id);
 
