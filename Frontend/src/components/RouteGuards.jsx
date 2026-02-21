@@ -1,24 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { checkAuth } from '../services/authService';
+import { getProfile } from '../services/authService';
 import { Box, CircularProgress } from '@mui/material';
 
 /**
  * ProtectedRoute - Requires authentication
  * Redirects to login if not authenticated
+ * Passes user data to children via cloneElement
  */
 export const ProtectedRoute = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(null);
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const location = useLocation();
 
     useEffect(() => {
         const verifyAuth = async () => {
             try {
-                const isAuth = await checkAuth();
-                setIsAuthenticated(isAuth);
+                const response = await getProfile();
+                setUser(response.data);
             } catch (error) {
-                setIsAuthenticated(false);
+                setUser(null);
             } finally {
                 setLoading(false);
             }
@@ -42,29 +43,45 @@ export const ProtectedRoute = ({ children }) => {
         );
     }
 
-    if (!isAuthenticated) {
-        // Redirect to login, save the attempted location
+    if (!user) {
         return <Navigate to="/" state={{ from: location }} replace />;
     }
 
-    return children;
+    // Redirect superadmin to admin dashboard if trying to access user pages
+    if (user.role === 'superadmin' && !location.pathname.startsWith('/admin')) {
+        return <Navigate to="/admin/dashboard" replace />;
+    }
+
+    // Pass user data to children
+    return React.cloneElement(children, { user });
+};
+
+/**
+ * AdminRoute - Requires superadmin role
+ * Redirects to dashboard if not superadmin
+ */
+export const AdminRoute = ({ children, user }) => {
+    if (!user || user.role !== 'superadmin') {
+        return <Navigate to="/dashboard" replace />;
+    }
+    return React.cloneElement(children, { user });
 };
 
 /**
  * PublicRoute - Only accessible when NOT authenticated
- * Redirects to dashboard if already authenticated
+ * Redirects to appropriate dashboard based on role
  */
 export const PublicRoute = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(null);
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const verifyAuth = async () => {
             try {
-                const isAuth = await checkAuth();
-                setIsAuthenticated(isAuth);
+                const response = await getProfile();
+                setUser(response.data);
             } catch (error) {
-                setIsAuthenticated(false);
+                setUser(null);
             } finally {
                 setLoading(false);
             }
@@ -88,8 +105,11 @@ export const PublicRoute = ({ children }) => {
         );
     }
 
-    if (isAuthenticated) {
-        // Already logged in, redirect to dashboard
+    if (user) {
+        // Redirect based on role
+        if (user.role === 'superadmin') {
+            return <Navigate to="/admin/dashboard" replace />;
+        }
         return <Navigate to="/dashboard" replace />;
     }
 
