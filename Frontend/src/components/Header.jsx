@@ -15,6 +15,11 @@ const pageConfig = {
   '/history': { title: 'Scan History', subtitle: 'View and manage your scan history' },
   '/documents': { title: 'Saved Documents', subtitle: 'Browse all saved document records' },
   '/settings': { title: 'Settings', subtitle: 'Manage your account preferences' },
+  // Admin routes
+  '/admin/dashboard': { title: 'Admin Dashboard', subtitle: 'Overview of system statistics and recent activity' },
+  '/admin/users': { title: 'User Management', subtitle: 'Manage all user accounts and their access' },
+  '/admin/features': { title: 'Feature Toggle', subtitle: 'Enable or disable features for each user' },
+  '/admin/activity': { title: 'Activity Log', subtitle: 'Monitor user login activity and document usage' },
 };
 
 // Helper function to get page config for dynamic routes
@@ -30,7 +35,7 @@ const getPageConfig = (pathname) => {
   }
 
   // Default fallback
-  return { title: 'Synchro Scan', subtitle: '' };
+  return { title: 'Synchro Scan', subtitle: 'Advanced OCR Platform' };
 };
 
 const Header = ({ handleDrawerToggle, drawerWidth }) => {
