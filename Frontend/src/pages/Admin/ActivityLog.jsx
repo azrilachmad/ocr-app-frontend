@@ -53,15 +53,7 @@ const ActivityLog = () => {
     };
 
     return (
-        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 10, md: 12 } }}>
-            {/* Header */}
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#1F2937', mb: 1 }}>
-                Activity Log
-            </Typography>
-            <Typography sx={{ color: '#6B7280', mb: 4, fontSize: '14px' }}>
-                Monitor user login activity and document usage
-            </Typography>
-
+        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 8, md: 10 } }}>
             {/* Search */}
             <TextField
                 size="small"
