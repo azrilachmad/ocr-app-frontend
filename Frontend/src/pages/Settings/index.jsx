@@ -369,50 +369,41 @@ const SettingsPage = () => {
                 {isSaving && <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }} />}
 
                 <Container maxWidth="lg" sx={{ py: 4 }}>
-                    {/* Header */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
-                        <Box>
-                            <Typography sx={{ fontSize: '28px', fontWeight: 700, color: '#111827', mb: 0.5 }}>
-                                Settings
-                            </Typography>
-                            <Typography sx={{ fontSize: '14px', color: '#6B7280' }}>
-                                Configure AI and document scanning parameters
-                            </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <Button
-                                variant="outlined"
-                                startIcon={<RefreshIcon />}
-                                onClick={handleResetToDefault}
-                                disabled={isSaving}
-                                sx={{
-                                    borderColor: '#D1D5DB',
-                                    color: '#374151',
-                                    textTransform: 'none',
-                                    px: 2.5,
-                                    py: 1,
-                                    '&:hover': { borderColor: '#9CA3AF', bgcolor: '#F9FAFB' }
-                                }}
-                            >
-                                Reset to Default
-                            </Button>
-                            <Button
-                                variant="contained"
-                                startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
-                                onClick={handleSaveChanges}
-                                disabled={isSaving}
-                                sx={{
-                                    bgcolor: '#6366F1',
-                                    textTransform: 'none',
-                                    px: 2.5,
-                                    py: 1,
-                                    '&:hover': { bgcolor: '#5558E3' }
-                                }}
-                            >
-                                {isSaving ? 'Saving...' : 'Save Changes'}
-                            </Button>
-                        </Box>
+                    {/* Header Actions */}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 4, gap: 2 }}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<RefreshIcon />}
+                            onClick={handleResetToDefault}
+                            disabled={isSaving}
+                            sx={{
+                                borderColor: '#D1D5DB',
+                                color: '#374151',
+                                textTransform: 'none',
+                                px: 2.5,
+                                py: 1,
+                                '&:hover': { borderColor: '#9CA3AF', bgcolor: '#F9FAFB' }
+                            }}
+                        >
+                            Reset to Default
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                            onClick={handleSaveChanges}
+                            disabled={isSaving}
+                            sx={{
+                                bgcolor: '#6366F1',
+                                textTransform: 'none',
+                                px: 2.5,
+                                py: 1,
+                                '&:hover': { bgcolor: '#5558E3' }
+                            }}
+                        >
+                            {isSaving ? 'Saving...' : 'Save Changes'}
+                        </Button>
                     </Box>
+
 
                     {/* AI Configuration Section */}
                     <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, mb: 3 }}>
@@ -911,10 +902,10 @@ const SettingsPage = () => {
                         {isSavingDocType ? 'Saving...' : (editingDocType ? 'Save Changes' : 'Create Document Type')}
                     </Button>
                 </DialogActions>
-            </Dialog>
+            </Dialog >
 
             {/* Delete Confirmation Dialog */}
-            <Dialog open={deleteConfirmOpen} onClose={handleCloseDeleteConfirm} maxWidth="xs" fullWidth>
+            < Dialog open={deleteConfirmOpen} onClose={handleCloseDeleteConfirm} maxWidth="xs" fullWidth >
                 <DialogTitle sx={{ fontWeight: 600, color: '#DC2626' }}>
                     Delete Document Type
                 </DialogTitle>
@@ -941,10 +932,10 @@ const SettingsPage = () => {
                         {isDeletingDocType ? 'Deleting...' : 'Delete'}
                     </Button>
                 </DialogActions>
-            </Dialog>
+            </Dialog >
 
             {/* Snackbar for notifications */}
-            <Snackbar
+            < Snackbar
                 open={snackbar.open}
                 autoHideDuration={3000}
                 onClose={handleCloseSnackbar}
@@ -957,7 +948,7 @@ const SettingsPage = () => {
                 >
                     {snackbar.message}
                 </Alert>
-            </Snackbar>
+            </Snackbar >
         </>
     );
 };
