@@ -5,7 +5,7 @@ import Sidebar from './Sidebar';
 
 const drawerWidth = 256;
 
-const Layout = ({ children }) => {
+const Layout = ({ children, user }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleDrawerToggle = () => {
@@ -20,6 +20,7 @@ const Layout = ({ children }) => {
         drawerWidth={drawerWidth}
         mobileOpen={mobileOpen}
         handleDrawerToggle={handleDrawerToggle}
+        user={user}
       />
       <Box
         component="main"
