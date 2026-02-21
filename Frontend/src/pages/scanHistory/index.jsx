@@ -435,51 +435,40 @@ const ScanHistoryPage = () => {
     <Box sx={{ bgcolor: '#F9FAFB', minHeight: '100vh', pb: 4 }}>
       <Toolbar sx={{ minHeight: { xs: 56, sm: 89 } }} />
 
-      {/* Header Section */}
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #E5E7EB', py: 3 }}>
+      {/* Header Actions */}
+      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #E5E7EB', py: 2 }}>
         <Container maxWidth="xl">
           <Box sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', md: 'row' },
-            justifyContent: 'space-between',
-            alignItems: { xs: 'flex-start', md: 'center' },
-            gap: 2
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: 1.5
           }}>
-            <Box>
-              <Typography variant="h4" sx={{ color: '#111827', fontWeight: 700, fontSize: { xs: '20px', md: '24px' }, mb: 0.5 }}>
-                Scan History
-              </Typography>
-              <Typography sx={{ color: '#6B7280', fontSize: '14px' }}>
-                View and manage your saved documents and recent scans
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={fetchAllData}
-                disabled={isLoading}
-                sx={{
-                  borderColor: '#D1D5DB', color: '#374151', textTransform: 'none', px: 2,
-                  '&:hover': { borderColor: '#9CA3AF', bgcolor: '#F9FAFB' }
-                }}
-              >
-                Refresh
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                component={RouterLink}
-                to="/upload"
-                sx={{
-                  background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-                  textTransform: 'none', px: 2.5, boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  '&:hover': { background: 'linear-gradient(135deg, #5558E3 0%, #7C3AED 100%)' }
-                }}
-              >
-                New Scan
-              </Button>
-            </Box>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={fetchAllData}
+              disabled={isLoading}
+              sx={{
+                borderColor: '#D1D5DB', color: '#374151', textTransform: 'none', px: 2,
+                '&:hover': { borderColor: '#9CA3AF', bgcolor: '#F9FAFB' }
+              }}
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              component={RouterLink}
+              to="/upload"
+              sx={{
+                background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+                textTransform: 'none', px: 2.5, boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                '&:hover': { background: 'linear-gradient(135deg, #5558E3 0%, #7C3AED 100%)' }
+              }}
+            >
+              New Scan
+            </Button>
           </Box>
         </Container>
       </Box>
