@@ -76,15 +76,7 @@ const AdminDashboard = () => {
     };
 
     return (
-        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 10, md: 12 } }}>
-            {/* Header */}
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#1F2937', mb: 1 }}>
-                Admin Dashboard
-            </Typography>
-            <Typography sx={{ color: '#6B7280', mb: 4, fontSize: '14px' }}>
-                Overview of system statistics and recent activity
-            </Typography>
-
+        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 8, md: 10 } }}>
             {error && (
                 <Paper sx={{ p: 2, mb: 3, bgcolor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 2 }}>
                     <Typography sx={{ color: '#DC2626', fontSize: '14px' }}>{error}</Typography>
