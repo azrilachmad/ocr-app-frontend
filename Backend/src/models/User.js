@@ -25,8 +25,25 @@ const User = sequelize.define('User', {
         allowNull: true
     },
     role: {
-        type: DataTypes.ENUM('admin', 'user'),
+        type: DataTypes.ENUM('superadmin', 'admin', 'user'),
         defaultValue: 'user'
+    },
+    isActive: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        allowNull: false
+    },
+    features: {
+        type: DataTypes.JSON,
+        defaultValue: {
+            knowledgeBase: false,
+            batchScan: true
+        },
+        allowNull: false
+    },
+    lastLoginAt: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, {
     tableName: 'users',
