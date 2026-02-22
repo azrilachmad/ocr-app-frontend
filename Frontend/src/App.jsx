@@ -11,6 +11,7 @@ const DocumentUploadPage = lazy(() => import('./pages/documentUpload'));
 const ScanHistoryPage = lazy(() => import('./pages/scanHistory'));
 const ScanDetailEditPage = lazy(() => import('./pages/scanHistory/ScanDetailEditPage'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
+const KnowledgeBase = lazy(() => import('./pages/User/KnowledgeBase'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const RegisterPage = lazy(() => import('./pages/Register'));
 
@@ -19,6 +20,9 @@ const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
 const UserManagement = lazy(() => import('./pages/Admin/UserManagement'));
 const FeatureToggle = lazy(() => import('./pages/Admin/FeatureToggle'));
 const ActivityLog = lazy(() => import('./pages/Admin/ActivityLog'));
+const DocumentManagement = lazy(() => import('./pages/Admin/DocumentManagement'));
+const SystemSettings = lazy(() => import('./pages/Admin/SystemSettings'));
+const ScanStatistics = lazy(() => import('./pages/Admin/ScanStatistics'));
 
 function App() {
   return (
@@ -48,6 +52,7 @@ function App() {
                     <Route path="/upload" element={<DocumentUploadPage />} />
                     <Route path="/history" element={<ScanHistoryPage />} />
                     <Route path="/history/:id" element={<ScanDetailEditPage />} />
+                    <Route path="/knowledge-base" element={<KnowledgeBase />} />
                     <Route path="/settings" element={<SettingsPage />} />
 
                     {/* Admin routes */}
@@ -55,6 +60,9 @@ function App() {
                     <Route path="/admin/users" element={<UserManagement />} />
                     <Route path="/admin/features" element={<FeatureToggle />} />
                     <Route path="/admin/activity" element={<ActivityLog />} />
+                    <Route path="/admin/documents" element={<DocumentManagement />} />
+                    <Route path="/admin/settings" element={<SystemSettings />} />
+                    <Route path="/admin/statistics" element={<ScanStatistics />} />
                   </Routes>
                 </Suspense>
               </Layout>
