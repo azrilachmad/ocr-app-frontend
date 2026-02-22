@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User, Settings } = require('../models');
+const { User, Settings, DocumentType } = require('../models');
 
 // Cookie domain for cross-subdomain sharing (e.g., '.synchro.co.id' for *.synchro.co.id)
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
@@ -135,6 +135,54 @@ const register = async (req, res, next) => {
 
         // Create default settings for user
         await Settings.create({ userId: user.id });
+
+        // Seed default document types for the new user
+        const defaultTemplates = [
+            {
+                name: 'KTP',
+                description: 'Kartu Tanda Penduduk (Indonesian ID Card) - 14 fields configured',
+                fields: [
+                    { name: 'NIK', required: true }, { name: 'Nama', required: true },
+                    { name: 'Tempat/Tgl Lahir', required: true }, { name: 'Jenis Kelamin', required: true },
+                    { name: 'Alamat', required: true }, { name: 'RT/RW', required: false },
+                    { name: 'Kel/Desa', required: true }, { name: 'Kecamatan', required: true },
+                    { name: 'Agama', required: true }, { name: 'Status Perkawinan', required: true },
+                    { name: 'Pekerjaan', required: false }, { name: 'Kewarganegaraan', required: true },
+                    { name: 'Berlaku Hingga', required: true }, { name: 'Gol. Darah', required: false }
+                ],
+                active: true
+            },
+            {
+                name: 'KK',
+                description: 'Kartu Keluarga (Family Card) - 8 fields configured',
+                fields: [
+                    { name: 'No. KK', required: true }, { name: 'Nama Kepala Keluarga', required: true },
+                    { name: 'Alamat', required: true }, { name: 'RT/RW', required: false },
+                    { name: 'Desa/Kelurahan', required: true }, { name: 'Kecamatan', required: true },
+                    { name: 'Kabupaten/Kota', required: true }, { name: 'Provinsi', required: true }
+                ],
+                active: true
+            },
+            {
+                name: 'Invoice',
+                description: 'Invoice / Faktur / Receipt - 10 fields configured',
+                fields: [
+                    { name: 'Invoice Number', required: true }, { name: 'Invoice Date', required: true },
+                    { name: 'Due Date', required: false }, { name: 'Vendor Name', required: true },
+                    { name: 'Vendor Address', required: false }, { name: 'Customer Name', required: true },
+                    { name: 'Customer Address', required: false }, { name: 'Total Amount', required: true },
+                    { name: 'Tax Amount', required: false }, { name: 'Line Items', required: false }
+                ],
+                active: true
+            }
+        ];
+
+        for (const template of defaultTemplates) {
+            await DocumentType.create({
+                userId: user.id,
+                ...template
+            });
+        }
 
         // Generate token
         const token = generateToken(user.id);
