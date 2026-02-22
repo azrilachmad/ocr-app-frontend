@@ -70,6 +70,7 @@ const updateSettings = async (req, res, next) => {
 const getAllDocumentTypes = async (req, res, next) => {
     try {
         const documentTypes = await DocumentType.findAll({
+            where: { userId: req.userId },
             order: [['name', 'ASC']]
         });
 
@@ -98,6 +99,7 @@ const createDocumentType = async (req, res, next) => {
         }
 
         const documentType = await DocumentType.create({
+            userId: req.userId,
             name,
             description,
             fields: fields || [],
@@ -120,7 +122,9 @@ const createDocumentType = async (req, res, next) => {
  */
 const updateDocumentType = async (req, res, next) => {
     try {
-        const documentType = await DocumentType.findByPk(req.params.id);
+        const documentType = await DocumentType.findOne({
+            where: { id: req.params.id, userId: req.userId }
+        });
 
         if (!documentType) {
             return res.status(404).json({
@@ -154,7 +158,9 @@ const updateDocumentType = async (req, res, next) => {
  */
 const deleteDocumentType = async (req, res, next) => {
     try {
-        const documentType = await DocumentType.findByPk(req.params.id);
+        const documentType = await DocumentType.findOne({
+            where: { id: req.params.id, userId: req.userId }
+        });
 
         if (!documentType) {
             return res.status(404).json({
