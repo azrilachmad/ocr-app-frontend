@@ -14,12 +14,16 @@ const pageConfig = {
   '/upload': { title: 'Upload Document', subtitle: 'Upload and process documents with AI' },
   '/history': { title: 'Scan History', subtitle: 'View and manage your scan history' },
   '/documents': { title: 'Saved Documents', subtitle: 'Browse all saved document records' },
+  '/knowledge-base': { title: 'Knowledge Base', subtitle: 'AI assistant to help you find answers from your documents' },
   '/settings': { title: 'Settings', subtitle: 'Manage your account preferences' },
   // Admin routes
   '/admin/dashboard': { title: 'Admin Dashboard', subtitle: 'Overview of system statistics and recent activity' },
   '/admin/users': { title: 'User Management', subtitle: 'Manage all user accounts and their access' },
   '/admin/features': { title: 'Feature Toggle', subtitle: 'Enable or disable features for each user' },
   '/admin/activity': { title: 'Activity Log', subtitle: 'Monitor user login activity and document usage' },
+  '/admin/documents': { title: 'Document Management', subtitle: 'View and manage documents across all users' },
+  '/admin/settings': { title: 'System Settings', subtitle: 'Configure global system parameters and preferences' },
+  '/admin/statistics': { title: 'Scan Statistics', subtitle: 'Aggregated scan analytics and usage trends' },
 };
 
 // Helper function to get page config for dynamic routes
