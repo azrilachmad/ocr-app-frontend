@@ -352,8 +352,7 @@ const SettingsPage = () => {
 
     if (isLoading) {
         return (
-            <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
-                <Toolbar sx={{ minHeight: { xs: 56, sm: 89 } }} />
+            <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB', pt: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
                     <CircularProgress sx={{ color: '#6366F1' }} />
                 </Box>
@@ -363,9 +362,7 @@ const SettingsPage = () => {
 
     return (
         <>
-            <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
-                <Toolbar sx={{ minHeight: { xs: 56, sm: 89 } }} />
-
+            <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB', pt: 3 }}>
                 {isSaving && <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }} />}
 
                 <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -902,10 +899,10 @@ const SettingsPage = () => {
                         {isSavingDocType ? 'Saving...' : (editingDocType ? 'Save Changes' : 'Create Document Type')}
                     </Button>
                 </DialogActions>
-            </Dialog >
+            </Dialog>
 
             {/* Delete Confirmation Dialog */}
-            < Dialog open={deleteConfirmOpen} onClose={handleCloseDeleteConfirm} maxWidth="xs" fullWidth >
+            <Dialog open={deleteConfirmOpen} onClose={handleCloseDeleteConfirm} maxWidth="xs" fullWidth>
                 <DialogTitle sx={{ fontWeight: 600, color: '#DC2626' }}>
                     Delete Document Type
                 </DialogTitle>
@@ -932,10 +929,10 @@ const SettingsPage = () => {
                         {isDeletingDocType ? 'Deleting...' : 'Delete'}
                     </Button>
                 </DialogActions>
-            </Dialog >
+            </Dialog>
 
             {/* Snackbar for notifications */}
-            < Snackbar
+            <Snackbar
                 open={snackbar.open}
                 autoHideDuration={3000}
                 onClose={handleCloseSnackbar}
@@ -948,7 +945,7 @@ const SettingsPage = () => {
                 >
                     {snackbar.message}
                 </Alert>
-            </Snackbar >
+            </Snackbar>
         </>
     );
 };
