@@ -11,11 +11,14 @@ import {
     Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
+    Delete as DeleteIcon,
     LockReset as ResetIcon,
-    Visibility as ViewIcon
+    Visibility as ViewIcon,
+    FileCopy as FileCopyIcon
 } from '@mui/icons-material';
 import {
-    getUsers, createUser, updateUser, deleteUser, resetUserPassword
+    getUsers, createUser, updateUser, deleteUser, resetUserPassword,
+    getUserDocumentTypes, createUserDocumentType, updateUserDocumentType, deleteUserDocumentType
 } from '../../services/adminService';
 
 const UserManagement = () => {
@@ -31,12 +34,19 @@ const UserManagement = () => {
     const [editDialog, setEditDialog] = useState(false);
     const [deleteDialog, setDeleteDialog] = useState(false);
     const [resetDialog, setResetDialog] = useState(false);
+    const [templatesDialog, setTemplatesDialog] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [formLoading, setFormLoading] = useState(false);
 
     // Form data
     const [formData, setFormData] = useState({ email: '', password: '', name: '', role: 'user' });
     const [newPassword, setNewPassword] = useState('');
+
+    // Templates Management State
+    const [userTemplates, setUserTemplates] = useState([]);
+    const [loadingTemplates, setLoadingTemplates] = useState(false);
+    const [editingTemplate, setEditingTemplate] = useState(null);
+    const [templateForm, setTemplateForm] = useState({ name: '', description: '', fields: [], active: true });
 
     // Snackbar
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -141,6 +151,97 @@ const UserManagement = () => {
         setEditDialog(true);
     };
 
+    const openTemplatesDialog = async (user) => {
+        setSelectedUser(user);
+        setTemplatesDialog(true);
+        setLoadingTemplates(true);
+        try {
+            const response = await getUserDocumentTypes(user.id);
+            setUserTemplates(response.data.map(dt => ({
+                ...dt,
+                fields: typeof dt.fields === 'string' ? JSON.parse(dt.fields) : dt.fields
+            })));
+        } catch (error) {
+            showSnackbar('Failed to load user document types.', 'error');
+        } finally {
+            setLoadingTemplates(false);
+        }
+    };
+
+    const handleSaveTemplate = async () => {
+        try {
+            setFormLoading(true);
+            if (editingTemplate) {
+                const response = await updateUserDocumentType(selectedUser.id, editingTemplate.id, templateForm);
+                setUserTemplates(prev => prev.map(dt => dt.id === editingTemplate.id ? {
+                    ...response.data,
+                    fields: typeof response.data.fields === 'string' ? JSON.parse(response.data.fields) : response.data.fields
+                } : dt));
+                showSnackbar('Document template updated.');
+            } else {
+                const response = await createUserDocumentType(selectedUser.id, templateForm);
+                setUserTemplates(prev => [...prev, {
+                    ...response.data,
+                    fields: typeof response.data.fields === 'string' ? JSON.parse(response.data.fields) : response.data.fields
+                }]);
+                showSnackbar('Document template created.');
+            }
+            setEditingTemplate(null);
+            setTemplateForm({ name: '', description: '', fields: [], active: true });
+        } catch (err) {
+            showSnackbar(err.response?.data?.message || 'Failed to save template.', 'error');
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
+    const handleDeleteTemplate = async (templateId) => {
+        if (!window.confirm('Are you sure you want to delete this document type?')) return;
+        try {
+            await deleteUserDocumentType(selectedUser.id, templateId);
+            setUserTemplates(prev => prev.filter(dt => dt.id !== templateId));
+            showSnackbar('Document template deleted.');
+        } catch (err) {
+            showSnackbar('Failed to delete template.', 'error');
+        }
+    };
+
+    // Helper to edit a template inline
+    const handleEditTemplateForm = (template) => {
+        setEditingTemplate(template);
+        setTemplateForm({
+            name: template.name,
+            description: template.description || '',
+            fields: template.fields || [],
+            active: template.active
+        });
+    };
+
+    const handleCancelTemplateEdit = () => {
+        setEditingTemplate(null);
+        setTemplateForm({ name: '', description: '', fields: [], active: true });
+    };
+
+    // Helper for fields
+    const addField = () => {
+        setTemplateForm(prev => ({
+            ...prev,
+            fields: [...prev.fields, { name: '', required: false }]
+        }));
+    };
+
+    const updateField = (index, key, value) => {
+        const newFields = [...templateForm.fields];
+        newFields[index] = { ...newFields[index], [key]: value };
+        setTemplateForm({ ...templateForm, fields: newFields });
+    };
+
+    const removeField = (index) => {
+        const newFields = [...templateForm.fields];
+        newFields.splice(index, 1);
+        setTemplateForm(prev => ({ ...prev, fields: newFields }));
+    };
+
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
         return new Date(dateStr).toLocaleDateString('id-ID', {
@@ -149,7 +250,7 @@ const UserManagement = () => {
     };
 
     return (
-        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 8, md: 10 } }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 11, md: 13 } }}>
             {/* Header Actions */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
                 <Button
@@ -261,6 +362,7 @@ const UserManagement = () => {
                                             <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>{formatDate(user.createdAt)}</Typography>
                                         </TableCell>
                                         <TableCell align="right">
+                                            <Tooltip title="Manage Templates"><IconButton size="small" onClick={() => openTemplatesDialog(user)}><FileCopyIcon sx={{ fontSize: 18, color: '#10B981' }} /></IconButton></Tooltip>
                                             <Tooltip title="Edit"><IconButton size="small" onClick={() => openEditDialog(user)}><EditIcon sx={{ fontSize: 18, color: '#6B7280' }} /></IconButton></Tooltip>
                                             <Tooltip title="Reset Password"><IconButton size="small" onClick={() => { setSelectedUser(user); setResetDialog(true); }}><ResetIcon sx={{ fontSize: 18, color: '#F59E0B' }} /></IconButton></Tooltip>
                                             <Tooltip title="Delete"><IconButton size="small" onClick={() => { setSelectedUser(user); setDeleteDialog(true); }}><DeleteIcon sx={{ fontSize: 18, color: '#EF4444' }} /></IconButton></Tooltip>
@@ -367,6 +469,104 @@ const UserManagement = () => {
                         sx={{ bgcolor: '#F59E0B', textTransform: 'none', '&:hover': { bgcolor: '#D97706' } }}>
                         {formLoading ? <CircularProgress size={20} /> : 'Reset Password'}
                     </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Manage Templates Dialog */}
+            <Dialog open={templatesDialog} onClose={() => setTemplatesDialog(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3, maxHeight: '90vh' } }}>
+                <DialogTitle sx={{ fontWeight: 600 }}>Manage Templates for {selectedUser?.name || selectedUser?.email}</DialogTitle>
+                <DialogContent dividers sx={{ pt: '16px !important', bgcolor: '#F9FAFB' }}>
+                    {loadingTemplates ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}><CircularProgress size={30} /></Box>
+                    ) : (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+
+                            {/* Template Form (Create / Edit) */}
+                            <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid #E5E7EB', elevation: 0 }}>
+                                <Typography sx={{ mb: 2, fontWeight: 600, fontSize: '15px' }}>
+                                    {editingTemplate ? `Edit Template: ${editingTemplate.name}` : 'Create New Template'}
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <TextField label="Template Name" size="small" value={templateForm.name} onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })} fullWidth required />
+                                    <TextField label="Description" size="small" value={templateForm.description} onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })} fullWidth multiline rows={2} />
+
+                                    <Box sx={{ mt: 1 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                                            <Typography sx={{ fontWeight: 500, fontSize: '14px', color: '#374151' }}>Extracted Fields</Typography>
+                                            <Button size="small" startIcon={<AddIcon />} onClick={addField} sx={{ textTransform: 'none' }}>Add Field</Button>
+                                        </Box>
+                                        {templateForm.fields.length === 0 ? (
+                                            <Typography sx={{ color: '#9CA3AF', fontSize: '13px', fontStyle: 'italic' }}>No fields defined. Add fields that the AI should extract from this document type.</Typography>
+                                        ) : (
+                                            templateForm.fields.map((field, idx) => (
+                                                <Box key={idx} sx={{ display: 'flex', gap: 1.5, mb: 1.5, alignItems: 'center' }}>
+                                                    <TextField size="small" value={field.name} onChange={(e) => updateField(idx, 'name', e.target.value)} placeholder="Field Name (e.g. NIK, Total Amount)" fullWidth />
+                                                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                                                        <Select value={field.required ? 'true' : 'false'} onChange={(e) => updateField(idx, 'required', e.target.value === 'true')}>
+                                                            <MenuItem value="true">Required</MenuItem>
+                                                            <MenuItem value="false">Optional</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+                                                    <IconButton size="small" color="error" onClick={() => removeField(idx)}><DeleteIcon fontSize="small" /></IconButton>
+                                                </Box>
+                                            ))
+                                        )}
+                                    </Box>
+
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+                                        {editingTemplate && (
+                                            <Button size="small" onClick={handleCancelTemplateEdit} sx={{ textTransform: 'none' }}>Cancel Edit</Button>
+                                        )}
+                                        <Button
+                                            size="small"
+                                            variant="contained"
+                                            onClick={handleSaveTemplate}
+                                            disabled={!templateForm.name.trim() || formLoading}
+                                            sx={{ textTransform: 'none', bgcolor: '#6366F1' }}
+                                        >
+                                            {formLoading ? <CircularProgress size={16} /> : (editingTemplate ? 'Update Template' : 'Add Template')}
+                                        </Button>
+                                    </Box>
+                                </Box>
+                            </Paper>
+
+                            {/* Existing Templates List */}
+                            <Box>
+                                <Typography sx={{ mb: 2, fontWeight: 600, fontSize: '15px' }}>Existing Templates ({userTemplates.length})</Typography>
+                                {userTemplates.length === 0 ? (
+                                    <Typography sx={{ color: '#6B7280', fontSize: '14px' }}>This user has no document templates configured.</Typography>
+                                ) : (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                        {userTemplates.map(template => (
+                                            <Paper key={template.id} sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Box>
+                                                    <Typography sx={{ fontWeight: 600, fontSize: '14px', color: '#1F2937' }}>{template.name}</Typography>
+                                                    <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>
+                                                        {template.description || 'No description'} • {template.fields?.length || 0} fields
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                    <Tooltip title="Edit">
+                                                        <IconButton size="small" onClick={() => handleEditTemplateForm(template)} disabled={editingTemplate?.id === template.id}>
+                                                            <EditIcon sx={{ fontSize: 18, color: '#6366F1' }} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Delete">
+                                                        <IconButton size="small" onClick={() => handleDeleteTemplate(template.id)}>
+                                                            <DeleteIcon sx={{ fontSize: 18, color: '#EF4444' }} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Box>
+                                            </Paper>
+                                        ))}
+                                    </Box>
+                                )}
+                            </Box>
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
+                    <Button onClick={() => setTemplatesDialog(false)} variant="outlined" sx={{ textTransform: 'none' }}>Close</Button>
                 </DialogActions>
             </Dialog>
 
