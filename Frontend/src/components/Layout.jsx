@@ -33,7 +33,10 @@ const Layout = ({ children, user }) => {
           flexDirection: 'column'
         }}
       >
-        <Box sx={{ flexGrow: 1 }}>
+        <Box sx={{
+          flexGrow: 1, py: 10,
+          px: 3,
+        }}>
           {children}
         </Box>
 
