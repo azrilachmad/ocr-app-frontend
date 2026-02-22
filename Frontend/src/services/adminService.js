@@ -72,3 +72,77 @@ export const getActivityLog = async (params = {}) => {
     const response = await api.get('/admin/activity', { params });
     return response.data;
 };
+
+/**
+ * Get all documents (admin)
+ */
+export const getAdminDocuments = async (params = {}) => {
+    const response = await api.get('/admin/documents', { params });
+    return response.data;
+};
+
+/**
+ * Delete document (admin)
+ */
+export const deleteAdminDocument = async (id) => {
+    const response = await api.delete(`/admin/documents/${id}`);
+    return response.data;
+};
+
+/**
+ * Get system configuration (admin)
+ */
+export const getSystemConfig = async () => {
+    const response = await api.get('/admin/system-config');
+    return response.data;
+};
+
+/**
+ * Update system configuration (admin)
+ */
+export const updateSystemConfig = async (configData) => {
+    const response = await api.put('/admin/system-config', configData);
+    return response.data;
+};
+
+/**
+ * Get scan statistics (admin)
+ */
+export const getScanStatistics = async (params = {}) => {
+    const response = await api.get('/admin/scan-statistics', { params });
+    return response.data;
+};
+
+// --- User Document Type Management ---
+
+/**
+ * Get document types for a specific user
+ */
+export const getUserDocumentTypes = async (userId) => {
+    const response = await api.get(`/admin/users/${userId}/document-types`);
+    return response.data;
+};
+
+/**
+ * Create document type for a specific user
+ */
+export const createUserDocumentType = async (userId, data) => {
+    const response = await api.post(`/admin/users/${userId}/document-types`, data);
+    return response.data;
+};
+
+/**
+ * Update document type for a specific user
+ */
+export const updateUserDocumentType = async (userId, typeId, data) => {
+    const response = await api.put(`/admin/users/${userId}/document-types/${typeId}`, data);
+    return response.data;
+};
+
+/**
+ * Delete document type for a specific user
+ */
+export const deleteUserDocumentType = async (userId, typeId) => {
+    const response = await api.delete(`/admin/users/${userId}/document-types/${typeId}`);
+    return response.data;
+};
