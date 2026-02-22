@@ -20,20 +20,30 @@ import {
   ToggleOn as ToggleOnIcon,
   Timeline as TimelineIcon,
   AdminPanelSettings as AdminIcon,
-  Shield as ShieldIcon
+  Shield as ShieldIcon,
+  Description as DescriptionIcon,
+  BarChart as BarChartIcon,
+  Chat as ChatIcon
 } from '@mui/icons-material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle, user }) => {
   const location = useLocation();
 
-  // Regular user navigation
+  // Base user navigation (always show Dashboard and Settings)
   const userNavItems = [
     { text: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
-    { text: 'Upload Document', path: '/upload', icon: <CloudUploadIcon /> },
-    { text: 'Scan History', path: '/history', icon: <HistoryIcon /> },
-    { text: 'Settings', path: '/settings', icon: <SettingsIcon /> },
   ];
+
+  // Add conditional items based on user features
+  if (user?.features?.knowledgeBase !== false) {
+    userNavItems.push({ text: 'Knowledge Base', path: '/knowledge-base', icon: <ChatIcon /> });
+  }
+
+  // These might not be toggled right now, but we can add safeguards
+  userNavItems.push({ text: 'Upload Document', path: '/upload', icon: <CloudUploadIcon /> });
+  userNavItems.push({ text: 'Scan History', path: '/history', icon: <HistoryIcon /> });
+  userNavItems.push({ text: 'Settings', path: '/settings', icon: <SettingsIcon /> });
 
   // Superadmin navigation
   const adminNavItems = [
@@ -41,6 +51,9 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle, user }) => {
     { text: 'User Management', path: '/admin/users', icon: <PeopleIcon /> },
     { text: 'Feature Toggle', path: '/admin/features', icon: <ToggleOnIcon /> },
     { text: 'Activity Log', path: '/admin/activity', icon: <TimelineIcon /> },
+    { text: 'Documents', path: '/admin/documents', icon: <DescriptionIcon /> },
+    { text: 'System Settings', path: '/admin/settings', icon: <SettingsIcon /> },
+    { text: 'Scan Statistics', path: '/admin/statistics', icon: <BarChartIcon /> },
   ];
 
   const isSuperAdmin = user?.role === 'superadmin';
