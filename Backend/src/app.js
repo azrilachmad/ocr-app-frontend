@@ -13,6 +13,7 @@ const statsRoutes = require('./routes/stats');
 const settingsRoutes = require('./routes/settings');
 const ocrRoutes = require('./routes/ocr');
 const adminRoutes = require('./routes/admin');
+const chatRoutes = require('./routes/chat');
 
 // Import middleware
 const { errorHandler, notFound } = require('./middleware/errorHandler');
@@ -29,7 +30,7 @@ app.use(helmet({
 // Rate limiting - general API
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per window per IP
+    max: process.env.NODE_ENV === 'development' ? 10000 : 100, // 100 requests per window per IP
     message: {
         success: false,
         message: 'Too many requests, please try again later.'
@@ -41,7 +42,7 @@ const generalLimiter = rateLimit({
 // Rate limiting - auth endpoints (stricter)
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // 10 login attempts per window
+    max: process.env.NODE_ENV === 'development' ? 1000 : 10, // 10 login attempts per window
     message: {
         success: false,
         message: 'Too many login attempts, please try again after 15 minutes.'
@@ -53,7 +54,7 @@ const authLimiter = rateLimit({
 // Rate limiting - OCR processing (prevent abuse)
 const ocrLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 10, // 10 OCR requests per minute
+    max: process.env.NODE_ENV === 'development' ? 100 : 10, // 10 OCR requests per minute
     message: {
         success: false,
         message: 'Too many OCR requests, please slow down.'
@@ -148,6 +149,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/ocr', ocrRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/chat', chatRoutes);
 
 // 404 handler
 app.use(notFound);
