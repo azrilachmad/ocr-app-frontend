@@ -27,7 +27,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { processDocuments, submitProcessedData, getSettings, rescanDocument, getDocumentById, getDocumentFileUrl } from '../../services/apiService';
+import { processDocuments, submitProcessedData, getSettings, rescanDocument, getDocumentById, getDocumentFileUrl, getDocumentTypes } from '../../services/apiService';
 
 // --- Helper Components ---
 
@@ -294,6 +294,27 @@ const UploadPhase = ({
     handleRemoveFile, handleProcess, isProcessing
 }) => {
     const fileInputRef = useRef();
+    const [availableTemplates, setAvailableTemplates] = useState([]);
+    const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+
+    // Fetch document templates on component mount
+    useEffect(() => {
+        const fetchTemplates = async () => {
+            setIsLoadingTemplates(true);
+            try {
+                const templatesData = await getDocumentTypes();
+                // Filter only active templates
+                const activeTemplates = templatesData.filter(t => t.active !== false);
+                setAvailableTemplates(activeTemplates);
+            } catch (error) {
+                console.error("Failed to fetch document templates:", error);
+            } finally {
+                setIsLoadingTemplates(false);
+            }
+        };
+
+        fetchTemplates();
+    }, []);
 
     // Auto-force Auto Detect when multiple files are selected
     const isMultipleFiles = selectedFiles.length > 1;
@@ -442,11 +463,18 @@ const UploadPhase = ({
                                 }}
                             >
                                 <MenuItem value="auto">Auto Detect</MenuItem>
-                                <MenuItem value="KTP">KTP</MenuItem>
-                                <MenuItem value="KK">KK</MenuItem>
-                                <MenuItem value="STNK">STNK</MenuItem>
-                                <MenuItem value="BPKB">BPKB</MenuItem>
-                                <MenuItem value="Invoice">Invoice</MenuItem>
+                                {isLoadingTemplates ? (
+                                    <MenuItem disabled value="">
+                                        <CircularProgress size={16} sx={{ mr: 1, color: '#9CA3AF' }} />
+                                        Loading templates...
+                                    </MenuItem>
+                                ) : (
+                                    availableTemplates.map((template) => (
+                                        <MenuItem key={template.id} value={template.name}>
+                                            {template.name}
+                                        </MenuItem>
+                                    ))
+                                )}
                             </Select>
                         </FormControl>
                         {isMultipleFiles && (
@@ -783,7 +811,6 @@ function DocumentUploadPage() {
 
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB', pt: 3, pb: 6 }}>
-            <Toolbar sx={{ minHeight: { xs: 56, sm: 89 } }} />
             <Container maxWidth="lg">
 
                 {/* Upload Section */}
