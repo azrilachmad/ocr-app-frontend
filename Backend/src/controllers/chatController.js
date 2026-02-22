@@ -1,4 +1,4 @@
-const { ChatSession, ChatMessage, Document } = require('../models');
+const { ChatSession, ChatMessage, Document, Settings } = require('../models');
 const aiService = require('../services/aiService');
 
 /**
@@ -119,7 +119,11 @@ const sendMessage = async (req, res) => {
 
         // Update session title if it's the first message
         if (history.length === 0 && session.title === 'New Chat') {
-            const newTitle = await aiService.generateChatTitle(prompt);
+            const userSettings = await Settings.findOne({ where: { userId: req.userId } });
+            const aiModel = userSettings?.aiModel || 'gemini-1.5-flash';
+            const apiKey = userSettings?.apiKey || null;
+
+            const newTitle = await aiService.generateChatTitle(prompt, aiModel, apiKey);
             session.title = newTitle;
             // We also update timestamp to put it at top of list
             session.changed('updatedAt', true);
@@ -145,8 +149,13 @@ const sendMessage = async (req, res) => {
             }
         });
 
+        // 4.5 Fetch User AI Settings
+        const userSettings = await Settings.findOne({ where: { userId: req.userId } });
+        const aiModel = userSettings?.aiModel || 'gemini-1.5-flash';
+        const apiKey = userSettings?.apiKey || null;
+
         // 5. Generate AI Response
-        const aiResponseText = await aiService.generateChatResponse(history, prompt, documentContext);
+        const aiResponseText = await aiService.generateChatResponse(history, prompt, documentContext, aiModel, apiKey);
 
         // 6. Save AI Message
         const assistantMessage = await ChatMessage.create({

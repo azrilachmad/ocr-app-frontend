@@ -8,11 +8,15 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
  * @param {Array} history - Array of previous messages { role: 'user' | 'assistant', content: string }
  * @param {string} prompt - The new user prompt
  * @param {string} documentContext - The OCR text from user's documents to be used as context
+ * @param {string} aiModel - The Gemini model to use
+ * @param {string} apiKey - The dynamic API key of the user
  * @returns {Promise<string>} The AI's response text
  */
-const generateChatResponse = async (history, prompt, documentContext = '') => {
+const generateChatResponse = async (history, prompt, documentContext = '', aiModel = 'gemini-1.5-flash', apiKey = null) => {
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Fast and capable model
+        const keyToUse = apiKey || process.env.GEMINI_API_KEY || 'dummy_key';
+        const genAI = new GoogleGenerativeAI(keyToUse);
+        const model = genAI.getGenerativeModel({ model: aiModel });
 
         // Construct the system instruction/context
         let systemInstruction = "You are a helpful and intelligent AI assistant for an OCR (Optical Character Recognition) application. Your goal is to help the user understand and analyze their scanned documents. Be concise and polite.";
@@ -56,10 +60,14 @@ const generateChatResponse = async (history, prompt, documentContext = '') => {
 /**
  * Summarizes the first user prompt to generate a short title for the chat session.
  * @param {string} prompt - The first user prompt
+ * @param {string} aiModel - The Gemini model to use
+ * @param {string} apiKey - The dynamic API key of the user
  */
-const generateChatTitle = async (prompt) => {
+const generateChatTitle = async (prompt, aiModel = 'gemini-1.5-flash', apiKey = null) => {
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const keyToUse = apiKey || process.env.GEMINI_API_KEY || 'dummy_key';
+        const genAI = new GoogleGenerativeAI(keyToUse);
+        const model = genAI.getGenerativeModel({ model: aiModel });
         const result = await model.generateContent(`Generate a very short, concise title (max 4-5 words) summarizing this request: "${prompt}"`);
         const response = await result.response;
         // Clean up quotes and newlines
