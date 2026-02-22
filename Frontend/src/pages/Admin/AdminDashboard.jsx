@@ -2,17 +2,22 @@ import React, { useState, useEffect } from 'react';
 import {
     Box, Typography, Paper, Grid, Skeleton,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Chip, Avatar
+    Chip, Avatar, LinearProgress
 } from '@mui/material';
 import {
     People as PeopleIcon,
     PersonOff as PersonOffIcon,
     Description as DocIcon,
-    TrendingUp as TrendingIcon
+    TrendingUp as TrendingIcon,
+    Scanner as ScanIcon,
+    Today as TodayIcon,
+    Storage as StorageIcon,
+    CheckCircle as CheckIcon,
+    Speed as SpeedIcon
 } from '@mui/icons-material';
 import { getAdminStats } from '../../services/adminService';
 
-const StatCard = ({ title, value, icon, color, loading }) => (
+const StatCard = ({ title, value, icon, color, loading, subtitle }) => (
     <Paper
         elevation={0}
         sx={{
@@ -38,13 +43,28 @@ const StatCard = ({ title, value, icon, color, loading }) => (
             {loading ? (
                 <Skeleton width={60} height={32} />
             ) : (
-                <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#1F2937' }}>
-                    {value}
-                </Typography>
+                <>
+                    <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#1F2937' }}>
+                        {value}
+                    </Typography>
+                    {subtitle && (
+                        <Typography sx={{ fontSize: '12px', color: '#9CA3AF', mt: -0.5 }}>
+                            {subtitle}
+                        </Typography>
+                    )}
+                </>
             )}
         </Box>
     </Paper>
 );
+
+const formatStorageSize = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
 
 const AdminDashboard = () => {
     const [stats, setStats] = useState(null);
@@ -75,16 +95,24 @@ const AdminDashboard = () => {
         });
     };
 
+    const totalScans = stats?.totalDocuments || 0;
+    const completedScans = stats?.completedScans || 0;
+    const processingScans = stats?.processingScans || 0;
+    const failedScans = stats?.failedScans || 0;
+
     return (
-        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 8, md: 10 } }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 11, md: 13 } }}>
             {error && (
                 <Paper sx={{ p: 2, mb: 3, bgcolor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 2 }}>
                     <Typography sx={{ color: '#DC2626', fontSize: '14px' }}>{error}</Typography>
                 </Paper>
             )}
 
-            {/* Stats Cards */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+            {/* User Stats Cards */}
+            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#6B7280', mb: 1.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Users
+            </Typography>
+            <Grid container spacing={2.5} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard
                         title="Total Users"
@@ -105,6 +133,16 @@ const AdminDashboard = () => {
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard
+                        title="Active Today"
+                        value={stats?.activeToday || 0}
+                        icon={<TodayIcon />}
+                        color="#3B82F6"
+                        loading={loading}
+                        subtitle="Logged in today"
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <StatCard
                         title="Inactive Users"
                         value={stats?.inactiveUsers || 0}
                         icon={<PersonOffIcon />}
@@ -112,28 +150,123 @@ const AdminDashboard = () => {
                         loading={loading}
                     />
                 </Grid>
+            </Grid>
+
+            {/* Scan Stats Cards */}
+            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#6B7280', mb: 1.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Scans & Storage
+            </Typography>
+            <Grid container spacing={2.5} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard
-                        title="Total Documents"
+                        title="Total Scans"
                         value={stats?.totalDocuments || 0}
-                        icon={<DocIcon />}
+                        icon={<ScanIcon />}
+                        color="#8B5CF6"
+                        loading={loading}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <StatCard
+                        title="Scans Today"
+                        value={stats?.scansToday || 0}
+                        icon={<TodayIcon />}
                         color="#F59E0B"
+                        loading={loading}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <StatCard
+                        title="Success Rate"
+                        value={loading ? '' : `${stats?.successRate || 0}%`}
+                        icon={<SpeedIcon />}
+                        color="#10B981"
+                        loading={loading}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <StatCard
+                        title="Storage Usage"
+                        value={loading ? '' : formatStorageSize(stats?.storageUsage || 0)}
+                        icon={<StorageIcon />}
+                        color="#EC4899"
                         loading={loading}
                     />
                 </Grid>
             </Grid>
 
-            {/* Active Today */}
+            {/* Scan Status Breakdown */}
             <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid #E5E7EB', mb: 4 }}>
-                <Typography sx={{ fontWeight: 600, color: '#1F2937', mb: 0.5, fontSize: '16px' }}>
-                    Active Today
+                <Typography sx={{ fontWeight: 600, color: '#1F2937', mb: 2.5, fontSize: '16px' }}>
+                    Scan Status Breakdown
                 </Typography>
-                <Typography sx={{ fontSize: '36px', fontWeight: 700, color: '#6366F1' }}>
-                    {loading ? <Skeleton width={40} height={48} /> : stats?.activeToday || 0}
-                </Typography>
-                <Typography sx={{ color: '#6B7280', fontSize: '13px' }}>
-                    Users logged in today
-                </Typography>
+                {loading ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Skeleton height={40} />
+                        <Skeleton height={40} />
+                        <Skeleton height={40} />
+                    </Box>
+                ) : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        {/* Completed */}
+                        <Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CheckIcon sx={{ fontSize: 16, color: '#10B981' }} />
+                                    <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>Completed</Typography>
+                                </Box>
+                                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>{completedScans}</Typography>
+                            </Box>
+                            <LinearProgress
+                                variant="determinate"
+                                value={totalScans > 0 ? (completedScans / totalScans) * 100 : 0}
+                                sx={{
+                                    height: 8, borderRadius: 4,
+                                    bgcolor: '#D1FAE5',
+                                    '& .MuiLinearProgress-bar': { bgcolor: '#10B981', borderRadius: 4 }
+                                }}
+                            />
+                        </Box>
+                        {/* Processing */}
+                        <Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F59E0B' }} />
+                                    <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>Processing</Typography>
+                                </Box>
+                                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>{processingScans}</Typography>
+                            </Box>
+                            <LinearProgress
+                                variant="determinate"
+                                value={totalScans > 0 ? (processingScans / totalScans) * 100 : 0}
+                                sx={{
+                                    height: 8, borderRadius: 4,
+                                    bgcolor: '#FEF3C7',
+                                    '& .MuiLinearProgress-bar': { bgcolor: '#F59E0B', borderRadius: 4 }
+                                }}
+                            />
+                        </Box>
+                        {/* Failed */}
+                        <Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
+                                    <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>Failed</Typography>
+                                </Box>
+                                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>{failedScans}</Typography>
+                            </Box>
+                            <LinearProgress
+                                variant="determinate"
+                                value={totalScans > 0 ? (failedScans / totalScans) * 100 : 0}
+                                sx={{
+                                    height: 8, borderRadius: 4,
+                                    bgcolor: '#FEE2E2',
+                                    '& .MuiLinearProgress-bar': { bgcolor: '#EF4444', borderRadius: 4 }
+                                }}
+                            />
+                        </Box>
+                    </Box>
+                )}
             </Paper>
 
             {/* Recent Users */}
