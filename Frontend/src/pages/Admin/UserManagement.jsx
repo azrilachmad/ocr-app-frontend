@@ -11,7 +11,6 @@ import {
     Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
-    Delete as DeleteIcon,
     LockReset as ResetIcon,
     Visibility as ViewIcon,
     FileCopy as FileCopyIcon

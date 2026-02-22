@@ -48,13 +48,20 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle, user }) => {
   // Superadmin navigation
   const adminNavItems = [
     { text: 'Admin Dashboard', path: '/admin/dashboard', icon: <DashboardIcon /> },
+  ];
+
+  if (user?.features?.knowledgeBase !== false) {
+    adminNavItems.push({ text: 'Knowledge Base', path: '/knowledge-base', icon: <ChatIcon /> });
+  }
+
+  adminNavItems.push(
     { text: 'User Management', path: '/admin/users', icon: <PeopleIcon /> },
     { text: 'Feature Toggle', path: '/admin/features', icon: <ToggleOnIcon /> },
     { text: 'Activity Log', path: '/admin/activity', icon: <TimelineIcon /> },
     { text: 'Documents', path: '/admin/documents', icon: <DescriptionIcon /> },
     { text: 'System Settings', path: '/admin/settings', icon: <SettingsIcon /> },
-    { text: 'Scan Statistics', path: '/admin/statistics', icon: <BarChartIcon /> },
-  ];
+    { text: 'Scan Statistics', path: '/admin/statistics', icon: <BarChartIcon /> }
+  );
 
   const isSuperAdmin = user?.role === 'superadmin';
   const navItems = isSuperAdmin ? adminNavItems : userNavItems;

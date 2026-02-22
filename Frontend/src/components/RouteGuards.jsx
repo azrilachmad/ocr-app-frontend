@@ -47,8 +47,8 @@ export const ProtectedRoute = ({ children }) => {
         return <Navigate to="/" state={{ from: location }} replace />;
     }
 
-    // Redirect superadmin to admin dashboard if trying to access user pages
-    if (user.role === 'superadmin' && !location.pathname.startsWith('/admin')) {
+    // Redirect superadmin to admin dashboard if trying to access user pages, except knowledge base
+    if (user.role === 'superadmin' && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/knowledge-base')) {
         return <Navigate to="/admin/dashboard" replace />;
     }
 
