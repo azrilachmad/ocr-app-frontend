@@ -234,8 +234,6 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
-      <Toolbar sx={{ minHeight: { xs: 56, sm: 89 } }} />
-
       <Container maxWidth="xl" sx={{ py: 4 }}>
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
