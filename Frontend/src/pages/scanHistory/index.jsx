@@ -432,9 +432,7 @@ const ScanHistoryPage = () => {
   };
 
   return (
-    <Box sx={{ bgcolor: '#F9FAFB', minHeight: '100vh', pb: 4 }}>
-      <Toolbar sx={{ minHeight: { xs: 56, sm: 89 } }} />
-
+    <Box sx={{ bgcolor: '#F9FAFB', minHeight: '100vh', pb: 4, pt: 3 }}>
       {/* Header Actions */}
       <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #E5E7EB', py: 2 }}>
         <Container maxWidth="xl">
