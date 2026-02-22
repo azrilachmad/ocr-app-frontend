@@ -7,6 +7,15 @@ const DocumentType = sequelize.define('DocumentType', {
         primaryKey: true,
         autoIncrement: true
     },
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'users',
+            key: 'id'
+        },
+        onDelete: 'CASCADE',
+    },
     name: {
         type: DataTypes.STRING(100),
         allowNull: false
