@@ -61,7 +61,7 @@ const FeatureToggle = () => {
     };
 
     return (
-        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 8, md: 10 } }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 11, md: 13 } }}>
             {/* Feature Legend */}
             <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 2, border: '1px solid #E5E7EB', display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                 {FEATURE_LIST.map(f => (
