@@ -53,7 +53,7 @@ const ActivityLog = () => {
     };
 
     return (
-        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 8, md: 10 } }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, pt: { xs: 11, md: 13 } }}>
             {/* Search */}
             <TextField
                 size="small"
