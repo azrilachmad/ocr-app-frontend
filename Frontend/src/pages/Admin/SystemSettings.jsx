@@ -15,11 +15,11 @@ import {
 import { getSystemConfig, updateSystemConfig } from '../../services/adminService';
 
 const CONFIG_META = {
-    max_upload_size: { label: 'Max Upload Size', icon: <UploadIcon />, suffix: 'MB', color: '#6366F1', type: 'number' },
+    max_upload_size: { label: 'Max Upload Size', icon: <UploadIcon />, suffix: 'MB', color: '#6366F1', type: 'number', help: 'Leave empty for default' },
     allowed_file_types: { label: 'Allowed File Types', icon: <FileIcon />, suffix: '', color: '#8B5CF6', type: 'text' },
-    max_scans_per_day: { label: 'Max Scans Per Day', icon: <SpeedIcon />, suffix: 'scans', color: '#EC4899', type: 'number' },
+    max_scans_per_day: { label: 'Max Scans Per Day', icon: <SpeedIcon />, suffix: 'scans', color: '#EC4899', type: 'number', help: '(Leave empty for Unlimited)' },
     auto_delete_unsaved_days: { label: 'Auto-Delete Unsaved After', icon: <ScheduleIcon />, suffix: 'days', color: '#F59E0B', type: 'number' },
-    default_ai_model: { label: 'Default AI Model', icon: <AiIcon />, suffix: '', color: '#10B981', type: 'text' },
+    allowed_ai_models: { label: 'Allowed AI Models', icon: <AiIcon />, suffix: '', color: '#10B981', type: 'text' },
     maintenance_mode: { label: 'Maintenance Mode', icon: <BuildIcon />, suffix: '', color: '#EF4444', type: 'boolean' }
 };
 
@@ -121,6 +121,11 @@ const SystemSettings = () => {
                         <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#1F2937' }}>
                             {meta.label}
                         </Typography>
+                        {meta.help && (
+                            <Typography sx={{ fontSize: '12px', color: '#6B7280', mt: 0.5 }}>
+                                {meta.help}
+                            </Typography>
+                        )}
                     </Box>
                 </Box>
                 <TextField
@@ -138,11 +143,11 @@ const SystemSettings = () => {
                     }}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: '#F9FAFB' } }}
                 />
-                {key === 'allowed_file_types' && (
+                {(key === 'allowed_file_types' || key === 'allowed_ai_models') && (
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1.5 }}>
-                        {value.split(',').filter(Boolean).map(ext => (
-                            <Chip key={ext} label={`.${ext.trim()}`} size="small"
-                                sx={{ bgcolor: '#EDE9FE', color: '#7C3AED', fontWeight: 500, fontSize: '11px', height: 22 }} />
+                        {value.split(',').filter(Boolean).map(item => (
+                            <Chip key={item} label={key === 'allowed_file_types' ? `.${item.trim()}` : item.trim()} size="small"
+                                sx={{ bgcolor: key === 'allowed_file_types' ? '#EDE9FE' : '#D1FAE5', color: key === 'allowed_file_types' ? '#7C3AED' : '#047857', fontWeight: 500, fontSize: '11px', height: 22 }} />
                         ))}
                     </Box>
                 )}
