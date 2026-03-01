@@ -72,6 +72,17 @@ User.prototype.comparePassword = async function (candidatePassword) {
 User.prototype.toJSON = function () {
     const values = { ...this.get() };
     delete values.password;
+
+    // Ensure features is an object (some DB dialects return JSON as string)
+    if (typeof values.features === 'string') {
+        try {
+            values.features = JSON.parse(values.features);
+        } catch (e) {
+            console.error('Failed to parse user features in toJSON:', e);
+            values.features = {};
+        }
+    }
+
     return values;
 };
 
