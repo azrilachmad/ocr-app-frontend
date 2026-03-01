@@ -29,8 +29,8 @@ const Settings = sequelize.define('Settings', {
         field: 'confidence_threshold'
     },
     languageDetection: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
+        type: DataTypes.STRING(10),
+        defaultValue: 'ID',
         field: 'language_detection'
     },
     autoCorrect: {
