@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box, Typography, TextField, Button, Paper, InputAdornment,
@@ -9,7 +9,8 @@ import {
     FolderOpen as FolderIcon, TrendingUp as TrendIcon, Logout as LogoutIcon,
     Description as DocIcon, School as SchoolIcon,
     AccountBalance as MuseumIcon, Gavel as PolicyIcon,
-    Assessment as ReportIcon, Lightbulb as InsightIcon
+    Assessment as ReportIcon, Lightbulb as InsightIcon,
+    PictureAsPdf as PdfIcon, Close as CloseIcon
 } from '@mui/icons-material';
 import { logout, getCategories, searchKB } from '../../services/api';
 import { useAuth } from '../../App';
@@ -30,6 +31,13 @@ const Home = () => {
     const [searchResults, setSearchResults] = useState(null);
     const [searching, setSearching] = useState(false);
 
+    // Live search suggestions
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+    const debounceRef = useRef(null);
+    const searchBoxRef = useRef(null);
+
     useEffect(() => {
         getCategories()
             .then(res => setCategories(res.data?.data || []))
@@ -37,13 +45,78 @@ const Home = () => {
             .finally(() => setLoading(false));
     }, []);
 
+    // Click outside to close suggestions
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const handleLogout = async () => {
         try { await logout(); } catch (e) { /* ignore */ }
         setUser(null);
     };
 
+    // Debounced live search — triggers 300ms after user stops typing
+    const handleSearchInput = (value) => {
+        setSearchQuery(value);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        if (!value.trim() || value.trim().length < 2) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        setSuggestionsLoading(true);
+        setShowSuggestions(true);
+
+        debounceRef.current = setTimeout(async () => {
+            try {
+                const res = await searchKB(value);
+                const data = res.data?.data || {};
+                const items = [];
+
+                // Add articles as suggestions
+                (data.articles || []).forEach(art => {
+                    items.push({ type: 'article', title: art.title, subtitle: art.summary, slug: art.slug, icon: 'article' });
+                });
+                // Add files as suggestions
+                (data.files || []).forEach(file => {
+                    items.push({ type: 'file', title: file.fileName, subtitle: file.fileSize, id: file.id, icon: 'file' });
+                });
+                // Add OCR documents
+                (data.documents || []).forEach(doc => {
+                    items.push({ type: 'document', title: doc.fileName, subtitle: 'OCR Document', icon: 'doc' });
+                });
+
+                setSuggestions(items.slice(0, 8)); // max 8 suggestions
+            } catch (err) {
+                console.error(err);
+                setSuggestions([]);
+            } finally {
+                setSuggestionsLoading(false);
+            }
+        }, 300);
+    };
+
+    const handleSuggestionClick = (item) => {
+        setShowSuggestions(false);
+        if (item.type === 'article') {
+            navigate(`/articles/${item.slug}`);
+        } else if (item.type === 'file') {
+            window.open(`/api/kb/files/${item.id}/download`, '_blank');
+        }
+        // For OCR documents, just close
+    };
+
     const handleSearch = async (e) => {
         e.preventDefault();
+        setShowSuggestions(false);
         if (!searchQuery.trim()) { setSearchResults(null); return; }
         try {
             setSearching(true);
@@ -134,31 +207,112 @@ const Home = () => {
                         Cari artikel, dokumen, laporan, atau tanya langsung ke AI Assistant
                     </Typography>
 
-                    {/* Search Bar */}
-                    <Paper component="form" onSubmit={handleSearch} elevation={0} sx={{
-                        display: 'flex', alignItems: 'center', maxWidth: 560, mx: 'auto',
-                        borderRadius: 3, overflow: 'hidden', border: '2px solid rgba(99,102,241,0.3)',
-                        transition: 'border-color 0.3s', '&:focus-within': { borderColor: '#6366F1' }
-                    }}>
-                        <TextField
-                            fullWidth placeholder="Cari dokumen, artikel, atau topik..."
-                            value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                            InputProps={{
-                                startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#94A3B8' }} /></InputAdornment>,
-                                sx: { '& fieldset': { border: 'none' } }
-                            }}
-                            sx={{ flex: 1 }}
-                        />
-                        <Button type="submit" variant="contained" disabled={searching} sx={{
-                            m: 0.5, px: 3, borderRadius: 2, background: 'linear-gradient(135deg, #4F46E5, #6366F1)',
+                    {/* Search Bar with Live Suggestions */}
+                    <Box ref={searchBoxRef} sx={{ position: 'relative', maxWidth: 600, mx: 'auto' }}>
+                        <Paper component="form" onSubmit={handleSearch} elevation={0} sx={{
+                            display: 'flex', alignItems: 'center',
+                            borderRadius: showSuggestions && suggestions.length > 0 ? '24px 24px 0 0' : '24px',
+                            overflow: 'hidden',
+                            border: '2px solid rgba(99,102,241,0.3)',
+                            transition: 'all 0.2s',
+                            '&:focus-within': { borderColor: '#6366F1', boxShadow: '0 4px 20px rgba(99,102,241,0.15)' }
                         }}>
-                            {searching ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Cari'}
-                        </Button>
-                    </Paper>
+                            <TextField
+                                fullWidth placeholder="Cari dokumen, artikel, atau topik..."
+                                autoComplete="off"
+                                value={searchQuery}
+                                onChange={(e) => handleSearchInput(e.target.value)}
+                                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                                onKeyDown={(e) => { if (e.key === 'Escape') setShowSuggestions(false); }}
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#94A3B8', ml: 1 }} /></InputAdornment>,
+                                    endAdornment: searchQuery && (
+                                        <InputAdornment position="end">
+                                            <IconButton size="small" onClick={() => { setSearchQuery(''); setSuggestions([]); setShowSuggestions(false); setSearchResults(null); }}>
+                                                <CloseIcon sx={{ fontSize: 18, color: '#94A3B8' }} />
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                    sx: { '& fieldset': { border: 'none' }, fontSize: '15px' }
+                                }}
+                                sx={{ flex: 1 }}
+                            />
+                            <Button type="submit" variant="contained" disabled={searching} sx={{
+                                m: 0.5, px: 3, borderRadius: '20px', background: 'linear-gradient(135deg, #4F46E5, #6366F1)',
+                            }}>
+                                {searching ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Cari'}
+                            </Button>
+                        </Paper>
+
+                        {/* Live Suggestions Dropdown */}
+                        {showSuggestions && (suggestions.length > 0 || suggestionsLoading) && (
+                            <Paper elevation={8} sx={{
+                                position: 'absolute', top: '100%', left: 0, right: 0,
+                                borderRadius: '0 0 16px 16px',
+                                border: '2px solid rgba(99,102,241,0.3)', borderTop: 'none',
+                                bgcolor: 'white', zIndex: 999,
+                                maxHeight: 400, overflowY: 'auto',
+                                boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
+                            }}>
+                                {suggestionsLoading && suggestions.length === 0 ? (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2.5, py: 2 }}>
+                                        <CircularProgress size={18} sx={{ color: '#94A3B8' }} />
+                                        <Typography sx={{ fontSize: '14px', color: '#94A3B8' }}>Mencari...</Typography>
+                                    </Box>
+                                ) : (
+                                    suggestions.map((item, i) => (
+                                        <Box key={i}
+                                            onClick={() => handleSuggestionClick(item)}
+                                            sx={{
+                                                display: 'flex', alignItems: 'center', gap: 2,
+                                                px: 2.5, py: 1.5, cursor: 'pointer',
+                                                borderTop: i > 0 ? '1px solid #F1F5F9' : 'none',
+                                                transition: 'background 0.15s',
+                                                '&:hover': { bgcolor: '#F8FAFC' },
+                                                '&:last-child': { borderRadius: '0 0 14px 14px' }
+                                            }}
+                                        >
+                                            {item.type === 'file' ? (
+                                                <PdfIcon sx={{ fontSize: 20, color: '#EF4444', flexShrink: 0 }} />
+                                            ) : item.type === 'article' ? (
+                                                <ArticleIcon sx={{ fontSize: 20, color: '#6366F1', flexShrink: 0 }} />
+                                            ) : (
+                                                <SearchIcon sx={{ fontSize: 20, color: '#94A3B8', flexShrink: 0 }} />
+                                            )}
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                <Typography sx={{ fontSize: '14px', color: '#1F2937', fontWeight: 500 }} noWrap>
+                                                    {item.title}
+                                                </Typography>
+                                                {item.subtitle && (
+                                                    <Typography sx={{ fontSize: '12px', color: '#94A3B8' }} noWrap>
+                                                        {item.subtitle}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                            <Typography sx={{ fontSize: '11px', color: '#CBD5E1', flexShrink: 0, textTransform: 'capitalize' }}>
+                                                {item.type === 'article' ? 'Artikel' : item.type === 'file' ? 'File' : 'Dokumen'}
+                                            </Typography>
+                                        </Box>
+                                    ))
+                                )}
+
+                                {!suggestionsLoading && suggestions.length > 0 && (
+                                    <Box sx={{
+                                        px: 2.5, py: 1.5, borderTop: '1px solid #E2E8F0',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <Button size="small" onClick={handleSearch} sx={{ fontSize: '12px', color: '#6366F1' }}>
+                                            Lihat semua hasil untuk "{searchQuery}"
+                                        </Button>
+                                    </Box>
+                                )}
+                            </Paper>
+                        )}
+                    </Box>
                 </Box>
             </Box>
 
-            {/* Search Results */}
+            {/* Full Search Results */}
             {searchResults && (
                 <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, py: 4 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
