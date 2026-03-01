@@ -5,6 +5,8 @@ import {
 } from '@mui/material';
 import { Send as SendIcon, Add as AddIcon, Delete as DeleteIcon, Person as PersonIcon } from '@mui/icons-material';
 import { SmartToy as BotIcon } from '@mui/icons-material';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import chatService from '../../services/chatService';
 
 const KnowledgeBase = () => {
@@ -145,10 +147,10 @@ const KnowledgeBase = () => {
     };
 
     return (
-        <Box sx={{ display: 'flex', height: 'calc(100vh - 120px)', gap: 3, pt: 3 }}>
+        <Box sx={{ display: 'flex', height: 'calc(100vh - 120px)', gap: 3, pt: 3, mt: 8 }}>
 
             {/* Sidebar (History) */}
-            <Paper sx={{ width: 280, display: 'flex', flexDirection: 'column', borderRadius: 3, overflow: 'hidden' }}>
+            <Paper sx={{ width: 280, flexShrink: 0, display: { xs: 'none', md: 'flex' }, flexDirection: 'column', borderRadius: 3, overflow: 'hidden' }}>
                 <Box sx={{ p: 2, borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600 }}>Chat History</Typography>
                     <Tooltip title="New Chat">
@@ -219,9 +221,32 @@ const KnowledgeBase = () => {
                                 borderRadius: msg.role === 'user' ? '20px 20px 0 20px' : '20px 20px 20px 0',
                                 boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                                 whiteSpace: 'pre-wrap',
-                                border: msg.role !== 'user' ? '1px solid #E5E7EB' : 'none'
+                                wordBreak: 'break-word',
+                                border: msg.role !== 'user' ? '1px solid #E5E7EB' : 'none',
+                                overflowX: 'auto'
                             }}>
-                                <Typography sx={{ fontSize: '15px', lineHeight: 1.5 }}>{msg.content}</Typography>
+                                {msg.role === 'user' ? (
+                                    <Typography sx={{ fontSize: '15px', lineHeight: 1.5 }}>
+                                        {msg.content}
+                                    </Typography>
+                                ) : (
+                                    <Box className="markdown-body" sx={{
+                                        fontSize: '15px',
+                                        lineHeight: 1.6,
+                                        '& p': { margin: '0 0 10px 0', '&:last-child': { mb: 0 } },
+                                        '& table': { borderCollapse: 'collapse', width: '100%', mb: 2 },
+                                        '& th, & td': { border: '1px solid #E5E7EB', padding: '8px 12px', textAlign: 'left' },
+                                        '& th': { backgroundColor: '#F9FAFB', fontWeight: 600 },
+                                        '& ul, & ol': { margin: '0 0 10px 0', paddingLeft: '24px' },
+                                        '& h1, & h2, & h3, & h4': { margin: '16px 0 8px 0', fontWeight: 600 },
+                                        '& h1': { fontSize: '1.4em' }, '& h2': { fontSize: '1.2em' }, '& h3': { fontSize: '1.1em' },
+                                        '& code': { bgcolor: '#F3F4F6', p: '2px 6px', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.9em' }
+                                    }}>
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {msg.content}
+                                        </ReactMarkdown>
+                                    </Box>
+                                )}
                             </Box>
                             {msg.role === 'user' && (
                                 <Avatar sx={{ bgcolor: '#9CA3AF', ml: 2, width: 36, height: 36 }}>
