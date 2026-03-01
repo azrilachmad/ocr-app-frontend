@@ -15,9 +15,16 @@ const getSettings = async (req, res, next) => {
             settings = await Settings.create({ userId: req.userId });
         }
 
+        const { SystemConfig } = require('../models');
+        const allowedModelsConfig = await SystemConfig.findOne({ where: { key: 'allowed_ai_models' } });
+        const allowedModels = allowedModelsConfig ? allowedModelsConfig.value.split(',').map(m => m.trim()) : ['gemini-2.5-flash'];
+
         res.json({
             success: true,
-            data: settings
+            data: {
+                ...settings.toJSON(),
+                allowedAiModels: allowedModels
+            }
         });
     } catch (error) {
         next(error);
@@ -34,17 +41,26 @@ const updateSettings = async (req, res, next) => {
             where: { userId: req.userId }
         });
 
+        const { aiModel, apiKey, confidenceThreshold, languageDetection, autoCorrect } = req.body;
+
+        let scaledThreshold = undefined;
+        if (confidenceThreshold !== undefined) {
+            scaledThreshold = parseFloat(confidenceThreshold) / 100;
+        }
+
         if (!settings) {
             settings = await Settings.create({
                 userId: req.userId,
-                ...req.body
+                aiModel,
+                apiKey,
+                confidenceThreshold: scaledThreshold,
+                languageDetection,
+                autoCorrect
             });
         } else {
-            const { aiModel, apiKey, confidenceThreshold, languageDetection, autoCorrect } = req.body;
-
             if (aiModel !== undefined) settings.aiModel = aiModel;
             if (apiKey !== undefined) settings.apiKey = apiKey;
-            if (confidenceThreshold !== undefined) settings.confidenceThreshold = confidenceThreshold;
+            if (scaledThreshold !== undefined) settings.confidenceThreshold = scaledThreshold;
             if (languageDetection !== undefined) settings.languageDetection = languageDetection;
             if (autoCorrect !== undefined) settings.autoCorrect = autoCorrect;
 
@@ -74,9 +90,28 @@ const getAllDocumentTypes = async (req, res, next) => {
             order: [['name', 'ASC']]
         });
 
+        const parsedDocTypes = documentTypes.map(dt => {
+            const docJson = dt.toJSON();
+            // Handle potentially double-stringified JSON fields
+            if (typeof docJson.fields === 'string') {
+                try {
+                    let parsed = JSON.parse(docJson.fields);
+                    if (typeof parsed === 'string') {
+                        parsed = JSON.parse(parsed);
+                    }
+                    docJson.fields = Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                    docJson.fields = [];
+                }
+            } else if (!Array.isArray(docJson.fields)) {
+                docJson.fields = [];
+            }
+            return docJson;
+        });
+
         res.json({
             success: true,
-            data: documentTypes
+            data: parsedDocTypes
         });
     } catch (error) {
         next(error);
@@ -106,10 +141,23 @@ const createDocumentType = async (req, res, next) => {
             active: active !== undefined ? active : true
         });
 
+        const docJson = documentType.toJSON();
+        if (typeof docJson.fields === 'string') {
+            try {
+                let parsed = JSON.parse(docJson.fields);
+                if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+                docJson.fields = Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                docJson.fields = [];
+            }
+        } else if (!Array.isArray(docJson.fields)) {
+            docJson.fields = [];
+        }
+
         res.status(201).json({
             success: true,
             message: 'Document type created successfully.',
-            data: documentType
+            data: docJson
         });
     } catch (error) {
         next(error);
@@ -137,15 +185,28 @@ const updateDocumentType = async (req, res, next) => {
 
         if (name !== undefined) documentType.name = name;
         if (description !== undefined) documentType.description = description;
-        if (fields !== undefined) documentType.fields = fields;
+        if (fields !== undefined) documentType.fields = Array.isArray(fields) ? JSON.stringify(fields) : fields;
         if (active !== undefined) documentType.active = active;
 
         await documentType.save();
 
+        const docJson = documentType.toJSON();
+        if (typeof docJson.fields === 'string') {
+            try {
+                let parsed = JSON.parse(docJson.fields);
+                if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+                docJson.fields = Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                docJson.fields = [];
+            }
+        } else if (!Array.isArray(docJson.fields)) {
+            docJson.fields = [];
+        }
+
         res.json({
             success: true,
             message: 'Document type updated successfully.',
-            data: documentType
+            data: docJson
         });
     } catch (error) {
         next(error);
@@ -190,7 +251,13 @@ const testAiConnection = async (req, res, next) => {
 
         // Get API key from request body only (from user settings)
         const apiKey = req.body.apiKey;
-        const aiModel = req.body.aiModel || 'gemini-2.5-flash';
+        const requestedModel = req.body.aiModel;
+
+        const { SystemConfig } = require('../models');
+        const allowedModelsConfig = await SystemConfig.findOne({ where: { key: 'allowed_ai_models' } });
+        let allowedModels = allowedModelsConfig ? allowedModelsConfig.value.split(',').map(m => m.trim()) : ['gemini-2.5-flash'];
+
+        const aiModel = requestedModel || allowedModels[0] || 'gemini-2.5-flash';
 
         if (!apiKey) {
             return res.status(400).json({
