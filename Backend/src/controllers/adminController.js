@@ -133,10 +133,23 @@ const getUsers = async (req, res, next) => {
             attributes: ['id', 'name', 'email', 'role', 'isActive', 'features', 'lastLoginAt', 'createdAt', 'updatedAt']
         });
 
+        // Parse features if returned as string
+        const parsedUsers = users.map(u => {
+            const userJson = u.toJSON ? u.toJSON() : u;
+            if (typeof userJson.features === 'string') {
+                try {
+                    userJson.features = JSON.parse(userJson.features);
+                } catch (e) {
+                    userJson.features = {};
+                }
+            }
+            return userJson;
+        });
+
         res.json({
             success: true,
             data: {
-                users,
+                users: parsedUsers,
                 pagination: {
                     total,
                     page: parseInt(page),
@@ -170,10 +183,20 @@ const getUserById = async (req, res, next) => {
         // Count user's documents
         const documentCount = await Document.count({ where: { userId: user.id } });
 
+        // Ensure features is an object
+        const userJson = user.toJSON();
+        if (typeof userJson.features === 'string') {
+            try {
+                userJson.features = JSON.parse(userJson.features);
+            } catch (e) {
+                userJson.features = {};
+            }
+        }
+
         res.json({
             success: true,
             data: {
-                ...user.toJSON(),
+                ...userJson,
                 documentCount
             }
         });
@@ -405,8 +428,8 @@ const updateUserFeatures = async (req, res, next) => {
         // Merge with existing features
         const updatedFeatures = { ...currentFeatures, ...features };
 
-        // Save back to DB
-        await user.update({ features: updatedFeatures });
+        // Save back to DB (force stringify so MySQL stores it correctly)
+        await user.update({ features: JSON.stringify(updatedFeatures) });
 
         res.json({
             success: true,
@@ -575,8 +598,16 @@ const getActivityLog = async (req, res, next) => {
         const activityData = await Promise.all(
             users.map(async (user) => {
                 const documentCount = await Document.count({ where: { userId: user.id } });
+                const userJson = user.toJSON();
+                if (typeof userJson.features === 'string') {
+                    try {
+                        userJson.features = JSON.parse(userJson.features);
+                    } catch (e) {
+                        userJson.features = {};
+                    }
+                }
                 return {
-                    ...user.toJSON(),
+                    ...userJson,
                     documentCount
                 };
             })
@@ -701,7 +732,7 @@ const DEFAULT_CONFIG = {
     allowed_file_types: { value: 'jpg,jpeg,png,pdf,webp', description: 'Comma-separated list of allowed file extensions' },
     max_scans_per_day: { value: '100', description: 'Maximum scans per user per day' },
     auto_delete_unsaved_days: { value: '7', description: 'Auto-delete unsaved scans after N days' },
-    default_ai_model: { value: 'gemini-2.5-flash', description: 'Default AI model for new users' },
+    allowed_ai_models: { value: 'gemini-2.5-flash,gemini-2.5-pro,gemini-2.5-flash', description: 'Comma-separated list of allowed AI models' },
     maintenance_mode: { value: 'false', description: 'Enable maintenance mode (disable scanning)' }
 };
 
