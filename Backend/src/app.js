@@ -14,6 +14,7 @@ const settingsRoutes = require('./routes/settings');
 const ocrRoutes = require('./routes/ocr');
 const adminRoutes = require('./routes/admin');
 const chatRoutes = require('./routes/chat');
+const kbRoutes = require('./routes/kb');
 
 // Import middleware
 const { errorHandler, notFound } = require('./middleware/errorHandler');
@@ -123,8 +124,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static files (for uploaded documents) - protected from listing
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
-    dotfiles: 'deny', // Deny access to dotfiles
-    index: false // Disable directory indexing
+    dotfiles: 'deny',
+    index: false
+}));
+
+// KB files (for knowledge base raw documents)
+app.use('/kb-files', express.static(path.join(__dirname, '../kb-files'), {
+    dotfiles: 'deny',
+    index: false
 }));
 
 // Health check (no rate limiting)
@@ -150,6 +157,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/ocr', ocrRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/kb', kbRoutes);
 
 // 404 handler
 app.use(notFound);
