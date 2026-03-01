@@ -257,7 +257,7 @@ const ScanHistoryPage = () => {
           gridTemplateColumns: { xs: '1fr 120px', md: '2fr 1fr 1.2fr 1fr 1fr 120px' },
           borderBottom: !isLast ? '1px solid #E5E7EB' : 'none',
           py: 2, px: 2, gap: 2, alignItems: 'center',
-          '&:hover': { bgcolor: '#F9FAFB' }
+          '&:hover': { bgcolor: '#F9FAFB' },
         }}
       >
         {/* Document Info */}
@@ -432,7 +432,7 @@ const ScanHistoryPage = () => {
   };
 
   return (
-    <Box sx={{ bgcolor: '#F9FAFB', minHeight: '100vh', pb: 4, pt: 3 }}>
+    <Box sx={{ bgcolor: '#F9FAFB', minHeight: '100vh', pb: 4, pt: 3, mt: 8 }}>
       {/* Header Actions */}
       <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #E5E7EB', py: 2 }}>
         <Container maxWidth="xl">

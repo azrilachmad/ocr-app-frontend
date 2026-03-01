@@ -40,7 +40,8 @@ import {
     People as PeopleIcon,
     DirectionsCar as CarIcon,
     CreditCard as CardIcon,
-    Receipt as ReceiptIcon
+    Receipt as ReceiptIcon,
+    PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
 import { getDocumentById, updateDocument, deleteDocument, saveDocument } from '../../services/apiService';
 
@@ -80,9 +81,20 @@ const getDocumentTypeConfig = (type) => {
         'KK': { icon: <PeopleIcon />, color: '#16A34A' },
         'STNK': { icon: <CarIcon />, color: '#EA580C' },
         'BPKB': { icon: <CardIcon />, color: '#7C3AED' },
-        'Invoice': { icon: <ReceiptIcon />, color: '#DC2626' }
+        'Invoice': { icon: <ReceiptIcon />, color: '#DC2626' },
+        'Insight / Summary': { icon: <AnalyticsIcon />, color: '#10B981' }
     };
     return configs[type] || { icon: <DocumentIcon />, color: '#6B7280' };
+};
+
+const isImageFile = (fileName) => {
+    const ext = fileName?.split('.').pop().toLowerCase() || '';
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
+};
+
+const isPdfFile = (fileName) => {
+    const ext = fileName?.split('.').pop().toLowerCase() || '';
+    return ext === 'pdf';
 };
 
 const ScanDetailEditPage = () => {
@@ -394,7 +406,13 @@ const ScanDetailEditPage = () => {
                             <CardContent sx={{ p: 2 }}>
                                 {document.filePath ? (
                                     <Box
-                                        onClick={() => setImageDialogOpen(true)}
+                                        onClick={() => {
+                                            if (isImageFile(document.fileName)) {
+                                                setImageDialogOpen(true);
+                                            } else {
+                                                window.open(getImageUrl(document.filePath), '_blank');
+                                            }
+                                        }}
                                         sx={{
                                             cursor: 'pointer',
                                             position: 'relative',
@@ -403,23 +421,39 @@ const ScanDetailEditPage = () => {
                                             }
                                         }}
                                     >
-                                        <Box
-                                            component="img"
-                                            src={getImageUrl(document.filePath)}
-                                            alt="Document preview"
-                                            sx={{
-                                                width: '100%',
-                                                borderRadius: 2,
-                                                mb: 2,
-                                                maxHeight: 400,
-                                                objectFit: 'contain',
-                                                bgcolor: '#F3F4F6'
-                                            }}
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.parentElement.nextSibling.style.display = 'flex';
-                                            }}
-                                        />
+                                        {isImageFile(document.fileName) ? (
+                                            <Box
+                                                component="img"
+                                                src={getImageUrl(document.filePath)}
+                                                alt="Document preview"
+                                                sx={{
+                                                    width: '100%',
+                                                    borderRadius: 2,
+                                                    mb: 2,
+                                                    maxHeight: 400,
+                                                    objectFit: 'contain',
+                                                    bgcolor: '#F3F4F6'
+                                                }}
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.parentElement.nextSibling.style.display = 'flex';
+                                                }}
+                                            />
+                                        ) : isPdfFile(document.fileName) ? (
+                                            <Box sx={{ width: '100%', maxHeight: 400, mb: 2, borderRadius: 2, overflow: 'hidden' }}>
+                                                <object data={getImageUrl(document.filePath)} type="application/pdf" width="100%" height="400px">
+                                                    <Box sx={{ p: 5, textAlign: 'center', bgcolor: '#F3F4F6', color: '#6B7280' }}>
+                                                        <PdfIcon sx={{ fontSize: 64, color: '#EF4444', mb: 1 }} />
+                                                        <Typography>Click to download or view PDF</Typography>
+                                                    </Box>
+                                                </object>
+                                            </Box>
+                                        ) : (
+                                            <Box sx={{ p: 5, textAlign: 'center', bgcolor: '#F3F4F6', color: '#6B7280', mb: 2, borderRadius: 2 }}>
+                                                <DocumentIcon sx={{ fontSize: 64, mb: 1 }} />
+                                                <Typography>Click to download file</Typography>
+                                            </Box>
+                                        )}
                                         <Box
                                             className="preview-overlay"
                                             sx={{
@@ -438,7 +472,7 @@ const ScanDetailEditPage = () => {
                                             }}
                                         >
                                             <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '14px' }}>
-                                                Click to view full size
+                                                {isImageFile(document.fileName) ? 'Click to view full size' : 'Click to View / Download'}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -529,24 +563,40 @@ const ScanDetailEditPage = () => {
 
                                 {editedContent && Object.keys(editedContent).length > 0 ? (
                                     <Grid container spacing={2}>
-                                        {Object.entries(editedContent).map(([key, value]) => (
-                                            <Grid item xs={12} sm={6} key={key}>
-                                                <Typography sx={{ fontSize: '12px', color: '#4B5563', mb: 0.5, fontWeight: 500 }}>
-                                                    {formatLabel(key)}
-                                                </Typography>
-                                                <TextField
-                                                    fullWidth
-                                                    size="small"
-                                                    value={value || ''}
-                                                    onChange={(e) => handleContentChange(key, e.target.value)}
-                                                    InputProps={{
-                                                        readOnly: !isEditing,
-                                                        sx: { fontSize: '13px', bgcolor: isEditing ? '#fff' : '#FAFAFA' }
-                                                    }}
-                                                    sx={{ '& fieldset': { borderColor: '#E5E7EB' } }}
-                                                />
-                                            </Grid>
-                                        ))}
+                                        {Object.entries(editedContent).map(([key, value]) => {
+                                            const isObject = typeof value === 'object' && value !== null;
+                                            const displayValue = isObject ? JSON.stringify(value, null, 2) : (value || '');
+                                            // Force multiline if it's the new Summary field or just naturally long
+                                            const isLongText = isObject || String(displayValue).length > 60 || key === 'Summary';
+
+                                            return (
+                                                <Grid item xs={12} sm={isLongText ? 12 : 6} key={key}>
+                                                    <Typography sx={{ fontSize: '12px', color: '#4B5563', mb: 0.5, fontWeight: 500 }}>
+                                                        {formatLabel(key)}
+                                                    </Typography>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        multiline={isLongText}
+                                                        minRows={isLongText ? 4 : 1}
+                                                        maxRows={isLongText ? 15 : undefined}
+                                                        value={displayValue}
+                                                        onChange={(e) => {
+                                                            let newValue = e.target.value;
+                                                            if (isObject) {
+                                                                try { newValue = JSON.parse(newValue); } catch (err) { /* ignore parse error while typing */ }
+                                                            }
+                                                            handleContentChange(key, newValue);
+                                                        }}
+                                                        InputProps={{
+                                                            readOnly: !isEditing,
+                                                            sx: { fontSize: '13px', bgcolor: isEditing ? '#fff' : '#FAFAFA' }
+                                                        }}
+                                                        sx={{ '& fieldset': { borderColor: '#E5E7EB' } }}
+                                                    />
+                                                </Grid>
+                                            );
+                                        })}
                                     </Grid>
                                 ) : (
                                     <Box sx={{ py: 4, textAlign: 'center' }}>
