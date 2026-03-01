@@ -6,7 +6,7 @@ import {
     Grid, TextField, CircularProgress, Chip, LinearProgress,
     Fade, Paper, Snackbar, Alert, Toolbar,
     Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-    Collapse, Divider
+    Collapse, Divider, RadioGroup, Radio, FormControlLabel, FormLabel
 } from '@mui/material';
 import {
     CloudUpload as CloudUploadIcon,
@@ -23,13 +23,26 @@ import {
     ExpandMore as ExpandMoreIcon,
     ExpandLess as ExpandLessIcon,
     PlaylistAddCheck as SaveAllIcon,
-    Close as CloseIcon
+    Close as CloseIcon,
+    PictureAsPdf as PdfIcon,
+    Description as DocIcon,
+    TableChart as XlsIcon,
+    InsertDriveFile as GenericFileIcon
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { processDocuments, submitProcessedData, getSettings, rescanDocument, getDocumentById, getDocumentFileUrl, getDocumentTypes } from '../../services/apiService';
 
 // --- Helper Components ---
+
+const getFileIcon = (fileName, sxProps = {}) => {
+    const ext = fileName?.split('.').pop().toLowerCase() || '';
+    if (['pdf'].includes(ext)) return <PdfIcon sx={{ color: '#EF4444', ...sxProps }} />;
+    if (['doc', 'docx'].includes(ext)) return <DocIcon sx={{ color: '#2563EB', ...sxProps }} />;
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return <XlsIcon sx={{ color: '#10B981', ...sxProps }} />;
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) return <ImageIcon sx={{ color: '#8B5CF6', ...sxProps }} />;
+    return <GenericFileIcon sx={{ color: '#6B7280', ...sxProps }} />;
+};
 
 // File status badge
 const FileStatusBadge = ({ status }) => {
@@ -71,9 +84,17 @@ const FileResultCard = ({
     expectedType
 }) => {
     const [previewUrl, setPreviewUrl] = useState(null);
+    const [isImage, setIsImage] = useState(false);
+    const [isPdf, setIsPdf] = useState(false);
+    const [previewOpen, setPreviewOpen] = useState(false);
 
     useEffect(() => {
         if (fileResult.file) {
+            const ext = fileResult.file.name?.split('.').pop().toLowerCase() || '';
+            const imageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+            setIsImage(imageExts.includes(ext));
+            setIsPdf(ext === 'pdf');
+
             const url = URL.createObjectURL(fileResult.file);
             setPreviewUrl(url);
             return () => URL.revokeObjectURL(url);
@@ -128,10 +149,10 @@ const FileResultCard = ({
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         overflow: 'hidden'
                     }}>
-                        {previewUrl ? (
+                        {previewUrl && isImage ? (
                             <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                            <ImageIcon sx={{ color: '#9CA3AF' }} />
+                            getFileIcon(fileResult.fileName, { fontSize: 24 })
                         )}
                     </Box>
                     <Box>
@@ -185,13 +206,65 @@ const FileResultCard = ({
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    minHeight: 200
+                                    minHeight: 200,
+                                    borderBottomLeftRadius: 0,
+                                    borderBottomRightRadius: 0
                                 }}>
-                                    {previewUrl ? (
+                                    {previewUrl && isImage ? (
                                         <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain' }} />
+                                    ) : previewUrl && isPdf ? (
+                                        <Box sx={{ p: 5, textAlign: 'center', color: '#6B7280' }}>
+                                            <PdfIcon sx={{ fontSize: 64, color: '#EF4444', mb: 1 }} />
+                                            <Typography>PDF Document</Typography>
+                                        </Box>
                                     ) : (
-                                        <ImageIcon sx={{ fontSize: 64, color: '#D1D5DB' }} />
+                                        getFileIcon(fileResult.fileName, { fontSize: 64 })
                                     )}
+                                </Box>
+                                <Box sx={{
+                                    display: 'flex',
+                                    bgcolor: '#E5E7EB',
+                                    borderBottomLeftRadius: 8,
+                                    borderBottomRightRadius: 8,
+                                    overflow: 'hidden'
+                                }}>
+                                    <Button
+                                        fullWidth
+                                        variant="text"
+                                        onClick={() => {
+                                            if (!previewUrl) return;
+                                            if (isImage) setPreviewOpen(true);
+                                            else window.open(previewUrl, '_blank');
+                                        }}
+                                        sx={{
+                                            borderRadius: 0,
+                                            color: '#374151',
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            borderRight: '1px solid #D1D5DB',
+                                            py: 1.5,
+                                            '&:hover': { bgcolor: '#D1D5DB' }
+                                        }}
+                                    >
+                                        Preview
+                                    </Button>
+                                    <Button
+                                        fullWidth
+                                        variant="text"
+                                        component="a"
+                                        href={previewUrl}
+                                        download={fileResult.fileName}
+                                        sx={{
+                                            borderRadius: 0,
+                                            color: '#6366F1',
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            py: 1.5,
+                                            '&:hover': { bgcolor: '#D1D5DB' }
+                                        }}
+                                    >
+                                        Download
+                                    </Button>
                                 </Box>
                                 <Box sx={{ mt: 2, p: 2, bgcolor: '#F9FAFB', borderRadius: 2 }}>
                                     <Typography sx={{ fontSize: '12px', color: '#6B7280', mb: 1 }}>Document Info</Typography>
@@ -229,23 +302,39 @@ const FileResultCard = ({
                                     Extracted Data
                                 </Typography>
                                 <Grid container spacing={2}>
-                                    {Object.entries(content).map(([key, value]) => (
-                                        <Grid item xs={12} sm={6} key={key}>
-                                            <TextField
-                                                fullWidth
-                                                label={formatLabel(key)}
-                                                value={value || ''}
-                                                onChange={(e) => onContentChange(index, key, e.target.value)}
-                                                size="small"
-                                                InputProps={{
-                                                    sx: { borderRadius: 2, fontSize: '13px' }
-                                                }}
-                                                InputLabelProps={{
-                                                    sx: { fontSize: '13px' }
-                                                }}
-                                            />
-                                        </Grid>
-                                    ))}
+                                    {Object.entries(content).map(([key, value]) => {
+                                        const isObject = typeof value === 'object' && value !== null;
+                                        const displayValue = isObject ? JSON.stringify(value, null, 2) : (value || '');
+                                        // Force multiline if it's the new Summary field or just naturally long
+                                        const isLongText = isObject || String(displayValue).length > 60 || key === 'Summary';
+
+                                        return (
+                                            <Grid item xs={12} sm={isLongText ? 12 : 6} key={key}>
+                                                <TextField
+                                                    fullWidth
+                                                    label={formatLabel(key)}
+                                                    value={displayValue}
+                                                    onChange={(e) => {
+                                                        let newValue = e.target.value;
+                                                        if (isObject) {
+                                                            try { newValue = JSON.parse(newValue); } catch (err) { }
+                                                        }
+                                                        onContentChange(index, key, newValue);
+                                                    }}
+                                                    size="small"
+                                                    multiline={isLongText}
+                                                    minRows={isLongText ? 4 : 1}
+                                                    maxRows={isLongText ? 15 : undefined}
+                                                    InputProps={{
+                                                        sx: { borderRadius: 2, fontSize: '13px' }
+                                                    }}
+                                                    InputLabelProps={{
+                                                        sx: { fontSize: '13px' }
+                                                    }}
+                                                />
+                                            </Grid>
+                                        );
+                                    })}
                                 </Grid>
 
                                 {/* Actions */}
@@ -284,6 +373,26 @@ const FileResultCard = ({
                     )}
                 </CardContent>
             </Collapse>
+
+            {/* Image Preview Dialog */}
+            <Dialog
+                open={previewOpen}
+                onClose={() => setPreviewOpen(false)}
+                maxWidth="lg" fullWidth
+                PaperProps={{ sx: { bgcolor: 'rgba(0,0,0,0.95)', boxShadow: 'none', borderRadius: 2, maxHeight: '95vh' } }}
+            >
+                <DialogTitle sx={{ color: 'white', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography sx={{ fontWeight: 600 }}>{fileResult.fileName}</Typography>
+                    <IconButton onClick={() => setPreviewOpen(false)} sx={{ color: 'white' }} size="small">
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+                    {previewUrl && (
+                        <img src={previewUrl} alt="Document full preview" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: 8 }} />
+                    )}
+                </DialogContent>
+            </Dialog>
         </Card>
     );
 };
@@ -298,6 +407,7 @@ const UploadPhase = ({
     const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
 
     // Fetch document templates on component mount
+    const [processMode, setProcessMode] = useState('template'); // 'template' or 'insight'
     useEffect(() => {
         const fetchTemplates = async () => {
             setIsLoadingTemplates(true);
@@ -318,12 +428,12 @@ const UploadPhase = ({
 
     // Auto-force Auto Detect when multiple files are selected
     const isMultipleFiles = selectedFiles.length > 1;
-    const effectiveDocumentType = isMultipleFiles ? 'auto' : documentType;
-    const isTypeDisabled = selectedFiles.length === 0 || isMultipleFiles;
+    const effectiveDocumentType = (isMultipleFiles || processMode === 'insight') ? 'auto' : documentType;
+    const isTypeDisabled = selectedFiles.length === 0 || isMultipleFiles || processMode === 'insight';
 
     return (
         <Fade in timeout={500}>
-            <Box>
+            <Box sx={{ mt: 12 }}>
                 <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, mb: 3 }}>
                     <CardContent sx={{ p: 4 }}>
                         {/* Upload Instructions - First */}
@@ -417,7 +527,7 @@ const UploadPhase = ({
                                                 width: 36, height: 36, borderRadius: 1.5, bgcolor: '#F3F4F6',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center'
                                             }}>
-                                                <ImageIcon sx={{ fontSize: 20, color: '#9CA3AF' }} />
+                                                {getFileIcon(file.name, { fontSize: 20 })}
                                             </Box>
                                             <Box>
                                                 <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
@@ -438,6 +548,33 @@ const UploadPhase = ({
                     </Card>
                 )}
 
+                {/* Processing Mode Selection */}
+                <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, mb: 3, opacity: selectedFiles.length === 0 ? 0.6 : 1 }}>
+                    <CardContent sx={{ p: 3 }}>
+                        <Typography sx={{ fontSize: '16px', fontWeight: 600, mb: 1, color: '#111827' }}>
+                            Processing Mode
+                        </Typography>
+                        <FormControl disabled={selectedFiles.length === 0} component="fieldset">
+                            <RadioGroup
+                                row
+                                value={processMode}
+                                onChange={(e) => setProcessMode(e.target.value)}
+                            >
+                                <FormControlLabel
+                                    value="template"
+                                    control={<Radio sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />}
+                                    label={<Box><Typography sx={{ fontWeight: 600, fontSize: '14px' }}>Template Mode</Typography><Typography sx={{ fontSize: '12px', color: '#6B7280' }}>Extract specific fields like KTP, Invoice, SIM.</Typography></Box>}
+                                />
+                                <FormControlLabel
+                                    value="insight"
+                                    control={<Radio sx={{ color: '#10B981', '&.Mui-checked': { color: '#10B981' } }} />}
+                                    label={<Box><Typography sx={{ fontWeight: 600, fontSize: '14px' }}>Insight Mode</Typography><Typography sx={{ fontSize: '12px', color: '#6B7280' }}>Read entire document, generate title, summary, key points, and conclusion.</Typography></Box>}
+                                />
+                            </RadioGroup>
+                        </FormControl>
+                    </CardContent>
+                </Card>
+
                 {/* Document Type Selection - After Upload */}
                 <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, mb: 3, opacity: isTypeDisabled && selectedFiles.length === 0 ? 0.6 : 1 }}>
                     <CardContent sx={{ p: 3 }}>
@@ -447,9 +584,11 @@ const UploadPhase = ({
                         <Typography sx={{ fontSize: '13px', color: '#6B7280', mb: 2 }}>
                             {selectedFiles.length === 0
                                 ? 'Upload files first to select document type'
-                                : isMultipleFiles
-                                    ? 'Multiple files detected - Auto Detect will be used for each file'
-                                    : 'Choose a template or let AI auto-detect the document type'
+                                : processMode === 'insight'
+                                    ? 'Insight Mode dynamically analyzes the document, template selection is disabled.'
+                                    : isMultipleFiles
+                                        ? 'Multiple files detected - Auto Detect will be used for each file'
+                                        : 'Choose a template or let AI auto-detect the document type'
                             }
                         </Typography>
                         <FormControl fullWidth size="small" disabled={isTypeDisabled}>
@@ -524,6 +663,7 @@ function DocumentUploadPage() {
     // State
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [documentType, setDocumentType] = useState('auto');
+    const [processMode, setProcessMode] = useState('template');
     const [isProcessing, setIsProcessing] = useState(false);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
@@ -647,7 +787,7 @@ function DocumentUploadPage() {
 
         // Process files
         try {
-            const options = { documentType: documentType === 'auto' ? null : documentType };
+            const options = { documentType: documentType === 'auto' ? null : documentType, mode: processMode };
 
             // Update first file to processing
             setFileResults(prev => prev.map((f, i) => i === 0 ? { ...f, status: 'processing' } : f));

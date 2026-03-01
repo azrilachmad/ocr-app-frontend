@@ -10,7 +10,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import SaveIcon from '@mui/icons-material/Save';
 
 // Impor fungsi API yang sudah kita sesuaikan
-import { processDocuments, submitProcessedData } from '../../services/apiService'; 
+import { processDocuments, submitProcessedData } from '../../services/apiService';
 
 // Nanti kita bisa buat komponen ini untuk menampilkan form yang bisa diedit
 // import OcrResultForm from '../../components/OcrResultForm';
@@ -18,14 +18,14 @@ import { processDocuments, submitProcessedData } from '../../services/apiService
 function DocumentUploadPage2() {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [ocrResponse, setOcrResponse] = useState(null); // Akan berisi { document_type, content }
-    
+
     const [isProcessing, setIsProcessing] = useState(false);
     const [processError, setProcessError] = useState(null);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(null);
     const [submitSuccess, setSubmitSuccess] = useState('');
-    
+
     const fileInputRef = useRef();
 
     const handleFileChange = (event) => {
@@ -84,7 +84,7 @@ function DocumentUploadPage2() {
     };
 
     return (
-        <Container sx={{ mt: 3, mb: 3 }}>
+        <Container sx={{ mt: 200, mb: 3 }}>
             <Typography variant="h4" component="h1" gutterBottom>
                 Upload dan Proses Dokumen
             </Typography>
@@ -129,27 +129,27 @@ function DocumentUploadPage2() {
 
             {/* Menampilkan Error dari Proses OCR */}
             {processError && <Alert severity="error" sx={{ mb: 2 }}>{processError}</Alert>}
-            
+
             {/* Menampilkan Hasil OCR */}
             {ocrResponse && (
                 <Paper elevation={3} sx={{ p: 3 }}>
-                    <Chip label={ocrResponse.document_type} color="success" sx={{mb: 2, fontWeight:'bold'}} />
+                    <Chip label={ocrResponse.document_type} color="success" sx={{ mb: 2, fontWeight: 'bold' }} />
                     <Typography variant="h5" gutterBottom>
                         Hasil Ekstraksi Data (Verifikasi & Simpan)
                     </Typography>
-                    
+
                     {/* Untuk sekarang, kita tampilkan JSON mentah. Nanti ini akan menjadi form. */}
                     <Box sx={{ maxHeight: '400px', overflowY: 'auto', p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, mt: 2 }}>
                         <pre>{JSON.stringify(ocrResponse.content, null, 2)}</pre>
                     </Box>
 
-                    <Button 
-                        variant="contained" 
-                        color="secondary" 
-                        sx={{mt: 3}} 
+                    <Button
+                        variant="contained"
+                        color="secondary"
+                        sx={{ mt: 3 }}
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        startIcon={isSubmitting ? <CircularProgress size={20}/> : <SaveIcon />}
+                        startIcon={isSubmitting ? <CircularProgress size={20} /> : <SaveIcon />}
                     >
                         {isSubmitting ? 'Menyimpan...' : 'Simpan ke Database'}
                     </Button>
