@@ -193,7 +193,7 @@ const Home = () => {
             {/* Hero Section */}
             <Box sx={{
                 background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-                py: 8, px: 4, textAlign: 'center', position: 'relative', overflow: 'hidden'
+                pt: 8, pb: 12, px: 4, textAlign: 'center', position: 'relative'
             }}>
                 <Box sx={{
                     position: 'absolute', top: -100, right: -100, width: 300, height: 300,
