@@ -122,8 +122,9 @@ const SettingsPage = () => {
     const [apiKey, setApiKey] = useState('');
     const [showApiKey, setShowApiKey] = useState(false);
     const [confidenceThreshold, setConfidenceThreshold] = useState(85);
-    const [languageDetection, setLanguageDetection] = useState('indonesian');
+    const [languageDetection, setLanguageDetection] = useState('ID');
     const [autoCorrect, setAutoCorrect] = useState(true);
+    const [allowedAiModels, setAllowedAiModels] = useState(['gemini-2.5-flash']);
 
     // Document Types State
     const [documentTypes, setDocumentTypes] = useState([]);
@@ -147,10 +148,17 @@ const SettingsPage = () => {
                 // Fetch user settings
                 const settingsData = await getSettings();
                 if (settingsData) {
-                    setAiModel(settingsData.aiModel || 'gemini-2.5-flash');
+                    const fallbackModels = ['gemini-2.5-flash'];
+                    const modelsList = settingsData.allowedAiModels || fallbackModels;
+                    setAllowedAiModels(modelsList);
+                    setAiModel(settingsData.aiModel || modelsList[0]);
                     setApiKey(settingsData.apiKey || '');
-                    setConfidenceThreshold(settingsData.confidenceThreshold || 85);
-                    setLanguageDetection(settingsData.languageDetection || 'indonesian');
+                    setConfidenceThreshold(settingsData.confidenceThreshold !== undefined ? Math.round(Number(settingsData.confidenceThreshold) * 100) : 85);
+                    let initialLang = settingsData.languageDetection;
+                    if (initialLang === 'indonesian' || initialLang === true) initialLang = 'ID';
+                    if (initialLang === 'english') initialLang = 'EN';
+                    if (initialLang === 'auto') initialLang = 'AUTO';
+                    setLanguageDetection(initialLang || 'ID');
                     setAutoCorrect(settingsData.autoCorrect !== false);
                 }
             } catch (error) {
@@ -193,7 +201,7 @@ const SettingsPage = () => {
     const handleResetToDefault = async () => {
         setAiModel('gemini-2.5-flash');
         setConfidenceThreshold(85);
-        setLanguageDetection('indonesian');
+        setLanguageDetection('ID');
         setAutoCorrect(true);
 
         try {
@@ -201,7 +209,7 @@ const SettingsPage = () => {
             await updateSettings({
                 aiModel: 'gemini-2.5-flash',
                 confidenceThreshold: 85,
-                languageDetection: 'indonesian',
+                languageDetection: 'ID',
                 autoCorrect: true
             });
             setSnackbar({ open: true, message: 'Settings reset to default values', severity: 'info' });
@@ -224,7 +232,7 @@ const SettingsPage = () => {
             await updateSettings({
                 aiModel,
                 apiKey,
-                confidenceThreshold,
+                confidenceThreshold: confidenceThreshold ? confidenceThreshold / 100 : 0.5,
                 languageDetection,
                 autoCorrect
             });
@@ -362,7 +370,7 @@ const SettingsPage = () => {
 
     return (
         <>
-            <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB', pt: 3 }}>
+            <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB', pt: 3, mt: 8 }}>
                 {isSaving && <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }} />}
 
                 <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -444,8 +452,9 @@ const SettingsPage = () => {
                                             onChange={(e) => setAiModel(e.target.value)}
                                             sx={{ bgcolor: 'white' }}
                                         >
-                                            <MenuItem value="gemini-2.5-pro">Gemini 2.5 Pro</MenuItem>
-                                            <MenuItem value="gemini-2.5-flash">Gemini 2.5 Flash</MenuItem>
+                                            {allowedAiModels.map(model => (
+                                                <MenuItem key={model} value={model}>{model}</MenuItem>
+                                            ))}
                                         </Select>
                                     </FormControl>
                                 </Box>
@@ -553,6 +562,7 @@ const SettingsPage = () => {
                                     value={confidenceThreshold}
                                     onChange={(e, newValue) => setConfidenceThreshold(newValue)}
                                     min={0}
+                                    step={10}
                                     max={100}
                                     sx={{
                                         color: '#6366F1',
@@ -579,7 +589,7 @@ const SettingsPage = () => {
                                     onChange={handleLanguageChange}
                                     sx={{ gap: 1 }}
                                 >
-                                    {['indonesian', 'english', 'auto'].map((lang) => (
+                                    {['ID', 'EN', 'AUTO'].map((lang) => (
                                         <ToggleButton
                                             key={lang}
                                             value={lang}
@@ -596,7 +606,7 @@ const SettingsPage = () => {
                                                 }
                                             }}
                                         >
-                                            {lang === 'auto' ? 'Auto Detect' : lang.charAt(0).toUpperCase() + lang.slice(1)}
+                                            {lang === 'AUTO' ? 'Auto Detect' : lang === 'ID' ? 'Indonesian' : 'English'}
                                         </ToggleButton>
                                     ))}
                                 </ToggleButtonGroup>
