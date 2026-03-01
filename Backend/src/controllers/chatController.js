@@ -1,4 +1,4 @@
-const { ChatSession, ChatMessage, Document, Settings } = require('../models');
+const { ChatSession, ChatMessage, Document, Settings, KBArticle, KBFile, KBCategory } = require('../models');
 const aiService = require('../services/aiService');
 
 /**
@@ -117,12 +117,23 @@ const sendMessage = async (req, res) => {
             content: prompt
         });
 
+        // 1.5 Fetch and Validate User AI Settings BEFORE starting generation
+        const userSettings = await Settings.findOne({ where: { userId: req.userId } });
+
+        if (!userSettings || !userSettings.aiModel || !userSettings.languageDetection) {
+            return res.status(400).json({
+                success: false,
+                message: 'AI Model or Language configuration missing. Please update your profile settings.'
+            });
+        }
+
+        const aiModel = userSettings.aiModel;
+        const apiKey = userSettings.apiKey || null;
+        const temperature = userSettings.confidenceThreshold !== undefined ? Number(userSettings.confidenceThreshold) : 0.85;
+        const languageDetection = userSettings.languageDetection;
+
         // Update session title if it's the first message
         if (history.length === 0 && session.title === 'New Chat') {
-            const userSettings = await Settings.findOne({ where: { userId: req.userId } });
-            const aiModel = userSettings?.aiModel || 'gemini-1.5-flash';
-            const apiKey = userSettings?.apiKey || null;
-
             const newTitle = await aiService.generateChatTitle(prompt, aiModel, apiKey);
             session.title = newTitle;
             // We also update timestamp to put it at top of list
@@ -133,29 +144,58 @@ const sendMessage = async (req, res) => {
             await session.save();
         }
 
-        // 4. Fetch context (User's OCR documents)
-        // We get the latest 5 documents with extractedText
+        // 4. Fetch context — OCR documents + KB articles + KB files
+        // OCR documents (user's scanned docs)
         const recentDocs = await Document.findAll({
             where: { userId: req.userId },
             order: [['createdAt', 'DESC']],
-            limit: 5,
-            attributes: ['filename', 'extractedText']
+            limit: 20
         });
 
         let documentContext = '';
         recentDocs.forEach(doc => {
-            if (doc.extractedText) {
-                documentContext += `--- Document: ${doc.filename} ---\n${doc.extractedText}\n\n`;
+            if (doc.content) {
+                const textContext = typeof doc.content === 'object' ? JSON.stringify(doc.content, null, 2) : doc.content;
+                documentContext += `--- OCR Document: ${doc.fileName} ---\n${textContext}\n\n`;
             }
         });
 
-        // 4.5 Fetch User AI Settings
-        const userSettings = await Settings.findOne({ where: { userId: req.userId } });
-        const aiModel = userSettings?.aiModel || 'gemini-1.5-flash';
-        const apiKey = userSettings?.apiKey || null;
+        // KB Articles (all published knowledge base articles)
+        const kbArticles = await KBArticle.findAll({
+            where: { status: 'published' },
+            include: [{ model: KBCategory, as: 'category', attributes: ['name', 'slug'] }],
+            order: [['createdAt', 'DESC']],
+            limit: 30
+        });
+
+        kbArticles.forEach(art => {
+            if (art.content) {
+                const catName = art.category?.name || 'Uncategorized';
+                documentContext += `--- KB Article [${catName}]: ${art.title} ---\n`;
+                if (art.summary) documentContext += `Summary: ${art.summary}\n`;
+                documentContext += `${art.content}\n\n`;
+            }
+        });
+
+        // KB File metadata (so AI knows what files exist)
+        const kbFiles = await KBFile.findAll({
+            include: [{ model: KBCategory, as: 'category', attributes: ['name'] }],
+            order: [['createdAt', 'DESC']],
+            limit: 50
+        });
+
+        if (kbFiles.length > 0) {
+            documentContext += `--- Available Files in Knowledge Base ---\n`;
+            kbFiles.forEach(f => {
+                documentContext += `• ${f.fileName} (${f.fileType?.toUpperCase()}, ${f.fileSize}) — Category: ${f.category?.name || 'General'}`;
+                if (f.description) documentContext += ` — ${f.description}`;
+                documentContext += `\n`;
+            });
+            documentContext += `\n`;
+        }
 
         // 5. Generate AI Response
-        const aiResponseText = await aiService.generateChatResponse(history, prompt, documentContext, aiModel, apiKey);
+        const aiResponseText = await aiService.generateChatResponse(history, prompt, documentContext, aiModel, apiKey, temperature, languageDetection);
 
         // 6. Save AI Message
         const assistantMessage = await ChatMessage.create({
@@ -174,7 +214,8 @@ const sendMessage = async (req, res) => {
         });
     } catch (error) {
         console.error('Error sending chat message:', error);
-        res.status(500).json({ success: false, message: 'Server error getting AI response' });
+        require('fs').writeFileSync('C:/Users/azril/.gemini/antigravity/brain/8a40289e-5bba-4f22-9711-6ae70c9f09e7/debug.txt', error.stack || String(error));
+        res.status(500).json({ success: false, message: 'Server error getting AI response', error: error.message });
     }
 };
 
