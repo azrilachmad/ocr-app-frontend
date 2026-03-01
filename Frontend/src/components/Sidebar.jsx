@@ -35,24 +35,21 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle, user }) => {
     { text: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
   ];
 
-  // Add conditional items based on user features
-  if (user?.features?.knowledgeBase !== false) {
-    userNavItems.push({ text: 'Knowledge Base', path: '/knowledge-base', icon: <ChatIcon /> });
-  }
+
 
   // These might not be toggled right now, but we can add safeguards
   userNavItems.push({ text: 'Upload Document', path: '/upload', icon: <CloudUploadIcon /> });
   userNavItems.push({ text: 'Scan History', path: '/history', icon: <HistoryIcon /> });
+  // Add conditional items based on user features
+  if (user?.features?.knowledgeBase !== false) {
+    userNavItems.push({ text: 'Knowledge Base', path: '/knowledge-base', icon: <ChatIcon /> });
+  }
   userNavItems.push({ text: 'Settings', path: '/settings', icon: <SettingsIcon /> });
 
   // Superadmin navigation
   const adminNavItems = [
     { text: 'Admin Dashboard', path: '/admin/dashboard', icon: <DashboardIcon /> },
   ];
-
-  if (user?.features?.knowledgeBase !== false) {
-    adminNavItems.push({ text: 'Knowledge Base', path: '/knowledge-base', icon: <ChatIcon /> });
-  }
 
   adminNavItems.push(
     { text: 'User Management', path: '/admin/users', icon: <PeopleIcon /> },
