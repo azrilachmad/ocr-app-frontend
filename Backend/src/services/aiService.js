@@ -1,46 +1,87 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// In a real application, ensure GEMINI_API_KEY is in your .env file
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
-
 /**
  * Generates a response from the Gemini AI model based on the chat history and document context.
- * @param {Array} history - Array of previous messages { role: 'user' | 'assistant', content: string }
- * @param {string} prompt - The new user prompt
- * @param {string} documentContext - The OCR text from user's documents to be used as context
- * @param {string} aiModel - The Gemini model to use
- * @param {string} apiKey - The dynamic API key of the user
- * @returns {Promise<string>} The AI's response text
  */
-const generateChatResponse = async (history, prompt, documentContext = '', aiModel = 'gemini-1.5-flash', apiKey = null) => {
+const generateChatResponse = async (history, prompt, documentContext = '', aiModel, apiKey = null, temperature, languageDetection) => {
+    if (!aiModel || temperature === undefined || !languageDetection) {
+        throw new Error('AI Provider configuration (model, temperature, language) is dynamically required but missing.');
+    }
     try {
         const keyToUse = apiKey || process.env.GEMINI_API_KEY || 'dummy_key';
         const genAI = new GoogleGenerativeAI(keyToUse);
         const model = genAI.getGenerativeModel({ model: aiModel });
 
-        // Construct the system instruction/context
-        let systemInstruction = "You are a helpful and intelligent AI assistant for an OCR (Optical Character Recognition) application. Your goal is to help the user understand and analyze their scanned documents. Be concise and polite.";
+        let systemInstructionText = `You are a highly intelligent Knowledge Base & Document Assistant for the IHA (Indonesian Heritage Agency) platform, powered by Synchro Scan. You help users understand, analyze, and cross-reference organizational documents, knowledge articles, and operational data.
 
-        if (documentContext) {
-            systemInstruction += `\n\nHere is the text from the user's documents for context:\n\n${documentContext}\n\nPlease use the above document text to answer their questions accurately.`;
+CONTEXT SOURCES:
+- "OCR Document": User's scanned/uploaded documents processed by Synchro Scan
+- "KB Article [Category]": Published knowledge base articles organized by categories
+- "Available Files": Raw files (PDFs, Excel) available for download in the file directory
+
+BEHAVIORAL RULES:
+1. FUZZY MATCHING: Aggressively fuzzy-match user queries against document/article names. Never ask users to spell things perfectly.
+2. PROACTIVE ANALYTICS: Use Markdown Tables, Bulleted Lists, and Headers for comparisons, summaries, and financial data. Make responses scannable and beautiful.
+3. CROSS-REFERENCING: When asked general questions, scan ALL provided contexts (OCR docs + KB articles + file metadata) and combine data.
+4. SOURCE CITATIONS: ALWAYS cite your sources at the end of your response using this format:
+   📌 **Sumber:**
+   - [Article/Document Name]
+   - [Another Source]
+   Only cite sources you actually used. Include category name for KB articles, e.g., "[Laporan Operasional] Laporan Galeri Nasional 2025".
+5. HONESTY: Only answer based on provided contexts. If info is unavailable, say so clearly and suggest where the user might find it.
+6. FRIENDLY TONE: Be conversational, helpful, and natural. Avoid robotic language.
+7. CHARTS & VISUALS: When data involves numbers, suggest comparisons or trends. If the user asks for charts, provide the data in clean table format and mention that chart visualization is available.`;
+
+        const detectLang = languageDetection ? languageDetection.toLowerCase() : 'auto';
+
+        if (detectLang === 'id') {
+            systemInstructionText += "\n\nCRITICAL INSTRUCTION: You MUST communicate and answer exclusively in Indonesian, maintaining a friendly and natural conversational tone.";
+        } else if (detectLang === 'en') {
+            systemInstructionText += "\n\nCRITICAL INSTRUCTION: You MUST communicate and answer exclusively in English, maintaining a friendly and natural conversational tone.";
+        } else {
+            systemInstructionText += "\n\nCRITICAL INSTRUCTION: You MUST automatically detect the language used by the user in their prompt and reply naturally in that EXACT same language.";
         }
 
-        // Format history for Gemini API
-        // Gemini expects 'user' and 'model' roles
-        const formattedHistory = history.map(msg => ({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }],
-        }));
+        if (documentContext) {
+            systemInstructionText += `\n\nHere is the organizational knowledge and document data for context:\n\n${documentContext}\n\nUse the above data to answer questions accurately. Always cite which specific document or article your answer is based on.`;
+        }
+
+        const systemInstructionContent = {
+            role: "system",
+            parts: [{ text: systemInstructionText }]
+        };
+
+        // Format history for Gemini API — strict alternating 'user' and 'model' roles
+        const formattedHistory = [];
+        let lastRole = null;
+
+        for (const msg of history) {
+            const mappedRole = msg.role === 'assistant' ? 'model' : 'user';
+
+            if (mappedRole === lastRole) {
+                if (formattedHistory.length > 0) {
+                    formattedHistory[formattedHistory.length - 1].parts[0].text += `\n\n${msg.content}`;
+                }
+            } else {
+                formattedHistory.push({
+                    role: mappedRole,
+                    parts: [{ text: msg.content }]
+                });
+                lastRole = mappedRole;
+            }
+        }
+
+        // History MUST end with 'model' response or be empty (next action is sendMessage → 'user')
+        if (formattedHistory.length > 0 && formattedHistory[formattedHistory.length - 1].role === 'user') {
+            formattedHistory.pop();
+        }
 
         const chat = model.startChat({
             history: formattedHistory,
-            systemInstruction: {
-                parts: [{ text: systemInstruction }],
-                role: "system"
-            },
+            systemInstruction: systemInstructionContent,
             generationConfig: {
                 maxOutputTokens: 1000,
-                temperature: 0.7,
+                temperature: Number(temperature),
             },
         });
 
@@ -49,34 +90,28 @@ const generateChatResponse = async (history, prompt, documentContext = '', aiMod
         return response.text();
     } catch (error) {
         console.error('Error in AI Service:', error);
-        // Fallback for development if API key is not set or invalid
-        if (error.message.includes('API key not valid') || error.message.includes('dummy_key')) {
-            return "I am a simulated AI assistant. To get real responses, please provide a valid GEMINI_API_KEY in the backend .env file. Based on your prompt, I acknowledge your input.";
-        }
-        throw new Error('Failed to generate AI response');
+        return `API Error: ${error.message}`;
     }
 };
 
 /**
  * Summarizes the first user prompt to generate a short title for the chat session.
- * @param {string} prompt - The first user prompt
- * @param {string} aiModel - The Gemini model to use
- * @param {string} apiKey - The dynamic API key of the user
  */
-const generateChatTitle = async (prompt, aiModel = 'gemini-1.5-flash', apiKey = null) => {
+const generateChatTitle = async (prompt, aiModel, apiKey = null) => {
+    if (!aiModel) {
+        throw new Error('AI Model parameter is dynamically required but missing.');
+    }
     try {
         const keyToUse = apiKey || process.env.GEMINI_API_KEY || 'dummy_key';
         const genAI = new GoogleGenerativeAI(keyToUse);
         const model = genAI.getGenerativeModel({ model: aiModel });
         const result = await model.generateContent(`Generate a very short, concise title (max 4-5 words) summarizing this request: "${prompt}"`);
         const response = await result.response;
-        // Clean up quotes and newlines
         return response.text().replace(/["'\n]/g, '').trim();
     } catch (error) {
-        // Fallback
         return prompt.length > 30 ? prompt.substring(0, 27) + '...' : prompt;
     }
-}
+};
 
 module.exports = {
     generateChatResponse,
