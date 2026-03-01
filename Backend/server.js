@@ -4,6 +4,7 @@ const { testConnection } = require('./src/config/database');
 const { syncModels } = require('./src/models');
 const { seedDocumentTypes } = require('./src/seeders/documentTypes');
 const { seedSuperAdmin } = require('./src/seeders/superadminSeeder');
+const { seedKB } = require('./src/seeders/kbSeeder');
 
 const PORT = process.env.PORT || 3001;
 
@@ -20,6 +21,9 @@ const startServer = async () => {
 
         // Seed default superadmin account
         await seedSuperAdmin();
+
+        // Seed KB categories, articles, and files
+        await seedKB();
 
         // Start server
         app.listen(PORT, () => {
