@@ -34,8 +34,7 @@ const Layout = ({ children, user }) => {
         }}
       >
         <Box sx={{
-          flexGrow: 1, py: 10,
-          px: 3,
+          flexGrow: 1,
         }}>
           {children}
         </Box>
