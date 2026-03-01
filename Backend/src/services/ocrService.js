@@ -149,15 +149,17 @@ Instructions:
 1. Identify the document type - try to match with one of the available types above
 2. If it matches a known type (KTP, KK, STNK, BPKB, Invoice), extract fields according to that template
 3. If it matches a custom type, extract the specified fields
-4. If no match, classify as "Other" and extract all visible data
+4. If no match, classify as "Other" and extract ONLY the document title and a highly detailed summary. Do not extract random scattered visible data.
 
-Return the data in JSON format:
+Return the data in STRICT JSON format:
 {
     "detected_type": "The document type (must be one from the list above if it matches, otherwise 'Other')",
     "confidence": "HIGH/MEDIUM/LOW - how confident you are about the type match",
     "fields": {
-        // All extracted fields as key-value pairs
-        // Use snake_case for field names
+        // IF "detected_type" is "Other", provide EXACTLY TWO fields:
+        // "Report Title": "The exact or inferred title of the document",
+        // "Summary": "An extensive, highly detailed multi-paragraph summary covering all key points, statistics, main themes, and conclusions present in the document."
+        // ELSE (if matched a template), provide all extracted fields as key-value pairs matching that template
     }
 }
 Only return the JSON object, no additional text.`;
@@ -171,11 +173,15 @@ Only return the JSON object, no additional text.`;
  * Process a document image with Gemini AI OCR
  * @param {string} filePath - Path to the image file
  * @param {string} documentType - Type of document (KTP, KK, STNK, BPKB, Invoice, auto)
- * @param {object} options - { apiKey, aiModel, availableTemplates } from user settings
+ * @param {object} options - { apiKey, aiModel, availableTemplates, mode } from user settings
  * @returns {Promise<object>} - Extracted data
  */
 const processDocument = async (filePath, documentType = 'auto', options = {}) => {
-    const { apiKey, aiModel = 'gemini-2.5-flash', availableTemplates = [] } = options;
+    const { apiKey, aiModel, availableTemplates = [], mode = 'template', languageDetection } = options;
+
+    if (!aiModel || !languageDetection) {
+        throw new Error('AI Provider configuration (model, language) is dynamically required but missing.');
+    }
 
     if (!apiKey) {
         throw new Error('API key is required. Please configure your API key in settings.');
@@ -204,8 +210,33 @@ const processDocument = async (filePath, documentType = 'auto', options = {}) =>
         // Get the model from user settings
         const model = genAI.getGenerativeModel({ model: aiModel });
 
-        // Prepare the prompt with available templates for better auto-detection
-        const prompt = getPromptForDocumentType(documentType, availableTemplates);
+        // Prepare the prompt
+        let prompt;
+        if (mode === 'insight') {
+            prompt = `Analyze this document image thoroughly. Read the entire document carefully.
+Extract the essence of it, regardless of how many pages or how dense the text is. 
+
+Return the data in STRICT JSON format with exactly TWO fields:
+{
+    "Report Title": "The exact or inferred title of the document or report.",
+    "Summary": "An extensive, highly detailed multi-paragraph summary covering all key points, statistics, main themes, and conclusions present in the document."
+}
+Only return the valid JSON object, no additional text. Do not wrap in markdown blocks. Do not add any other fields.`;
+        } else {
+            prompt = getPromptForDocumentType(documentType, availableTemplates);
+        }
+
+        // Apply Language Preference
+        let languageInstruction = "";
+        if (languageDetection === 'ID') {
+            languageInstruction = "\n\nCRITICAL INSTRUCTION: You MUST write the summary and all extracted string values exclusively in Indonesian.";
+        } else if (languageDetection === 'EN') {
+            languageInstruction = "\n\nCRITICAL INSTRUCTION: You MUST write the summary and all extracted string values exclusively in English.";
+        } else {
+            languageInstruction = "\n\nCRITICAL INSTRUCTION: You MUST write the summary and all extracted string values exclusively in universal English, regardless of the document's original language.";
+        }
+
+        prompt += languageInstruction;
 
         // Generate content with the image
         const result = await model.generateContent([
@@ -228,18 +259,35 @@ const processDocument = async (filePath, documentType = 'auto', options = {}) =>
             const jsonMatch = text.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 extractedData = JSON.parse(jsonMatch[0]);
+
+                // If insight mode, enforce exactly the two requested fields
+                if (mode === 'insight') {
+                    extractedData = {
+                        "Report Title": extractedData["Report Title"] || "Unknown Document",
+                        "Summary": extractedData["Summary"] || extractedData.Ringkasan_Dokumen || Object.values(extractedData).join('\n\n')
+                    };
+                }
             } else {
                 throw new Error('No JSON found in response');
             }
         } catch (parseError) {
             console.error('JSON parse error:', parseError);
             // Return raw text if JSON parsing fails
-            extractedData = { raw_text: text };
+            if (mode === 'insight') {
+                extractedData = {
+                    "Report Title": "Unknown Document",
+                    "Summary": text.trim()
+                };
+            } else {
+                extractedData = { raw_text: text };
+            }
         }
 
         // Determine final document type
         let finalDocumentType = documentType;
-        if (documentType === 'auto' && extractedData.detected_type) {
+        if (mode === 'insight') {
+            finalDocumentType = 'Insight / Summary';
+        } else if (documentType === 'auto' && extractedData.detected_type) {
             finalDocumentType = extractedData.detected_type;
             // Move fields to top level if auto-detected
             if (extractedData.fields) {
