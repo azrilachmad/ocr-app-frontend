@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const uploadMiddleware = require('../middleware/upload');
-const { Document, Settings, DocumentType } = require('../models');
+const { Op } = require('sequelize');
+const { Document, Settings, DocumentType, SystemConfig } = require('../models');
 const { processDocument } = require('../services/ocrService');
 const { cleanupOldScans } = require('../controllers/documentController');
 const path = require('path');
@@ -41,11 +42,50 @@ router.post('/process', authenticate, uploadMiddleware.multiple, async (req, res
             attributes: ['name', 'description', 'fields']
         });
 
-        // AI options from user settings + available templates
+        // Ensure user AI settings exist before hitting the processor
+        if (!userSettings.aiModel || !userSettings.languageDetection) {
+            return res.status(400).json({
+                success: false,
+                message: 'AI Model or Language configuration missing. Please update your profile settings.'
+            });
+        }
+
+        // --- ENFORCE MAX SCANS PER DAY LIMIT ---
+        const maxScansConfig = await SystemConfig.findOne({ where: { key: 'max_scans_per_day' } });
+        // Empty value, null, or '0' implies unlimited
+        if (maxScansConfig && maxScansConfig.value && maxScansConfig.value.trim() !== '' && maxScansConfig.value !== '0') {
+            const scanLimit = parseInt(maxScansConfig.value, 10);
+
+            if (!isNaN(scanLimit) && scanLimit > 0) {
+                // Count user scans for today
+                const startOfDay = new Date();
+                startOfDay.setHours(0, 0, 0, 0);
+
+                const todayScansCount = await Document.count({
+                    where: {
+                        userId: req.userId,
+                        scannedAt: { [Op.gte]: startOfDay }
+                    }
+                });
+
+                // Check if adding the new files will exceed the limit
+                if (todayScansCount + files.length > scanLimit) {
+                    return res.status(403).json({
+                        success: false,
+                        message: `Daily scan limit reached. You can only scan up to ${scanLimit} documents per day. You have already scanned ${todayScansCount} today.`
+                    });
+                }
+            }
+        }
+        // ---------------------------------------
+
+        // AI options strictly map from user settings + available templates
         const aiOptions = {
             apiKey: userSettings.apiKey,
-            aiModel: userSettings.aiModel || 'gemini-2.5-flash',
-            availableTemplates: availableTemplates.map(t => t.toJSON())
+            aiModel: userSettings.aiModel,
+            availableTemplates: availableTemplates.map(t => t.toJSON()),
+            mode: options.mode || 'template',
+            languageDetection: userSettings.languageDetection
         };
 
         // Process each file
@@ -176,11 +216,20 @@ router.post('/rescan/:id', authenticate, async (req, res, next) => {
             attributes: ['name', 'description', 'fields']
         });
 
-        // AI options from user settings + available templates
+        // Ensure user AI settings exist before hitting the processor
+        if (!userSettings.aiModel || !userSettings.languageDetection) {
+            return res.status(400).json({
+                success: false,
+                message: 'AI Model or Language configuration missing. Please update your profile settings.'
+            });
+        }
+
+        // AI options strictly map from user settings + available templates
         const aiOptions = {
             apiKey: userSettings.apiKey,
-            aiModel: userSettings.aiModel || 'gemini-2.5-flash',
-            availableTemplates: availableTemplates.map(t => t.toJSON())
+            aiModel: userSettings.aiModel,
+            availableTemplates: availableTemplates.map(t => t.toJSON()),
+            languageDetection: userSettings.languageDetection
         };
 
         const startTime = Date.now();
