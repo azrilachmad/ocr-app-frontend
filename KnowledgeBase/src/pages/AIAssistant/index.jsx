@@ -12,6 +12,7 @@ import {
 } from '@mui/icons-material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import ChartRenderer, { parseChartBlocks } from '../../components/ChartRenderer';
 import {
     getChatSessions, createChatSession, getChatMessages,
     sendChatMessage, deleteChatSession
@@ -314,9 +315,15 @@ const AIAssistant = () => {
                                         {msg.content}
                                     </Typography>
                                 ) : (
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                        {msg.content}
-                                    </ReactMarkdown>
+                                    parseChartBlocks(msg.content).map((block, bi) =>
+                                        block.type === 'chart' ? (
+                                            <ChartRenderer key={bi} chartData={block.data} />
+                                        ) : (
+                                            <ReactMarkdown key={bi} remarkPlugins={[remarkGfm]}>
+                                                {block.content}
+                                            </ReactMarkdown>
+                                        )
+                                    )
                                 )}
                             </Paper>
                             {msg.role === 'user' && (
