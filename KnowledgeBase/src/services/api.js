@@ -19,6 +19,10 @@ export const getCategoryArticles = (slug) => api.get(`/kb/categories/${slug}/art
 export const getArticle = (slug) => api.get(`/kb/articles/${slug}`);
 export const searchKB = (query) => api.get(`/kb/search?q=${encodeURIComponent(query)}`);
 
+// KB Dashboard
+export const getKBStats = () => api.get('/kb/stats');
+export const getPopularArticles = () => api.get('/kb/popular');
+
 // KB Files
 export const getFiles = (params) => api.get('/kb/files', { params });
 export const downloadFile = (id) => api.get(`/kb/files/${id}/download`, { responseType: 'blob' });
