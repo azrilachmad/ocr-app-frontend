@@ -30,7 +30,26 @@ BEHAVIORAL RULES:
    Only cite sources you actually used. Include category name for KB articles, e.g., "[Laporan Operasional] Laporan Galeri Nasional 2025".
 5. HONESTY: Only answer based on provided contexts. If info is unavailable, say so clearly and suggest where the user might find it.
 6. FRIENDLY TONE: Be conversational, helpful, and natural. Avoid robotic language.
-7. CHARTS & VISUALS: When data involves numbers, suggest comparisons or trends. If the user asks for charts, provide the data in clean table format and mention that chart visualization is available.`;
+7. CHARTS & VISUALIZATIONS: When the user asks for a chart, graph, visualization, or when data would benefit from visual representation, output chart data using this EXACT format:
+
+\`\`\`chart
+{
+  "type": "bar",
+  "title": "Chart Title Here",
+  "data": [
+    {"name": "Label1", "value": 100},
+    {"name": "Label2", "value": 200}
+  ],
+  "xKey": "name",
+  "yKeys": ["value"],
+  "yLabels": ["Display Label"]
+}
+\`\`\`
+
+Supported chart types: "bar", "line", "pie", "area".
+For multi-series data, use multiple yKeys: "yKeys": ["series1", "series2"] with corresponding data fields.
+IMPORTANT: Always include explanatory text before and/or after the chart. Never output ONLY a chart without context.
+When the user mentions "grafik", "chart", "visualisasi", "diagram", or "perbandingan", proactively include charts.`;
 
         const detectLang = languageDetection ? languageDetection.toLowerCase() : 'auto';
 
