@@ -434,7 +434,7 @@ const ScanHistoryPage = () => {
   return (
     <Box sx={{ bgcolor: '#F9FAFB', minHeight: '100vh', pb: 4, pt: 3, mt: 8 }}>
       {/* Header Actions */}
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #E5E7EB', py: 2 }}>
+      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #E5E7EB', py: 2, mt: 2 }}>
         <Container maxWidth="xl">
           <Box sx={{
             display: 'flex',
