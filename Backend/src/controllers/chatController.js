@@ -173,7 +173,11 @@ const sendMessage = async (req, res) => {
                 const catName = art.category?.name || 'Uncategorized';
                 documentContext += `--- KB Article [${catName}]: ${art.title} ---\n`;
                 if (art.summary) documentContext += `Summary: ${art.summary}\n`;
-                documentContext += `${art.content}\n\n`;
+                // Truncate individual article content to prevent context overflow
+                const truncatedContent = art.content.length > 500
+                    ? art.content.substring(0, 500) + '...'
+                    : art.content;
+                documentContext += `${truncatedContent}\n\n`;
             }
         });
 

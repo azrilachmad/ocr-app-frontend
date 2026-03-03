@@ -43,7 +43,12 @@ BEHAVIORAL RULES:
         }
 
         if (documentContext) {
-            systemInstructionText += `\n\nHere is the organizational knowledge and document data for context:\n\n${documentContext}\n\nUse the above data to answer questions accurately. Always cite which specific document or article your answer is based on.`;
+            // Truncate context to prevent exceeding model's token limit
+            const MAX_CONTEXT_CHARS = 30000;
+            const truncatedContext = documentContext.length > MAX_CONTEXT_CHARS
+                ? documentContext.substring(0, MAX_CONTEXT_CHARS) + '\n\n[... context truncated for brevity ...]'
+                : documentContext;
+            systemInstructionText += `\n\nHere is the organizational knowledge and document data for context:\n\n${truncatedContext}\n\nUse the above data to answer questions accurately. Always cite which specific document or article your answer is based on.`;
         }
 
         const systemInstructionContent = {
@@ -80,7 +85,7 @@ BEHAVIORAL RULES:
             history: formattedHistory,
             systemInstruction: systemInstructionContent,
             generationConfig: {
-                maxOutputTokens: 1000,
+                maxOutputTokens: 4096,
                 temperature: Number(temperature),
             },
         });
