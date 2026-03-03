@@ -175,7 +175,7 @@ const Home = () => {
             {/* Hero Section */}
             <Box sx={{
                 background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-                pt: 8, pb: 12, px: 4, textAlign: 'center', position: 'relative'
+                pt: 8, pb: 12, px: 4, textAlign: 'center', position: 'relative', zIndex: 20
             }}>
                 <Box sx={{
                     position: 'absolute', top: -100, right: -100, width: 300, height: 300,
@@ -229,7 +229,7 @@ const Home = () => {
                             <Paper elevation={8} sx={{
                                 position: 'absolute', top: '100%', left: 0, right: 0,
                                 borderRadius: '0 0 16px 16px', border: '2px solid rgba(99,102,241,0.3)', borderTop: 'none',
-                                bgcolor: 'white', zIndex: 999, maxHeight: 400, overflowY: 'auto',
+                                bgcolor: 'white', zIndex: 9999, maxHeight: 400, overflowY: 'auto',
                                 boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
                             }}>
                                 {suggestionsLoading && suggestions.length === 0 ? (
