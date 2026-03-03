@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box, Typography, TextField, Button, Paper, InputAdornment,
-    Avatar, IconButton, Menu, MenuItem, Chip, CircularProgress, Divider
+    Avatar, IconButton, Menu, MenuItem, Chip, CircularProgress
 } from '@mui/material';
 import {
     Search as SearchIcon, SmartToy as AIIcon, AutoStories as ArticleIcon,
@@ -11,11 +11,10 @@ import {
     AccountBalance as MuseumIcon, Gavel as PolicyIcon,
     Assessment as ReportIcon, Lightbulb as InsightIcon,
     PictureAsPdf as PdfIcon, Close as CloseIcon,
-    Visibility as ViewIcon, Schedule as TimeIcon,
     Category as CatIcon, Update as UpdateIcon,
-    ArrowForward as ArrowIcon, Home as HomeIcon
+    ArrowForward as ArrowIcon
 } from '@mui/icons-material';
-import { logout, getCategories, searchKB, getKBStats, getPopularArticles } from '../../services/api';
+import { logout, getCategories, searchKB, getKBStats } from '../../services/api';
 import { useAuth } from '../../App';
 
 const ICON_MAP = {
@@ -23,6 +22,15 @@ const ICON_MAP = {
     AccountBalance: <MuseumIcon />, Lightbulb: <InsightIcon />, School: <SchoolIcon />,
     Article: <ArticleIcon />, FolderOpen: <FolderIcon />
 };
+
+// Dummy popular articles (will be replaced with API data later)
+const DUMMY_POPULAR = [
+    { id: 1, title: 'Laporan Museum Nasional Indonesia 2025', category: 'Museum & Galeri', date: '2 Mar 2025', slug: 'laporan-museum-nasional-indonesia-2025' },
+    { id: 2, title: 'Wardun Borobudur 2025', category: 'Cagar Budaya', date: '1 Mar 2025', slug: 'wardun-borobudur-2025' },
+    { id: 3, title: 'Laporan Tim Data dan Informasi 2025', category: 'Data & Informasi', date: '28 Feb 2025', slug: 'laporan-tim-data-informasi-2025' },
+    { id: 4, title: 'Laporan Galeri Nasional Indonesia 2025', category: 'Museum & Galeri', date: '27 Feb 2025', slug: 'laporan-galeri-nasional-indonesia-2025' },
+    { id: 5, title: 'MINHA MCB 2025', category: 'Cagar Budaya', date: '25 Feb 2025', slug: 'minha-mcb-2025' },
+];
 
 const Home = () => {
     const navigate = useNavigate();
@@ -34,7 +42,6 @@ const Home = () => {
     const [searchResults, setSearchResults] = useState(null);
     const [searching, setSearching] = useState(false);
     const [stats, setStats] = useState(null);
-    const [popularArticles, setPopularArticles] = useState([]);
 
     // Live search suggestions
     const [suggestions, setSuggestions] = useState([]);
@@ -47,7 +54,6 @@ const Home = () => {
         Promise.all([
             getCategories().then(res => setCategories(res.data?.data || [])).catch(console.error),
             getKBStats().then(res => setStats(res.data?.data || null)).catch(console.error),
-            getPopularArticles().then(res => setPopularArticles(res.data?.data || [])).catch(console.error),
         ]).finally(() => setLoading(false));
     }, []);
 
@@ -71,36 +77,20 @@ const Home = () => {
     const handleSearchInput = (value) => {
         setSearchQuery(value);
         if (debounceRef.current) clearTimeout(debounceRef.current);
-
         if (!value.trim() || value.trim().length < 2) {
-            setSuggestions([]);
-            setShowSuggestions(false);
-            return;
+            setSuggestions([]); setShowSuggestions(false); return;
         }
-
-        setSuggestionsLoading(true);
-        setShowSuggestions(true);
-
+        setSuggestionsLoading(true); setShowSuggestions(true);
         debounceRef.current = setTimeout(async () => {
             try {
                 const res = await searchKB(value);
                 const data = res.data?.data || {};
                 const items = [];
-                (data.articles || []).forEach(art => {
-                    items.push({ type: 'article', title: art.title, subtitle: art.category?.name || art.summary, slug: art.slug, icon: 'article' });
-                });
-                (data.files || []).forEach(file => {
-                    items.push({ type: 'file', title: file.fileName, subtitle: file.fileSize, id: file.id, icon: 'file' });
-                });
-                (data.documents || []).forEach(doc => {
-                    items.push({ type: 'document', title: doc.fileName, subtitle: 'OCR Document', icon: 'doc' });
-                });
+                (data.articles || []).forEach(art => items.push({ type: 'article', title: art.title, subtitle: art.category?.name || art.summary, slug: art.slug }));
+                (data.files || []).forEach(file => items.push({ type: 'file', title: file.fileName, subtitle: file.fileSize, id: file.id }));
+                (data.documents || []).forEach(doc => items.push({ type: 'document', title: doc.fileName, subtitle: 'OCR Document' }));
                 setSuggestions(items.slice(0, 8));
-            } catch (err) {
-                setSuggestions([]);
-            } finally {
-                setSuggestionsLoading(false);
-            }
+            } catch (err) { setSuggestions([]); } finally { setSuggestionsLoading(false); }
         }, 300);
     };
 
@@ -118,29 +108,15 @@ const Home = () => {
             setSearching(true);
             const res = await searchKB(searchQuery);
             setSearchResults(res.data?.data || null);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setSearching(false);
-        }
-    };
-
-    const formatDate = (dateStr) => {
-        if (!dateStr) return '-';
-        const d = new Date(dateStr);
-        const now = new Date();
-        const diff = now - d;
-        if (diff < 86400000) return 'Hari ini';
-        if (diff < 172800000) return 'Kemarin';
-        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        } catch (err) { console.error(err); } finally { setSearching(false); }
     };
 
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC' }}>
-            {/* Header / Navigation */}
+            {/* Header */}
             <Box sx={{
                 position: 'sticky', top: 0, zIndex: 100,
-                background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)',
+                background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)',
                 borderBottom: '1px solid #E2E8F0', px: 4, py: 1.5
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: 1200, mx: 'auto' }}>
@@ -160,21 +136,6 @@ const Home = () => {
                                 Indonesian Heritage Agency
                             </Typography>
                         </Box>
-                    </Box>
-
-                    {/* Nav Links */}
-                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 0.5 }}>
-                        {[
-                            { label: 'Home', icon: <HomeIcon sx={{ fontSize: 16 }} />, path: '/' },
-                            { label: 'Articles', icon: <ArticleIcon sx={{ fontSize: 16 }} />, path: '/' },
-                            { label: 'Categories', icon: <CatIcon sx={{ fontSize: 16 }} />, path: '/' },
-                            { label: 'AI Insights', icon: <AIIcon sx={{ fontSize: 16 }} />, path: '/ai-assistant' },
-                        ].map(nav => (
-                            <Button key={nav.label} size="small" startIcon={nav.icon}
-                                onClick={() => nav.path === '/' ? document.getElementById(nav.label.toLowerCase())?.scrollIntoView({ behavior: 'smooth' }) : navigate(nav.path)}
-                                sx={{ fontSize: '13px', color: '#64748B', textTransform: 'none', '&:hover': { color: '#4F46E5', bgcolor: '#F0F0FF' } }}
-                            >{nav.label}</Button>
-                        ))}
                     </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -214,18 +175,18 @@ const Home = () => {
             {/* Hero Section */}
             <Box sx={{
                 background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-                pt: 7, pb: 10, px: 4, textAlign: 'center', position: 'relative'
+                pt: 8, pb: 12, px: 4, textAlign: 'center', position: 'relative'
             }}>
                 <Box sx={{
                     position: 'absolute', top: -100, right: -100, width: 300, height: 300,
                     borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)'
                 }} />
-                <Box sx={{ maxWidth: 700, mx: 'auto', position: 'relative', zIndex: 1 }}>
-                    <Typography sx={{ fontSize: { xs: '28px', md: '36px' }, fontWeight: 800, color: 'white', mb: 1 }}>
-                        Knowledge Base
+                <Box sx={{ maxWidth: 680, mx: 'auto', position: 'relative', zIndex: 1 }}>
+                    <Typography sx={{ fontSize: '36px', fontWeight: 800, color: 'white', mb: 1.5 }}>
+                        Temukan Pengetahuan Anda
                     </Typography>
-                    <Typography sx={{ fontSize: '15px', color: '#94A3B8', mb: 3.5 }}>
-                        Discover insights, tips, and best practices for preserving Indonesia's cultural heritage
+                    <Typography sx={{ fontSize: '16px', color: '#94A3B8', mb: 4 }}>
+                        Cari artikel, dokumen, laporan, atau tanya langsung ke AI Assistant
                     </Typography>
 
                     {/* Search Bar with Live Suggestions */}
@@ -233,15 +194,13 @@ const Home = () => {
                         <Paper component="form" onSubmit={handleSearch} elevation={0} sx={{
                             display: 'flex', alignItems: 'center',
                             borderRadius: showSuggestions && suggestions.length > 0 ? '24px 24px 0 0' : '24px',
-                            overflow: 'hidden',
-                            border: '2px solid rgba(99,102,241,0.3)',
+                            overflow: 'hidden', border: '2px solid rgba(99,102,241,0.3)',
                             transition: 'all 0.2s',
                             '&:focus-within': { borderColor: '#6366F1', boxShadow: '0 4px 20px rgba(99,102,241,0.15)' }
                         }}>
                             <TextField
-                                fullWidth placeholder="Search knowledge base..."
-                                autoComplete="off"
-                                value={searchQuery}
+                                fullWidth placeholder="Cari dokumen, artikel, atau topik..."
+                                autoComplete="off" value={searchQuery}
                                 onChange={(e) => handleSearchInput(e.target.value)}
                                 onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                                 onKeyDown={(e) => { if (e.key === 'Escape') setShowSuggestions(false); }}
@@ -258,9 +217,10 @@ const Home = () => {
                                 }}
                                 sx={{ flex: 1 }}
                             />
-                            <Button type="submit" variant="contained" disabled={searching}
-                                sx={{ m: 0.5, px: 3, borderRadius: '20px', background: 'linear-gradient(135deg, #4F46E5, #6366F1)' }}>
-                                {searching ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Search'}
+                            <Button type="submit" variant="contained" disabled={searching} sx={{
+                                m: 0.5, px: 3, borderRadius: '20px', background: 'linear-gradient(135deg, #4F46E5, #6366F1)',
+                            }}>
+                                {searching ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Cari'}
                             </Button>
                         </Paper>
 
@@ -268,8 +228,7 @@ const Home = () => {
                         {showSuggestions && (suggestions.length > 0 || suggestionsLoading) && (
                             <Paper elevation={8} sx={{
                                 position: 'absolute', top: '100%', left: 0, right: 0,
-                                borderRadius: '0 0 16px 16px',
-                                border: '2px solid rgba(99,102,241,0.3)', borderTop: 'none',
+                                borderRadius: '0 0 16px 16px', border: '2px solid rgba(99,102,241,0.3)', borderTop: 'none',
                                 bgcolor: 'white', zIndex: 999, maxHeight: 400, overflowY: 'auto',
                                 boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
                             }}>
@@ -289,14 +248,10 @@ const Home = () => {
                                                 '&:hover': { bgcolor: '#F8FAFC' },
                                                 '&:last-child': { borderRadius: '0 0 14px 14px' }
                                             }}>
-                                            {item.type === 'file' ? (
-                                                <PdfIcon sx={{ fontSize: 20, color: '#EF4444', flexShrink: 0 }} />
-                                            ) : item.type === 'article' ? (
-                                                <ArticleIcon sx={{ fontSize: 20, color: '#6366F1', flexShrink: 0 }} />
-                                            ) : (
-                                                <SearchIcon sx={{ fontSize: 20, color: '#94A3B8', flexShrink: 0 }} />
-                                            )}
-                                            <Box sx={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                                            {item.type === 'file' ? <PdfIcon sx={{ fontSize: 20, color: '#EF4444', flexShrink: 0 }} />
+                                                : item.type === 'article' ? <ArticleIcon sx={{ fontSize: 20, color: '#6366F1', flexShrink: 0 }} />
+                                                    : <SearchIcon sx={{ fontSize: 20, color: '#94A3B8', flexShrink: 0 }} />}
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
                                                 <Typography sx={{ fontSize: '14px', color: '#1F2937', fontWeight: 500 }} noWrap>{item.title}</Typography>
                                                 {item.subtitle && <Typography sx={{ fontSize: '12px', color: '#94A3B8' }} noWrap>{item.subtitle}</Typography>}
                                             </Box>
@@ -309,7 +264,7 @@ const Home = () => {
                                 {!suggestionsLoading && suggestions.length > 0 && (
                                     <Box sx={{ px: 2.5, py: 1.5, borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'center' }}>
                                         <Button size="small" onClick={handleSearch} sx={{ fontSize: '12px', color: '#6366F1' }}>
-                                            View all results for "{searchQuery}"
+                                            Lihat semua hasil untuk "{searchQuery}"
                                         </Button>
                                     </Box>
                                 )}
@@ -324,10 +279,10 @@ const Home = () => {
                 <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, mt: -5, position: 'relative', zIndex: 10 }}>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 2 }}>
                         {[
-                            { label: 'Total Articles', value: stats.totalArticles, icon: <ArticleIcon />, color: '#6366F1' },
-                            { label: 'Categories', value: stats.totalCategories, icon: <CatIcon />, color: '#0EA5E9' },
-                            { label: 'Total Files', value: stats.totalFiles, icon: <FolderIcon />, color: '#10B981' },
-                            { label: 'Last Updated', value: formatDate(stats.lastUpdated), icon: <UpdateIcon />, color: '#F59E0B', isText: true },
+                            { label: 'Total Artikel', value: stats.totalArticles, icon: <ArticleIcon />, color: '#6366F1' },
+                            { label: 'Kategori', value: stats.totalCategories, icon: <CatIcon />, color: '#0EA5E9' },
+                            { label: 'Total File', value: stats.totalFiles, icon: <FolderIcon />, color: '#10B981' },
+                            { label: 'Terakhir Update', value: 'Hari ini', icon: <UpdateIcon />, color: '#F59E0B', isText: true },
                         ].map((stat, i) => (
                             <Paper key={i} elevation={0} sx={{
                                 p: 2.5, borderRadius: 3, border: '1px solid #E2E8F0',
@@ -353,20 +308,19 @@ const Home = () => {
                 </Box>
             )}
 
-            {/* Full Search Results */}
+            {/* Search Results */}
             {searchResults && (
                 <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, py: 4 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                         <Typography sx={{ fontSize: '20px', fontWeight: 700, color: '#0F172A' }}>
-                            Search Results: "{searchQuery}"
+                            Hasil Pencarian: "{searchQuery}"
                         </Typography>
-                        <Button size="small" onClick={() => { setSearchResults(null); setSearchQuery(''); }}>Close</Button>
+                        <Button size="small" onClick={() => { setSearchResults(null); setSearchQuery(''); }}>Tutup</Button>
                     </Box>
-
                     {searchResults.articles?.length > 0 && (
                         <Box sx={{ mb: 3 }}>
                             <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#64748B', mb: 1.5 }}>
-                                📄 Articles ({searchResults.articles.length})
+                                📄 Artikel ({searchResults.articles.length})
                             </Typography>
                             {searchResults.articles.map(art => (
                                 <Paper key={art.id} elevation={0} onClick={() => navigate(`/articles/${art.slug}`)} sx={{
@@ -379,18 +333,12 @@ const Home = () => {
                             ))}
                         </Box>
                     )}
-
                     {searchResults.files?.length > 0 && (
                         <Box sx={{ mb: 3 }}>
-                            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#64748B', mb: 1.5 }}>
-                                📁 Files ({searchResults.files.length})
-                            </Typography>
+                            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#64748B', mb: 1.5 }}>📁 File ({searchResults.files.length})</Typography>
                             {searchResults.files.map(file => (
-                                <Paper key={file.id} elevation={0} sx={{
-                                    p: 2, mb: 1, borderRadius: 2, border: '1px solid #E2E8F0',
-                                    display: 'flex', alignItems: 'center', gap: 2
-                                }}>
-                                    <PdfIcon sx={{ color: '#EF4444' }} />
+                                <Paper key={file.id} elevation={0} sx={{ p: 2, mb: 1, borderRadius: 2, border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <DocIcon sx={{ color: '#EF4444' }} />
                                     <Box sx={{ flex: 1 }}>
                                         <Typography sx={{ fontSize: '14px', fontWeight: 500 }}>{file.fileName}</Typography>
                                         <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>{file.fileSize}</Typography>
@@ -399,197 +347,143 @@ const Home = () => {
                             ))}
                         </Box>
                     )}
-
                     {searchResults.articles?.length === 0 && searchResults.files?.length === 0 && searchResults.documents?.length === 0 && (
-                        <Typography sx={{ textAlign: 'center', color: '#94A3B8', py: 4 }}>No results found</Typography>
+                        <Typography sx={{ textAlign: 'center', color: '#94A3B8', py: 4 }}>Tidak ada hasil ditemukan</Typography>
                     )}
                 </Box>
             )}
 
-            {/* Main Content - Two Column Layout */}
-            <Box id="articles" sx={{ maxWidth: 1200, mx: 'auto', px: 4, py: 5 }}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 4 }}>
-
-                    {/* Left Column — Categories + Popular Articles */}
+            {/* Categories Grid (original layout) */}
+            <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, py: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
                     <Box>
-                        {/* Categories Section */}
-                        <Box id="categories" sx={{ mb: 5 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                                <Box>
-                                    <Typography sx={{ fontSize: '20px', fontWeight: 700, color: '#0F172A' }}>
-                                        Categories
-                                    </Typography>
-                                    <Typography sx={{ fontSize: '13px', color: '#94A3B8', mt: 0.5 }}>
-                                        Browse knowledge by topic
-                                    </Typography>
-                                </Box>
-                            </Box>
-
-                            {loading ? (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={28} /></Box>
-                            ) : (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-                                    {categories.map((cat) => (
-                                        <Paper key={cat.id} elevation={0}
-                                            onClick={() => navigate(`/categories/${cat.slug}`)}
-                                            sx={{
-                                                display: 'flex', alignItems: 'center', gap: 1.5,
-                                                px: 2, py: 1.5, borderRadius: 2,
-                                                border: '1px solid #E2E8F0', cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                                '&:hover': {
-                                                    borderColor: cat.color,
-                                                    transform: 'translateY(-2px)',
-                                                    boxShadow: `0 4px 12px ${cat.color}15`
-                                                }
-                                            }}>
-                                            <Box sx={{
-                                                width: 32, height: 32, borderRadius: 1.5,
-                                                bgcolor: `${cat.color}12`, color: cat.color,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                '& svg': { fontSize: 18 }
-                                            }}>
-                                                {ICON_MAP[cat.icon] || <ArticleIcon />}
-                                            </Box>
-                                            <Box>
-                                                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>
-                                                    {cat.name}
-                                                </Typography>
-                                                <Typography sx={{ fontSize: '11px', color: '#94A3B8' }}>
-                                                    {cat.articleCount || 0} articles
-                                                </Typography>
-                                            </Box>
-                                            <Chip label="AI Ready" size="small" sx={{
-                                                height: 20, fontSize: '10px', fontWeight: 600,
-                                                bgcolor: '#EEF2FF', color: '#6366F1', ml: 0.5
-                                            }} />
-                                        </Paper>
-                                    ))}
-                                </Box>
-                            )}
-                        </Box>
-
-                        {/* Popular Articles */}
-                        <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
-                                <Typography sx={{ fontSize: '20px', fontWeight: 700, color: '#0F172A' }}>
-                                    Popular Articles
-                                </Typography>
-                            </Box>
-
-                            {popularArticles.length === 0 ? (
-                                <Typography sx={{ color: '#94A3B8', fontSize: '14px' }}>No articles yet</Typography>
-                            ) : (
-                                popularArticles.map((art, i) => (
-                                    <Paper key={art.id} elevation={0}
-                                        onClick={() => navigate(`/articles/${art.slug}`)}
-                                        sx={{
-                                            p: 2.5, mb: 1.5, borderRadius: 2,
-                                            border: '1px solid #E2E8F0', cursor: 'pointer',
-                                            display: 'flex', alignItems: 'flex-start', gap: 2,
-                                            transition: 'all 0.2s',
-                                            '&:hover': { borderColor: '#6366F1', transform: 'translateX(4px)', boxShadow: '0 4px 12px rgba(99,102,241,0.08)' }
-                                        }}>
-                                        <Box sx={{
-                                            width: 36, height: 36, borderRadius: 1.5, flexShrink: 0,
-                                            bgcolor: art.category?.color ? `${art.category.color}12` : '#F1F5F9',
-                                            color: art.category?.color || '#6366F1',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            '& svg': { fontSize: 18 }
-                                        }}>
-                                            {ICON_MAP[art.category?.icon] || <ArticleIcon />}
-                                        </Box>
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', lineHeight: 1.3 }} noWrap>
-                                                {art.title}
-                                            </Typography>
-                                            <Typography sx={{ fontSize: '12px', color: '#94A3B8', mt: 0.3 }} noWrap>
-                                                {art.category?.name} • {formatDate(art.createdAt)}
-                                            </Typography>
-                                        </Box>
-                                        <Button size="small" sx={{ fontSize: '12px', color: '#6366F1', flexShrink: 0, minWidth: 'auto' }}>
-                                            Read <ArrowIcon sx={{ fontSize: 14, ml: 0.3 }} />
-                                        </Button>
-                                    </Paper>
-                                ))
-                            )}
-                        </Box>
-                    </Box>
-
-                    {/* Right Column — AI CTA + Recent AI Insights */}
-                    <Box>
-                        {/* Ask AI Card */}
-                        <Paper elevation={0} sx={{
-                            p: 3, borderRadius: 3, mb: 3,
-                            background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-                            position: 'relative', overflow: 'hidden'
-                        }}>
-                            <Box sx={{
-                                position: 'absolute', top: -30, right: -30, width: 120, height: 120,
-                                borderRadius: '50%', background: 'rgba(255,255,255,0.06)'
-                            }} />
-                            <AIIcon sx={{ fontSize: 36, color: 'rgba(255,255,255,0.9)', mb: 1.5 }} />
-                            <Typography sx={{ fontSize: '18px', fontWeight: 700, color: 'white', mb: 0.5 }}>
-                                Ask AI
-                            </Typography>
-                            <Typography sx={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', mb: 2.5, lineHeight: 1.5 }}>
-                                Get insights, analysis, and answers from our entire knowledge base using AI
-                            </Typography>
-                            <Button variant="contained" size="small" startIcon={<AIIcon />}
-                                onClick={() => navigate('/ai-assistant')}
-                                sx={{
-                                    bgcolor: 'white', color: '#4F46E5', fontWeight: 600, px: 2.5,
-                                    borderRadius: 2, fontSize: '13px',
-                                    '&:hover': { bgcolor: '#F0F0FF' }
-                                }}>
-                                Start Asking
-                            </Button>
-                        </Paper>
-
-                        {/* Recent AI Insights */}
-                        <Box>
-                            <Typography sx={{ fontSize: '16px', fontWeight: 700, color: '#0F172A', mb: 2 }}>
-                                Recent AI Insights
-                            </Typography>
-
-                            {[
-                                { title: 'AI-Powered Search', desc: 'Auto-suggest articles based on your queries', icon: <SearchIcon /> },
-                                { title: 'Smart Summaries', desc: 'AI-generated document summaries from your files', icon: <InsightIcon /> },
-                                { title: 'Context Awareness', desc: 'AI considers KB articles, OCR data, and files', icon: <AIIcon /> },
-                            ].map((insight, i) => (
-                                <Paper key={i} elevation={0} sx={{
-                                    p: 2, mb: 1.5, borderRadius: 2,
-                                    border: '1px solid #E2E8F0',
-                                    display: 'flex', alignItems: 'flex-start', gap: 1.5,
-                                    transition: 'all 0.2s',
-                                    '&:hover': { borderColor: '#C7D2FE' }
-                                }}>
-                                    <Box sx={{
-                                        width: 32, height: 32, borderRadius: 1.5,
-                                        bgcolor: '#EEF2FF', color: '#6366F1',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        '& svg': { fontSize: 16 }, flexShrink: 0
-                                    }}>
-                                        {insight.icon}
-                                    </Box>
-                                    <Box>
-                                        <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0F172A' }}>
-                                            {insight.title}
-                                        </Typography>
-                                        <Typography sx={{ fontSize: '12px', color: '#94A3B8', lineHeight: 1.4 }}>
-                                            {insight.desc}
-                                        </Typography>
-                                    </Box>
-                                </Paper>
-                            ))}
-
-                            <Button fullWidth onClick={() => navigate('/ai-assistant')}
-                                sx={{ mt: 1, fontSize: '13px', color: '#6366F1', textTransform: 'none' }}>
-                                View All AI Insights →
-                            </Button>
-                        </Box>
+                        <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#0F172A' }}>
+                            Kategori Topik
+                        </Typography>
+                        <Typography sx={{ fontSize: '14px', color: '#64748B', mt: 0.5 }}>
+                            Telusuri pengetahuan berdasarkan kategori
+                        </Typography>
                     </Box>
                 </Box>
+
+                {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>
+                ) : (
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 3 }}>
+                        {categories.map((cat, i) => (
+                            <Paper key={cat.id} elevation={0} className="fade-in-up"
+                                onClick={() => navigate(`/categories/${cat.slug}`)}
+                                sx={{
+                                    p: 3, borderRadius: 3, border: '1px solid #E2E8F0', cursor: 'pointer',
+                                    transition: 'all 0.3s ease', animationDelay: `${i * 0.08}s`,
+                                    '&:hover': {
+                                        transform: 'translateY(-4px)',
+                                        boxShadow: '0 12px 24px rgba(0,0,0,0.08)',
+                                        borderColor: cat.color
+                                    }
+                                }}>
+                                <Box sx={{
+                                    width: 48, height: 48, borderRadius: 2, mb: 2,
+                                    background: `${cat.color}12`, color: cat.color,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    {ICON_MAP[cat.icon] || <ArticleIcon />}
+                                </Box>
+                                <Typography sx={{ fontSize: '16px', fontWeight: 600, color: '#0F172A', mb: 0.5 }}>
+                                    {cat.name}
+                                </Typography>
+                                <Typography sx={{ fontSize: '13px', color: '#64748B', mb: 2, lineHeight: 1.5 }}>
+                                    {cat.description}
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Chip label={`${cat.articleCount || 0} articles`} size="small" sx={{
+                                        bgcolor: `${cat.color}10`, color: cat.color, fontWeight: 500, fontSize: '11px'
+                                    }} />
+                                    <Chip label="AI Ready" size="small" sx={{
+                                        height: 20, fontSize: '10px', fontWeight: 600,
+                                        bgcolor: '#EEF2FF', color: '#6366F1'
+                                    }} />
+                                </Box>
+                            </Paper>
+                        ))}
+                    </Box>
+                )}
+            </Box>
+
+            {/* Popular Articles (dummy data) */}
+            <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, pb: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                    <Box>
+                        <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#0F172A' }}>
+                            Artikel Populer
+                        </Typography>
+                        <Typography sx={{ fontSize: '14px', color: '#64748B', mt: 0.5 }}>
+                            Artikel yang paling banyak dibaca
+                        </Typography>
+                    </Box>
+                </Box>
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                    {DUMMY_POPULAR.map((art) => (
+                        <Paper key={art.id} elevation={0}
+                            onClick={() => navigate(`/articles/${art.slug}`)}
+                            sx={{
+                                p: 2.5, borderRadius: 2, border: '1px solid #E2E8F0', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: 2,
+                                transition: 'all 0.2s',
+                                '&:hover': { borderColor: '#6366F1', transform: 'translateX(4px)', boxShadow: '0 4px 12px rgba(99,102,241,0.08)' }
+                            }}>
+                            <Box sx={{
+                                width: 40, height: 40, borderRadius: 2, flexShrink: 0,
+                                bgcolor: '#EEF2FF', color: '#6366F1',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <ArticleIcon sx={{ fontSize: 20 }} />
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }} noWrap>
+                                    {art.title}
+                                </Typography>
+                                <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>
+                                    {art.category} • {art.date}
+                                </Typography>
+                            </Box>
+                            <Button size="small" sx={{ fontSize: '12px', color: '#6366F1', flexShrink: 0, minWidth: 'auto' }}>
+                                Read <ArrowIcon sx={{ fontSize: 14, ml: 0.3 }} />
+                            </Button>
+                        </Paper>
+                    ))}
+                </Box>
+            </Box>
+
+            {/* AI CTA Section */}
+            <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, pb: 6 }}>
+                <Paper elevation={0} sx={{
+                    p: 5, borderRadius: 3, textAlign: 'center',
+                    background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
+                    position: 'relative', overflow: 'hidden'
+                }}>
+                    <Box sx={{
+                        position: 'absolute', top: -50, right: -50, width: 200, height: 200,
+                        borderRadius: '50%', background: 'rgba(255,255,255,0.05)'
+                    }} />
+                    <AIIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.9)', mb: 2 }} />
+                    <Typography sx={{ fontSize: '24px', fontWeight: 700, color: 'white', mb: 1 }}>
+                        Tanya AI Assistant
+                    </Typography>
+                    <Typography sx={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', mb: 3, maxWidth: 500, mx: 'auto' }}>
+                        Dapatkan insight, analisis, dan jawaban dari seluruh basis pengetahuan Anda menggunakan AI
+                    </Typography>
+                    <Button variant="contained" size="large" startIcon={<AIIcon />}
+                        onClick={() => navigate('/ai-assistant')}
+                        sx={{
+                            bgcolor: 'white', color: '#4F46E5', fontWeight: 700, px: 4, py: 1.5,
+                            borderRadius: 2, fontSize: '15px',
+                            '&:hover': { bgcolor: '#F0F0FF' }
+                        }}>
+                        Mulai Bertanya
+                    </Button>
+                </Paper>
             </Box>
 
             {/* Footer */}
