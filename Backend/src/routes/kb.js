@@ -1,8 +1,56 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
-const { KBCategory, KBArticle, KBFile, Document } = require('../models');
+const { KBCategory, KBArticle, KBFile, Document, sequelize } = require('../models');
 const { Op } = require('sequelize');
+
+// =============================================
+// STATS & DASHBOARD
+// =============================================
+
+/**
+ * GET /api/kb/stats
+ * Quick statistics for dashboard
+ */
+router.get('/stats', authenticate, async (req, res, next) => {
+    try {
+        const totalArticles = await KBArticle.count({ where: { status: 'published' } });
+        const totalCategories = await KBCategory.count();
+        const totalFiles = await KBFile.count();
+        const lastArticle = await KBArticle.findOne({ order: [['createdAt', 'DESC']], attributes: ['createdAt'] });
+
+        res.json({
+            success: true,
+            data: {
+                totalArticles,
+                totalCategories,
+                totalFiles,
+                lastUpdated: lastArticle?.createdAt || new Date()
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * GET /api/kb/popular
+ * Popular / recent articles for dashboard
+ */
+router.get('/popular', authenticate, async (req, res, next) => {
+    try {
+        const articles = await KBArticle.findAll({
+            where: { status: 'published' },
+            attributes: ['id', 'title', 'slug', 'summary', 'tags', 'viewCount', 'createdAt'],
+            include: [{ model: KBCategory, as: 'category', attributes: ['name', 'slug', 'color', 'icon'] }],
+            order: [['viewCount', 'DESC'], ['createdAt', 'DESC']],
+            limit: 5
+        });
+        res.json({ success: true, data: articles });
+    } catch (error) {
+        next(error);
+    }
+});
 
 // =============================================
 // CATEGORIES
