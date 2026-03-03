@@ -14,7 +14,7 @@ const pageConfig = {
   '/upload': { title: 'Upload Document', subtitle: 'Upload and process documents with AI' },
   '/history': { title: 'Scan History', subtitle: 'View and manage your scan history' },
   '/documents': { title: 'Saved Documents', subtitle: 'Browse all saved document records' },
-  '/knowledge-base': { title: 'Knowledge Base', subtitle: 'AI assistant to help you find answers from your documents' },
+
   '/settings': { title: 'Settings', subtitle: 'Manage your account preferences' },
   // Admin routes
   '/admin/dashboard': { title: 'Admin Dashboard', subtitle: 'Overview of system statistics and recent activity' },

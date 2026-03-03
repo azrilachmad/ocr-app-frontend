@@ -40,10 +40,6 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle, user }) => {
   // These might not be toggled right now, but we can add safeguards
   userNavItems.push({ text: 'Upload Document', path: '/upload', icon: <CloudUploadIcon /> });
   userNavItems.push({ text: 'Scan History', path: '/history', icon: <HistoryIcon /> });
-  // Add conditional items based on user features
-  if (user?.features?.knowledgeBase !== false) {
-    userNavItems.push({ text: 'Knowledge Base', path: '/knowledge-base', icon: <ChatIcon /> });
-  }
   userNavItems.push({ text: 'Settings', path: '/settings', icon: <SettingsIcon /> });
 
   // Superadmin navigation

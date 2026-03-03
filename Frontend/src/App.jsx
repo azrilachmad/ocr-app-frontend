@@ -11,7 +11,7 @@ const DocumentUploadPage = lazy(() => import('./pages/documentUpload'));
 const ScanHistoryPage = lazy(() => import('./pages/scanHistory'));
 const ScanDetailEditPage = lazy(() => import('./pages/scanHistory/ScanDetailEditPage'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
-const KnowledgeBase = lazy(() => import('./pages/User/KnowledgeBase'));
+
 const LoginPage = lazy(() => import('./pages/Login'));
 const RegisterPage = lazy(() => import('./pages/Register'));
 
@@ -52,7 +52,7 @@ function App() {
                     <Route path="/upload" element={<DocumentUploadPage />} />
                     <Route path="/history" element={<ScanHistoryPage />} />
                     <Route path="/history/:id" element={<ScanDetailEditPage />} />
-                    <Route path="/knowledge-base" element={<KnowledgeBase />} />
+
                     <Route path="/settings" element={<SettingsPage />} />
 
                     {/* Admin routes */}

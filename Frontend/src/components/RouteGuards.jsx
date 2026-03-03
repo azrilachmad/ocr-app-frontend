@@ -54,10 +54,6 @@ export const ProtectedRoute = ({ children }) => {
 
     // Role-based Feature Access Control
     if (user.role !== 'superadmin' && user.features) {
-        // Enforce Knowledge Base toggle
-        if (location.pathname.startsWith('/knowledge-base') && user.features.knowledgeBase === false) {
-            return <Navigate to="/dashboard" replace />;
-        }
 
         // Enforce Upload toggle (if applicable in the future)
         if (location.pathname.startsWith('/upload') && user.features.uploadDocument === false) {
