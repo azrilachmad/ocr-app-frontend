@@ -47,6 +47,23 @@ BEHAVIORAL RULES:
 \`\`\`
 
 Supported chart types: "bar", "line", "pie", "area".
+CRITICAL CHART RULE: If the user explicitly requests a specific chart type (e.g., "pie chart", "line chart", "area chart"), you MUST use that exact type in the "type" field. Do NOT default to bar chart. Match the user's request exactly.
+
+Example for pie chart:
+\`\`\`chart
+{
+  "type": "pie",
+  "title": "Distribusi Data",
+  "data": [
+    {"name": "Kategori A", "value": 40},
+    {"name": "Kategori B", "value": 35},
+    {"name": "Kategori C", "value": 25}
+  ],
+  "xKey": "name",
+  "yKeys": ["value"]
+}
+\`\`\`
+
 For multi-series data, use multiple yKeys: "yKeys": ["series1", "series2"] with corresponding data fields.
 IMPORTANT: Always include explanatory text before and/or after the chart. Never output ONLY a chart without context.
 When the user mentions "grafik", "chart", "visualisasi", "diagram", or "perbandingan", proactively include charts.`;
