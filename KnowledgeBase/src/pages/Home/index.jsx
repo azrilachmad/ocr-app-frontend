@@ -276,7 +276,7 @@ const Home = () => {
 
             {/* Quick Statistics */}
             {stats && (
-                <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, mt: -5, position: 'relative', zIndex: 1 }}>
+                <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, mt: 4, position: 'relative', zIndex: 1 }}>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 2 }}>
                         {[
                             { label: 'Total Artikel', value: stats.totalArticles, icon: <ArticleIcon />, color: '#6366F1' },
