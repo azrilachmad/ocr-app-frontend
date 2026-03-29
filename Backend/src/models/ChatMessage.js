@@ -30,7 +30,7 @@ const ChatMessage = sequelize.define('ChatMessage', {
     tableName: 'ChatMessages',
     indexes: [
         {
-            fields: ['sessionId', 'createdAt'] // Fast lookup for chat history
+            fields: ['session_id', 'created_at'] // Fast lookup for chat history
         }
     ]
 });
