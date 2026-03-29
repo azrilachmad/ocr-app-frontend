@@ -13,8 +13,8 @@ const startServer = async () => {
         // Test database connection
         await testConnection();
 
-        // Sync models (set to true to force recreate tables - use cautiously!)
-        await syncModels(false);
+        // Sync models — 'alter' mode ensures new columns are added to existing tables
+        await syncModels('alter');
 
         // Seed default document types if none exist
         await seedDocumentTypes();

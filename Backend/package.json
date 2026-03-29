@@ -6,6 +6,10 @@
     "scripts": {
         "start": "node server.js",
         "dev": "nodemon server.js",
+        "db:setup": "node db-setup.js --seed",
+        "db:update": "node db-setup.js",
+        "db:reset": "node db-setup.js --force-seed",
+        "db:seed": "node db-setup.js --seed",
         "migrate": "npx sequelize-cli db:migrate",
         "seed": "npx sequelize-cli db:seed:all",
         "test": "jest --detectOpenHandles"
