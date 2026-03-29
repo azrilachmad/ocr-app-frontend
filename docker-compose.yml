@@ -79,6 +79,22 @@ services:
     networks:
       - synchro-network
 
+  # KnowledgeBase
+  knowledgebase:
+    build:
+      context: ./KnowledgeBase
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3001/api}
+    container_name: synchro-scan-knowledgebase
+    restart: unless-stopped
+    ports:
+      - "3005:80"
+    depends_on:
+      - backend
+    networks:
+      - synchro-network
+
   # Nginx Reverse Proxy (Optional - for production with SSL)
   nginx:
     image: nginx:alpine
@@ -93,6 +109,7 @@ services:
       - ./docker/ssl:/etc/nginx/ssl:ro
     depends_on:
       - frontend
+      - knowledgebase
       - backend
     networks:
       - synchro-network
