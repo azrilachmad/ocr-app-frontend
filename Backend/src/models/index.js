@@ -54,17 +54,27 @@ const syncModels = async (mode = 'safe') => {
             console.log('🔄 Alter sync: updating table schemas to match models...');
         }
 
-        await sequelize.sync(syncOptions);
-        console.log('✅ All models synchronized successfully.');
+        // Disable FK checks during sync to prevent constraint errors on ALTER
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
+        try {
+            await sequelize.sync(syncOptions);
+            console.log('✅ All models synchronized successfully.');
+        } finally {
+            // Always re-enable FK checks
+            await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
+        }
     } catch (error) {
         console.error('❌ Error synchronizing models:', error.message);
         if (mode !== 'alter') {
             // Fallback: try alter mode if safe mode failed
             try {
                 console.log('⏳ Retrying with ALTER mode...');
+                await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
                 await sequelize.sync({ alter: true });
+                await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
                 console.log('✅ Models synchronized with ALTER mode.');
             } catch (alterError) {
+                await sequelize.query('SET FOREIGN_KEY_CHECKS = 1').catch(() => {});
                 console.error('❌ ALTER sync also failed:', alterError.message);
                 throw alterError;
             }
