@@ -40,21 +40,36 @@ User.hasMany(KBArticle, { foreignKey: 'authorId', as: 'articles' });
 KBArticle.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
 
 // Sync all models
-const syncModels = async (force = false) => {
+// mode: 'safe' (default) = create tables only if not exist
+//        'alter'          = add/modify columns to match model (safe for production)
+//        'force'          = drop & recreate all tables (DESTROYS DATA!)
+const syncModels = async (mode = 'safe') => {
     try {
-        await sequelize.sync({ force });
+        const syncOptions = {};
+        if (mode === 'force') {
+            syncOptions.force = true;
+            console.log('⚠️  Force sync: dropping and recreating ALL tables...');
+        } else if (mode === 'alter') {
+            syncOptions.alter = true;
+            console.log('🔄 Alter sync: updating table schemas to match models...');
+        }
+
+        await sequelize.sync(syncOptions);
         console.log('✅ All models synchronized successfully.');
     } catch (error) {
         console.error('❌ Error synchronizing models:', error.message);
-        // Fallback: try to sync KB models individually
-        try {
-            console.log('⏳ Attempting to sync KB models individually...');
-            await KBCategory.sync({ force });
-            await KBArticle.sync({ force });
-            await KBFile.sync({ force });
-            console.log('✅ KB models synchronized individually.');
-        } catch (kbError) {
-            console.error('❌ KB model sync also failed:', kbError.message);
+        if (mode !== 'alter') {
+            // Fallback: try alter mode if safe mode failed
+            try {
+                console.log('⏳ Retrying with ALTER mode...');
+                await sequelize.sync({ alter: true });
+                console.log('✅ Models synchronized with ALTER mode.');
+            } catch (alterError) {
+                console.error('❌ ALTER sync also failed:', alterError.message);
+                throw alterError;
+            }
+        } else {
+            throw error;
         }
     }
 };

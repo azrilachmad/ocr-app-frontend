@@ -90,12 +90,15 @@ DB_PASS=your_db_password
 # JWT Configuration (Generate with: openssl rand -hex 32)
 JWT_SECRET=your_super_secret_jwt_key_at_least_32_characters
 
+# Cookie domain for cross-subdomain auth
+COOKIE_DOMAIN=.yourdomain.com
+
 # Upload Configuration
 UPLOAD_PATH=./uploads
 MAX_FILE_SIZE=10485760
 
-# CORS Configuration (comma-separated origins)
-ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+# CORS Configuration (comma-separated origins — include ALL frontend domains)
+ALLOWED_ORIGINS=https://ocr.yourdomain.com,https://kb.yourdomain.com
 
 # Gemini API Key (configured per-user in Settings page)
 # GEMINI_API_KEY=your_gemini_api_key
@@ -105,6 +108,10 @@ fi
 
 # Create necessary directories
 mkdir -p uploads logs
+
+# Setup database (create tables + seed initial data)
+echo -e "${YELLOW}Setting up database...${NC}"
+npm run db:setup
 
 cd ..
 
