@@ -41,6 +41,19 @@ const authenticate = async (req, res, next) => {
         req.user = user;
         req.userId = user.id;
 
+        // Handle impersonation: validate impersonator still has admin rights
+        if (decoded.impersonatorId) {
+            const impersonator = await User.findByPk(decoded.impersonatorId);
+            if (!impersonator || !['admin', 'superadmin'].includes(impersonator.role)) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Impersonation session invalid. Impersonator no longer has admin privileges.'
+                });
+            }
+            req.isImpersonating = true;
+            req.impersonatorId = decoded.impersonatorId;
+        }
+
         next();
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {

@@ -1,25 +1,19 @@
 const jwt = require('jsonwebtoken');
 const { User, Settings, DocumentType } = require('../models');
-
-// Cookie domain for cross-subdomain sharing (e.g., '.synchro.co.id' for *.synchro.co.id)
-const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
-
-// Cookie options for 24 hours
-const COOKIE_OPTIONS = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
-    path: '/',
-    ...(COOKIE_DOMAIN && { domain: COOKIE_DOMAIN }), // Only set domain if configured
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours in milliseconds
-};
+const { COOKIE_OPTIONS, getClearCookieOptions } = require('../config/cookieConfig');
 
 /**
  * Generate JWT token (24 hours expiry)
+ * @param {number} userId - Target user ID
+ * @param {number|null} impersonatorId - Admin ID if impersonating
  */
-const generateToken = (userId) => {
+const generateToken = (userId, impersonatorId = null) => {
+    const payload = { userId };
+    if (impersonatorId) {
+        payload.impersonatorId = impersonatorId;
+    }
     return jwt.sign(
-        { userId },
+        payload,
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
     );
@@ -208,9 +202,22 @@ const register = async (req, res, next) => {
  */
 const getProfile = async (req, res, next) => {
     try {
+        const userData = req.user.toJSON();
+
+        // Add impersonation info if applicable
+        if (req.isImpersonating) {
+            userData.isImpersonating = true;
+            const impersonator = await User.findByPk(req.impersonatorId, {
+                attributes: ['id', 'name', 'email', 'role']
+            });
+            if (impersonator) {
+                userData.impersonator = impersonator.toJSON();
+            }
+        }
+
         res.json({
             success: true,
-            data: req.user.toJSON()
+            data: userData
         });
     } catch (error) {
         next(error);
@@ -223,14 +230,10 @@ const getProfile = async (req, res, next) => {
  */
 const logout = async (req, res, next) => {
     try {
-        // Clear the token cookie with same options used when setting it
-        res.clearCookie('token', {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            path: '/',
-            ...(COOKIE_DOMAIN && { domain: COOKIE_DOMAIN })
-        });
+        const clearOpts = getClearCookieOptions();
+        res.clearCookie('token', clearOpts);
+        // Also clear admin_token if exists (from impersonation)
+        res.clearCookie('admin_token', clearOpts);
 
         res.json({
             success: true,

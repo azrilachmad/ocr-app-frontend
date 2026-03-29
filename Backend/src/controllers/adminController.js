@@ -1,6 +1,8 @@
+const jwt = require('jsonwebtoken');
 const { User, Document, Settings, SystemConfig } = require('../models');
 const { Op, fn, col } = require('sequelize');
 const bcrypt = require('bcryptjs');
+const { COOKIE_OPTIONS, getClearCookieOptions } = require('../config/cookieConfig');
 
 /**
  * GET /api/admin/stats
@@ -880,6 +882,161 @@ const getScanStatistics = async (req, res, next) => {
     }
 };
 
+/**
+ * POST /api/admin/impersonate/:userId
+ * Start impersonating a user — admin "logs in" as target user
+ */
+const impersonateUser = async (req, res, next) => {
+    try {
+        const targetUserId = parseInt(req.params.userId);
+        const adminId = req.user.id;
+
+        // Cannot impersonate yourself
+        if (targetUserId === adminId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot impersonate yourself.'
+            });
+        }
+
+        // Find target user
+        const targetUser = await User.findByPk(targetUserId);
+
+        if (!targetUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'Target user not found.'
+            });
+        }
+
+        // Cannot impersonate superadmin
+        if (targetUser.role === 'superadmin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Cannot impersonate a superadmin account.'
+            });
+        }
+
+        // Target user must be active
+        if (!targetUser.isActive) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot impersonate a deactivated account.'
+            });
+        }
+
+        // Backup current admin token to admin_token cookie
+        const currentToken = req.cookies?.token;
+        if (currentToken) {
+            res.cookie('admin_token', currentToken, COOKIE_OPTIONS);
+        }
+
+        // Generate impersonation token with impersonatorId embedded
+        const impersonationToken = jwt.sign(
+            { userId: targetUserId, impersonatorId: adminId },
+            process.env.JWT_SECRET,
+            { expiresIn: '2h' } // Shorter expiry for safety
+        );
+
+        // Set impersonation token as the active token
+        res.cookie('token', impersonationToken, {
+            ...COOKIE_OPTIONS,
+            maxAge: 2 * 60 * 60 * 1000 // 2 hours
+        });
+
+        res.json({
+            success: true,
+            message: `Now impersonating ${targetUser.name || targetUser.email}.`,
+            data: {
+                user: targetUser.toJSON(),
+                isImpersonating: true,
+                impersonator: {
+                    id: req.user.id,
+                    name: req.user.name,
+                    email: req.user.email,
+                    role: req.user.role
+                }
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * POST /api/admin/stop-impersonate
+ * Stop impersonating — restore admin session
+ */
+const stopImpersonate = async (req, res, next) => {
+    try {
+        // Must be in an impersonation session
+        if (!req.isImpersonating) {
+            return res.status(400).json({
+                success: false,
+                message: 'You are not currently impersonating any user.'
+            });
+        }
+
+        // Restore admin token from admin_token cookie
+        const adminToken = req.cookies?.admin_token;
+
+        if (!adminToken) {
+            // Fallback: generate fresh token for the impersonator
+            const impersonator = await User.findByPk(req.impersonatorId);
+            if (!impersonator) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Original admin account not found.'
+                });
+            }
+
+            const freshToken = jwt.sign(
+                { userId: impersonator.id },
+                process.env.JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+            res.cookie('token', freshToken, COOKIE_OPTIONS);
+            res.clearCookie('admin_token', getClearCookieOptions());
+
+            return res.json({
+                success: true,
+                message: 'Impersonation ended. Restored to admin session.',
+                data: {
+                    user: impersonator.toJSON()
+                }
+            });
+        }
+
+        // Restore the backup admin token
+        res.cookie('token', adminToken, COOKIE_OPTIONS);
+        res.clearCookie('admin_token', getClearCookieOptions());
+
+        // Verify and decode admin token to return admin user data
+        try {
+            const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+            const admin = await User.findByPk(decoded.userId);
+            if (admin) {
+                return res.json({
+                    success: true,
+                    message: 'Impersonation ended. Restored to admin session.',
+                    data: {
+                        user: admin.toJSON()
+                    }
+                });
+            }
+        } catch (tokenError) {
+            // admin_token expired or invalid, fall through to error
+        }
+
+        return res.status(401).json({
+            success: false,
+            message: 'Admin session expired. Please log in again.'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getUsers,
@@ -898,5 +1055,7 @@ module.exports = {
     getUserDocumentTypes,
     createUserDocumentType,
     updateUserDocumentType,
-    deleteUserDocumentType
+    deleteUserDocumentType,
+    impersonateUser,
+    stopImpersonate
 };
