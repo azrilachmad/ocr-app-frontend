@@ -1,0 +1,1016 @@
+{
+    "info": {
+        "name": "Synchro Scan API",
+        "description": "Postman Collection for Synchro Scan Monolith Backend API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3001/api",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"superadmin@synchroscan.com\",\n    \"password\": \"SuperAdmin123!\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"user1234\",\n    \"name\": \"Normal User\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/register",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "register"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/auth/me",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "me"]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/auth/logout",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "logout"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Documents",
+            "item": [
+                {
+                    "name": "Get All Documents",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/documents",
+                            "host": ["{{base_url}}"],
+                            "path": ["documents"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Recent Scans",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/documents/recent-scans",
+                            "host": ["{{base_url}}"],
+                            "path": ["documents", "recent-scans"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Document By ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/documents/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["documents", ":id"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Document File",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/documents/:id/file",
+                            "host": ["{{base_url}}"],
+                            "path": ["documents", ":id", "file"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Document",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"fileName\": \"Updated Name\",\n    \"content\": {}\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/documents/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["documents", ":id"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Document",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/documents/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["documents", ":id"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Save Document",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/documents/:id/save",
+                            "host": ["{{base_url}}"],
+                            "path": ["documents", ":id", "save"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Stats",
+            "item": [
+                {
+                    "name": "Get Overview Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/stats/overview",
+                            "host": ["{{base_url}}"],
+                            "path": ["stats", "overview"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Chart Data",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/stats/chart",
+                            "host": ["{{base_url}}"],
+                            "path": ["stats", "chart"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Stats By Type",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/stats/by-type",
+                            "host": ["{{base_url}}"],
+                            "path": ["stats", "by-type"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Recent Scans Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/stats/recent",
+                            "host": ["{{base_url}}"],
+                            "path": ["stats", "recent"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Settings",
+            "item": [
+                {
+                    "name": "Get Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Settings",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"apiKey\": \"new_key\",\n    \"aiModel\": \"gemini-1.5-pro\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Document Types",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings/document-types",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings", "document-types"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Document Type",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Invoice\",\n    \"fields\": [{\"name\": \"Total\"}]\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings/document-types",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings", "document-types"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Document Type",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Invoice\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings/document-types/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings", "document-types", ":id"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Document Type",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings/document-types/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings", "document-types", ":id"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Test AI Connection",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"apiKey\": \"your_api_key\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings/test-ai",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings", "test-ai"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "OCR",
+            "item": [
+                {
+                    "name": "Process Document",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "documents",
+                                    "type": "file",
+                                    "src": []
+                                },
+                                {
+                                    "key": "options",
+                                    "value": "{\"documentType\": \"auto\"}",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/ocr/process",
+                            "host": ["{{base_url}}"],
+                            "path": ["ocr", "process"]
+                        }
+                    }
+                },
+                {
+                    "name": "Rescan Document",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/ocr/rescan/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["ocr", "rescan", ":id"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Submit & Save Document",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "documentId",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "document_type",
+                                    "value": "KTP",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "content",
+                                    "value": "{\"NIK\":\"123456\"}",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/ocr/submit",
+                            "host": ["{{base_url}}"],
+                            "path": ["ocr", "submit"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin",
+            "item": [
+                {
+                    "name": "Impersonate User",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/impersonate/:userId",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "impersonate", ":userId"],
+                            "variable": [
+                                { "key": "userId", "value": "2" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Stop Impersonate",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/stop-impersonate",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "stop-impersonate"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Dashboard Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/stats",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "stats"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Users",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get User By ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users", ":id"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"New User\",\n    \"email\": \"new@example.com\",\n    \"password\": \"pass123\",\n    \"role\": \"user\",\n    \"isActive\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/admin/users",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update User",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Name\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users", ":id"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Reset User Password",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"password\": \"newpassword123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/:id/reset-password",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users", ":id", "reset-password"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete User",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users", ":id"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update User Features",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"knowledgeBase\": true,\n    \"batchScan\": false\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/:id/features",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users", ":id", "features"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get User Document Types",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/:id/document-types",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users", ":id", "document-types"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create User Document Type",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Custom Form\",\n    \"fields\": [{\"name\": \"Date\"}]\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/:id/document-types",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users", ":id", "document-types"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update User Document Type",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Form\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/:id/document-types/:typeId",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users", ":id", "document-types", ":typeId"],
+                            "variable": [
+                                { "key": "id", "value": "1" },
+                                { "key": "typeId", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete User Document Type",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/:id/document-types/:typeId",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "users", ":id", "document-types", ":typeId"],
+                            "variable": [
+                                { "key": "id", "value": "1" },
+                                { "key": "typeId", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Activity Log",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/activity",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "activity"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Documents",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/documents",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "documents"]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Document (Admin)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/documents/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "documents", ":id"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get System Config",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/system-config",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "system-config"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update System Config",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"key\": \"max_scans_per_day\",\n    \"value\": \"100\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/admin/system-config",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "system-config"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Scan Statistics",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/admin/scan-statistics",
+                            "host": ["{{base_url}}"],
+                            "path": ["admin", "scan-statistics"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Chat",
+            "item": [
+                {
+                    "name": "Get Sessions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat/sessions",
+                            "host": ["{{base_url}}"],
+                            "path": ["chat", "sessions"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Session",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"New Chat\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/chat/sessions",
+                            "host": ["{{base_url}}"],
+                            "path": ["chat", "sessions"]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Session",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat/sessions/:sessionId",
+                            "host": ["{{base_url}}"],
+                            "path": ["chat", "sessions", ":sessionId"],
+                            "variable": [
+                                { "key": "sessionId", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Session Messages",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat/sessions/:sessionId/messages",
+                            "host": ["{{base_url}}"],
+                            "path": ["chat", "sessions", ":sessionId", "messages"],
+                            "variable": [
+                                { "key": "sessionId", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Send Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"prompt\": \"Hello\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/chat/sessions/:sessionId/message",
+                            "host": ["{{base_url}}"],
+                            "path": ["chat", "sessions", ":sessionId", "message"],
+                            "variable": [
+                                { "key": "sessionId", "value": "1" }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Knowledge Base",
+            "item": [
+                {
+                    "name": "Get Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/kb/stats",
+                            "host": ["{{base_url}}"],
+                            "path": ["kb", "stats"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Popular Articles",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/kb/popular",
+                            "host": ["{{base_url}}"],
+                            "path": ["kb", "popular"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/kb/categories",
+                            "host": ["{{base_url}}"],
+                            "path": ["kb", "categories"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Category Articles",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/kb/categories/:slug/articles",
+                            "host": ["{{base_url}}"],
+                            "path": ["kb", "categories", ":slug", "articles"],
+                            "variable": [
+                                { "key": "slug", "value": "category-slug" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Article By Slug",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/kb/articles/:slug",
+                            "host": ["{{base_url}}"],
+                            "path": ["kb", "articles", ":slug"],
+                            "variable": [
+                                { "key": "slug", "value": "article-slug" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Files",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/kb/files",
+                            "host": ["{{base_url}}"],
+                            "path": ["kb", "files"],
+                            "query": [
+                                { "key": "categoryId", "value": "1", "disabled": true },
+                                { "key": "fileType", "value": "pdf", "disabled": true },
+                                { "key": "search", "value": "keyword", "disabled": true }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Download File",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/kb/files/:id/download",
+                            "host": ["{{base_url}}"],
+                            "path": ["kb", "files", ":id", "download"],
+                            "variable": [
+                                { "key": "id", "value": "1" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Search KB",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/kb/search",
+                            "host": ["{{base_url}}"],
+                            "path": ["kb", "search"],
+                            "query": [
+                                { "key": "q", "value": "search term" }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

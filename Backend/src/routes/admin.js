@@ -3,8 +3,18 @@ const router = express.Router();
 const { authenticate, isSuperAdmin } = require('../middleware/auth');
 const adminController = require('../controllers/adminController');
 
-// All admin routes require authentication + superadmin role
-router.use(authenticate, isSuperAdmin);
+// All admin routes require authentication
+router.use(authenticate);
+
+// --- Routes accessible during impersonation (before isSuperAdmin check) ---
+// Stop impersonate must work when session is a regular user (impersonated)
+router.post('/stop-impersonate', adminController.stopImpersonate);
+
+// --- All routes below require superadmin role ---
+router.use(isSuperAdmin);
+
+// Impersonate user
+router.post('/impersonate/:userId', adminController.impersonateUser);
 
 // Dashboard stats
 router.get('/stats', adminController.getDashboardStats);
