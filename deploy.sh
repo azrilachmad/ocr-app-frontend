@@ -23,14 +23,14 @@ echo -e "${BLUE}========================================${NC}"
 # =============================================================================
 # 1. SYSTEM UPDATE & DEPENDENCIES
 # =============================================================================
-echo -e "\n${YELLOW}[1/8] Updating system packages...${NC}"
+echo -e "\n${YELLOW}[1/9] Updating system packages...${NC}"
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl git build-essential nginx certbot python3-certbot-nginx
 
 # =============================================================================
 # 2. INSTALL NODE.JS (v20 LTS)
 # =============================================================================
-echo -e "\n${YELLOW}[2/8] Installing Node.js v20 LTS...${NC}"
+echo -e "\n${YELLOW}[2/9] Installing Node.js v20 LTS...${NC}"
 if ! command -v node &> /dev/null; then
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt install -y nodejs
@@ -41,7 +41,7 @@ echo -e "${GREEN}npm version: $(npm -v)${NC}"
 # =============================================================================
 # 3. INSTALL PM2 GLOBALLY
 # =============================================================================
-echo -e "\n${YELLOW}[3/8] Installing PM2...${NC}"
+echo -e "\n${YELLOW}[3/9] Installing PM2...${NC}"
 sudo npm install -g pm2
 pm2 install pm2-logrotate
 echo -e "${GREEN}PM2 version: $(pm2 -v)${NC}"
@@ -49,7 +49,7 @@ echo -e "${GREEN}PM2 version: $(pm2 -v)${NC}"
 # =============================================================================
 # 4. INSTALL MYSQL (Optional - skip if using external DB)
 # =============================================================================
-echo -e "\n${YELLOW}[4/8] Setting up MySQL...${NC}"
+echo -e "\n${YELLOW}[4/9] Setting up MySQL...${NC}"
 read -p "Install MySQL locally? (y/n): " install_mysql
 if [ "$install_mysql" = "y" ]; then
     sudo apt install -y mysql-server
@@ -66,7 +66,7 @@ fi
 # =============================================================================
 # 5. SETUP BACKEND
 # =============================================================================
-echo -e "\n${YELLOW}[5/8] Setting up Backend...${NC}"
+echo -e "\n${YELLOW}[5/9] Setting up Backend...${NC}"
 cd Backend
 
 # Install dependencies
@@ -111,7 +111,7 @@ cd ..
 # =============================================================================
 # 6. SETUP FRONTEND
 # =============================================================================
-echo -e "\n${YELLOW}[6/8] Setting up Frontend...${NC}"
+echo -e "\n${YELLOW}[6/9] Setting up Frontend...${NC}"
 cd Frontend
 
 # Install dependencies
@@ -135,15 +135,33 @@ npm install serve --save-dev
 cd ..
 
 # =============================================================================
-# 7. CREATE LOGS DIRECTORY
+# 7. SETUP KNOWLEDGEBASE
 # =============================================================================
-echo -e "\n${YELLOW}[7/8] Creating logs directory...${NC}"
+echo -e "\n${YELLOW}[7/9] Setting up KnowledgeBase...${NC}"
+cd KnowledgeBase
+
+# Install dependencies
+npm install
+
+# Build for production
+echo -e "${YELLOW}Building KnowledgeBase for production...${NC}"
+npm run build
+
+# Install serve for static file serving
+npm install serve --save-dev
+
+cd ..
+
+# =============================================================================
+# 8. CREATE LOGS DIRECTORY
+# =============================================================================
+echo -e "\n${YELLOW}[8/9] Creating logs directory...${NC}"
 mkdir -p logs
 
 # =============================================================================
-# 8. START WITH PM2
+# 9. START WITH PM2
 # =============================================================================
-echo -e "\n${YELLOW}[8/8] Starting applications with PM2...${NC}"
+echo -e "\n${YELLOW}[9/9] Starting applications with PM2...${NC}"
 
 # Stop existing processes
 pm2 stop all 2>/dev/null || true

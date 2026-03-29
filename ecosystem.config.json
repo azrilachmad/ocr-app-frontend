@@ -42,6 +42,25 @@
             "autorestart": true,
             "restart_delay": 1000,
             "max_restarts": 10
+        },
+        {
+            "name": "synchro-scan-knowledgebase",
+            "cwd": "./KnowledgeBase",
+            "script": "serve",
+            "args": "-s dist -l 3005",
+            "interpreter": "npx",
+            "env_production": {
+                "NODE_ENV": "production"
+            },
+            "error_file": "./logs/knowledgebase-error.log",
+            "out_file": "./logs/knowledgebase-out.log",
+            "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+            "merge_logs": true,
+            "max_memory_restart": "200M",
+            "watch": false,
+            "autorestart": true,
+            "restart_delay": 1000,
+            "max_restarts": 10
         }
     ]
 }

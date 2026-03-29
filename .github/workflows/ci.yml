@@ -1,0 +1,73 @@
+name: CI - Build & Lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-and-build:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # ---- Backend ----
+      - name: Install Backend dependencies
+        working-directory: ./Backend
+        run: npm install --legacy-peer-deps
+
+      - name: Lint Backend
+        working-directory: ./Backend
+        run: npm run lint --if-present
+
+      # ---- Frontend ----
+      - name: Install Frontend dependencies
+        working-directory: ./Frontend
+        run: npm install --legacy-peer-deps
+
+      - name: Lint Frontend
+        working-directory: ./Frontend
+        run: npm run lint --if-present
+
+      - name: Build Frontend
+        working-directory: ./Frontend
+        env:
+          VITE_API_BASE_URL: http://localhost:3001/api
+        run: npm run build
+
+      # ---- KnowledgeBase ----
+      - name: Install KnowledgeBase dependencies
+        working-directory: ./KnowledgeBase
+        run: npm install --legacy-peer-deps
+
+      - name: Lint KnowledgeBase
+        working-directory: ./KnowledgeBase
+        run: npm run lint --if-present
+
+      - name: Build KnowledgeBase
+        working-directory: ./KnowledgeBase
+        env:
+          VITE_API_BASE_URL: http://localhost:3001/api
+        run: npm run build
+
+      # ---- Tests ----
+      - name: Run Backend tests
+        working-directory: ./Backend
+        run: npm test --if-present
+
+      - name: Run Frontend tests
+        working-directory: ./Frontend
+        run: npm test --if-present
