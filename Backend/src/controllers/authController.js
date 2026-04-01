@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { User, Settings, DocumentType } = require('../models');
 const { COOKIE_OPTIONS, getClearCookieOptions } = require('../config/cookieConfig');
+const { logFromController } = require('../middleware/activityLogger');
 
 /**
  * Generate JWT token (24 hours expiry)
@@ -77,6 +78,12 @@ const login = async (req, res, next) => {
 
         // Set HTTP-only cookie
         res.cookie('token', token, cookieOptions);
+
+        // Log login event (fire-and-forget)
+        logFromController(req, 'LOGIN', 'auth', {
+            userId: user.id,
+            details: { email: user.email, role: user.role, rememberMe: !!rememberMe }
+        });
 
         res.json({
             success: true,
@@ -184,6 +191,12 @@ const register = async (req, res, next) => {
         // Set HTTP-only cookie
         res.cookie('token', token, COOKIE_OPTIONS);
 
+        // Log register event (fire-and-forget)
+        logFromController(req, 'REGISTER', 'auth', {
+            userId: user.id,
+            details: { email: user.email }
+        });
+
         res.status(201).json({
             success: true,
             message: 'Registration successful.',
@@ -230,6 +243,9 @@ const getProfile = async (req, res, next) => {
  */
 const logout = async (req, res, next) => {
     try {
+        // Log logout event (fire-and-forget) — before clearing cookies
+        logFromController(req, 'LOGOUT', 'auth');
+
         const clearOpts = getClearCookieOptions();
         res.clearCookie('token', clearOpts);
         // Also clear admin_token if exists (from impersonation)

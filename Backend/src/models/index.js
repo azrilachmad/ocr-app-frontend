@@ -9,6 +9,7 @@ const ChatMessage = require('./ChatMessage');
 const KBCategory = require('./KBCategory');
 const KBArticle = require('./KBArticle');
 const KBFile = require('./KBFile');
+const ActivityLog = require('./ActivityLog');
 
 // Define associations
 User.hasMany(Document, { foreignKey: 'userId', as: 'documents' });
@@ -38,6 +39,10 @@ KBCategory.belongsTo(KBCategory, { foreignKey: 'parentId', as: 'parent' });
 
 User.hasMany(KBArticle, { foreignKey: 'authorId', as: 'articles' });
 KBArticle.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
+
+// Activity Log associations
+User.hasMany(ActivityLog, { foreignKey: 'userId', as: 'activityLogs' });
+ActivityLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // Sync all models
 // mode: 'safe' (default) = create tables only if not exist
@@ -96,6 +101,7 @@ module.exports = {
     KBCategory,
     KBArticle,
     KBFile,
+    ActivityLog,
     syncModels
 };
 

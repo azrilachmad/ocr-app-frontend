@@ -21,6 +21,9 @@ const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const app = express();
 
+// Trust first proxy (Nginx) so req.ip reflects x-forwarded-for
+app.set('trust proxy', 1);
+
 // Security: Helmet for setting secure HTTP headers
 app.use(helmet({
     contentSecurityPolicy: false, // Disable for API-only server

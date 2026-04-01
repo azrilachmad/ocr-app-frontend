@@ -1,8 +1,9 @@
 const jwt = require('jsonwebtoken');
-const { User, Document, Settings, SystemConfig } = require('../models');
+const { User, Document, Settings, SystemConfig, ActivityLog } = require('../models');
 const { Op, fn, col } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const { COOKIE_OPTIONS, getClearCookieOptions } = require('../config/cookieConfig');
+const { logFromController } = require('../middleware/activityLogger');
 
 /**
  * GET /api/admin/stats
@@ -572,53 +573,73 @@ const deleteUserDocumentType = async (req, res, next) => {
 
 /**
  * GET /api/admin/activity
- * Get user activity log (login history)
+ * Get activity logs with filtering and pagination.
+ * Query params: page, limit, search, action, userId, startDate, endDate
  */
 const getActivityLog = async (req, res, next) => {
     try {
-        const { page = 1, limit = 20, search = '' } = req.query;
+        const {
+            page = 1,
+            limit = 20,
+            search = '',
+            action = '',
+            userId = '',
+            startDate = '',
+            endDate = ''
+        } = req.query;
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
-        const where = { role: { [Op.ne]: 'superadmin' } };
+        // Build WHERE clause for activity_logs
+        const where = {};
 
+        if (action) {
+            where.action = action;
+        }
+
+        if (userId) {
+            where.userId = parseInt(userId);
+        }
+
+        // Date range filter
+        if (startDate || endDate) {
+            where.createdAt = {};
+            if (startDate) {
+                where.createdAt[Op.gte] = new Date(startDate);
+            }
+            if (endDate) {
+                // End of the day
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                where.createdAt[Op.lte] = end;
+            }
+        }
+
+        // User search filter (by name or email via include)
+        const userWhere = {};
         if (search) {
-            where[Op.or] = [
+            userWhere[Op.or] = [
                 { name: { [Op.like]: `%${search}%` } },
                 { email: { [Op.like]: `%${search}%` } }
             ];
         }
 
-        const { rows: users, count: total } = await User.findAndCountAll({
+        const { rows: logs, count: total } = await ActivityLog.findAndCountAll({
             where,
-            order: [['lastLoginAt', 'DESC']],
+            include: [{
+                model: User,
+                as: 'user',
+                attributes: ['id', 'name', 'email', 'role'],
+                where: search ? userWhere : undefined
+            }],
+            order: [['createdAt', 'DESC']],
             limit: parseInt(limit),
-            offset,
-            attributes: ['id', 'name', 'email', 'role', 'isActive', 'lastLoginAt', 'createdAt']
+            offset
         });
-
-        // Get document counts per user
-        const activityData = await Promise.all(
-            users.map(async (user) => {
-                const documentCount = await Document.count({ where: { userId: user.id } });
-                const userJson = user.toJSON();
-                if (typeof userJson.features === 'string') {
-                    try {
-                        userJson.features = JSON.parse(userJson.features);
-                    } catch (e) {
-                        userJson.features = {};
-                    }
-                }
-                return {
-                    ...userJson,
-                    documentCount
-                };
-            })
-        );
 
         res.json({
             success: true,
             data: {
-                activity: activityData,
+                activity: logs,
                 pagination: {
                     total,
                     page: parseInt(page),
@@ -944,6 +965,13 @@ const impersonateUser = async (req, res, next) => {
             maxAge: 2 * 60 * 60 * 1000 // 2 hours
         });
 
+        // Log impersonation event (fire-and-forget)
+        logFromController(req, 'IMPERSONATE', 'admin/impersonate', {
+            userId: adminId,
+            resourceId: String(targetUserId),
+            details: { targetEmail: targetUser.email, targetName: targetUser.name }
+        });
+
         res.json({
             success: true,
             message: `Now impersonating ${targetUser.name || targetUser.email}.`,
@@ -976,6 +1004,13 @@ const stopImpersonate = async (req, res, next) => {
                 message: 'You are not currently impersonating any user.'
             });
         }
+
+        // Log stop-impersonation event (fire-and-forget)
+        logFromController(req, 'STOP_IMPERSONATE', 'admin/impersonate', {
+            userId: req.impersonatorId,
+            resourceId: String(req.userId),
+            details: { impersonatedUserId: req.userId }
+        });
 
         // Restore admin token from admin_token cookie
         const adminToken = req.cookies?.admin_token;
