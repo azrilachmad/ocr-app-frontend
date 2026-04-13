@@ -504,7 +504,6 @@ const AIAssistant = () => {
                         AI dapat membuat kesalahan. Verifikasi informasi penting secara manual.
                     </Typography>
                 </Box>
-                </Box>
             </Box>
 
             {/* Right Document Viewer Panel */}
