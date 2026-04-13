@@ -529,7 +529,8 @@ const AIAssistant = () => {
                                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
                                     <Tabs value={docViewTab} onChange={(e, val) => setDocViewTab(val)} aria-label="document view tabs" sx={{ minHeight: 40 }}>
                                         <Tab label="Summary" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '13px', minHeight: 40, py: 1 }} />
-                                        <Tab label="Isi Raw File" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '13px', minHeight: 40, py: 1 }} />
+                                        <Tab label="Teks OCR (Mentah)" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '13px', minHeight: 40, py: 1 }} />
+                                        <Tab label="File Asli (Original)" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '13px', minHeight: 40, py: 1 }} />
                                     </Tabs>
                                 </Box>
 
@@ -588,9 +589,47 @@ const AIAssistant = () => {
                                     </>
                                 )}
                                 
-                                {!targetDocContent.content?.Summary && !targetDocContent.content?.raw_text && (
+                                {docViewTab === 2 && (
+                                    <Box sx={{ mt: 2 }}>
+                                        {(() => {
+                                            if (!targetDocContent?.filePath) {
+                                                return (
+                                                    <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
+                                                        File fisik tidak ditemukan di server.
+                                                    </Typography>
+                                                );
+                                            }
+                                            
+                                            const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+                                            const serverUrl = apiUrl.replace(/\/api\/?$/, '');
+                                            const pathUrl = targetDocContent.filePath.replace(/\\/g, '/');
+                                            const fileUrl = `${serverUrl}/${pathUrl}`;
+                                            const ext = pathUrl.split('.').pop().toLowerCase();
+
+                                            if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+                                                return <Box component="img" src={fileUrl} sx={{ width: '100%', borderRadius: 2, border: '1px solid #E2E8F0' }} alt="Dokumen Asli" />;
+                                            } else if (ext === 'pdf') {
+                                                return <iframe src={fileUrl} width="100%" height="800px" style={{ border: 'none', borderRadius: '8px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }} title="PDF Viewer" />;
+                                            } else {
+                                                return (
+                                                    <Box sx={{ textAlign: 'center', py: 8, bgcolor: '#F8FAFC', borderRadius: 2, border: '1px dashed #CBD5E1' }}>
+                                                        <KBIcon sx={{ fontSize: 48, color: '#94A3B8', mb: 2 }} />
+                                                        <Typography sx={{ fontSize: '14px', color: '#475569', mb: 2 }}>
+                                                            Pratinjau langsung tidak tersedia secara native untuk format <b>.{ext.toUpperCase()}</b>
+                                                        </Typography>
+                                                        <Button variant="contained" href={fileUrl} target="_blank" sx={{ textTransform: 'none', bgcolor: '#4F46E5', '&:hover': { bgcolor: '#4338CA' } }}>
+                                                            Buka / Unduh File Eksternal
+                                                        </Button>
+                                                    </Box>
+                                                );
+                                            }
+                                        })()}
+                                    </Box>
+                                )}
+                                
+                                {docViewTab !== 2 && !targetDocContent.content?.Summary && !targetDocContent.content?.raw_text && (
                                     <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
-                                        Isi dokumen (teks) tidak dapat ditampilkan atau masih diproses.
+                                        Teks ekstraksi dokumen masih diproses atau tidak tersedia.
                                     </Typography>
                                 )}
                             </Box>
