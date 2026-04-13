@@ -216,11 +216,12 @@ const processDocument = async (filePath, documentType = 'auto', options = {}) =>
             prompt = `Analyze this document image thoroughly. Read the entire document carefully.
 Extract the essence of it, regardless of how many pages or how dense the text is. 
 
-Return the data in STRICT JSON format with exactly THREE fields:
+Return the data in STRICT JSON format with exactly FOUR fields:
 {
     "Category": "A short topic/category label for this document (e.g. Museum & Galeri, Cagar Budaya, Keuangan, Laporan Tahunan, Infrastruktur, Kebudayaan, Pendidikan, Kesehatan, Pariwisata, SDM, Data & Informasi, etc.). Pick the most fitting label based on the document content.",
     "Report Title": "The exact or inferred title of the document or report.",
-    "Summary": "An extensive, highly detailed multi-paragraph summary covering all key points, statistics, main themes, and conclusions present in the document."
+    "Summary": "An extensive, highly detailed multi-paragraph summary covering all key points, statistics, main themes, and conclusions present in the document.",
+    "raw_text": "The ENTIRE, UNEDITED, verbatim raw text extracted from the document from start to finish. Include EVERYTHING. Do not summarize, just transcribe everything you can read."
 }
 Only return the valid JSON object, no additional text. Do not wrap in markdown blocks. Do not add any other fields.`;
         } else {

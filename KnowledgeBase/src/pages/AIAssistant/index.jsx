@@ -34,7 +34,7 @@ const AIAssistant = () => {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [sessionsLoading, setSessionsLoading] = useState(true);
-    
+
     const location = useLocation();
     const deepScanTarget = location.state?.targetDocumentId || null;
     const deepScanTitle = location.state?.docTitle || 'Dokumen';
@@ -50,7 +50,7 @@ const AIAssistant = () => {
         try {
             const res = await getPopularArticles();
             setRecentDocs(res.data?.data || []);
-        } catch(e) {
+        } catch (e) {
             console.error('Failed fetching docs', e);
         } finally {
             setDocsLoading(false);
@@ -65,7 +65,7 @@ const AIAssistant = () => {
                 setActiveSession(createRes.data.data.id);
                 setMessages([]);
             }
-        } catch(e) {
+        } catch (e) {
             console.error('Failed creating deep scan session', e);
         }
         setDocModalOpen(false);
@@ -92,12 +92,12 @@ const AIAssistant = () => {
             setSessionsLoading(true);
             const res = await getChatSessions();
             let list = res.data?.data || [];
-            
+
             // Check if we need to initialize a deep scan
             if (deepScanTarget && !hasInitializedDeepScan.current) {
                 hasInitializedDeepScan.current = true;
                 const existingSession = list.find(s => s.targetDocumentId === deepScanTarget);
-                
+
                 if (existingSession) {
                     setActiveSession(existingSession.id);
                 } else {
@@ -108,13 +108,13 @@ const AIAssistant = () => {
                         setActiveSession(createRes.data.data.id);
                     }
                 }
-                
+
                 // Clear location state to prevent re-triggering on refresh
                 navigate('/ai-assistant', { replace: true, state: {} });
             } else if (!activeSession && list.length > 0) {
                 setActiveSession(list[0].id);
             }
-            
+
             setSessions(list);
         } catch (e) {
             console.error('Failed to fetch sessions:', e);
@@ -314,10 +314,10 @@ const AIAssistant = () => {
                             </Typography>
                         </Box>
                         {sessions.find(s => s.id === activeSession)?.targetDocumentId && (
-                            <Box sx={{ 
-                                display: 'flex', alignItems: 'center', gap: 1, 
-                                px: 1.5, py: 0.5, borderRadius: 2, 
-                                bgcolor: '#F0FDF4', border: '1px solid #BBF7D0' 
+                            <Box sx={{
+                                display: 'flex', alignItems: 'center', gap: 1,
+                                px: 1.5, py: 0.5, borderRadius: 2,
+                                bgcolor: '#F0FDF4', border: '1px solid #BBF7D0'
                             }}>
                                 <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#22C55E' }} />
                                 <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#166534' }}>
@@ -481,10 +481,10 @@ const AIAssistant = () => {
                 </DialogTitle>
                 <DialogContent dividers>
                     <Typography sx={{ fontSize: '13px', color: '#64748B', mb: 2 }}>
-                        Pilih satu dokumen untuk dianasilis secara mendalam tanpa batasan karakter. 
+                        Pilih satu dokumen untuk dianasilis secara spesifik.
                         AI akan memfokuskan memori hanya pada isi dokumen ini.
                     </Typography>
-                    
+
                     {docsLoading ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                             <CircularProgress size={24} />
@@ -497,7 +497,7 @@ const AIAssistant = () => {
                         <List sx={{ p: 0 }}>
                             {recentDocs.map((doc) => (
                                 <ListItemButton key={doc.id} onClick={() => handleSelectDeepScan(doc)}
-                                    sx={{ 
+                                    sx={{
                                         borderRadius: 2, mb: 1, border: '1px solid #E2E8F0',
                                         '&:hover': { borderColor: '#6366F1', bgcolor: '#EEF2FF' }
                                     }}
@@ -505,8 +505,8 @@ const AIAssistant = () => {
                                     <ListItemIcon sx={{ minWidth: 36 }}>
                                         <KBIcon sx={{ fontSize: 20, color: '#64748B' }} />
                                     </ListItemIcon>
-                                    <ListItemText 
-                                        primary={doc.fileName} 
+                                    <ListItemText
+                                        primary={doc.fileName}
                                         secondary={`${doc.documentType} • ${new Date(doc.scannedAt).toLocaleDateString('id-ID')}`}
                                         primaryTypographyProps={{ fontSize: '13px', fontWeight: 600, color: '#1E293B', noWrap: true }}
                                         secondaryTypographyProps={{ fontSize: '11px' }}
