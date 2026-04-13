@@ -320,288 +320,288 @@ const AIAssistant = () => {
 
             {/* Split Screen Area */}
             <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                
+
                 {/* Main Chat Area */}
                 <Box sx={{ flex: activeTargetId ? 1.5 : 1, display: 'flex', flexDirection: 'column', borderRight: activeTargetId ? '1px solid #E2E8F0' : 'none' }}>
-                {/* Chat Header */}
-                <Box sx={{
-                    px: 3, py: 2, borderBottom: '1px solid #E2E8F0', bgcolor: 'white',
-                    display: 'flex', alignItems: 'center', gap: 2
-                }}>
+                    {/* Chat Header */}
                     <Box sx={{
-                        width: 36, height: 36, borderRadius: 2,
-                        background: 'linear-gradient(135deg, #8B5CF6, #6366F1)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        px: 3, py: 2, borderBottom: '1px solid #E2E8F0', bgcolor: 'white',
+                        display: 'flex', alignItems: 'center', gap: 2
                     }}>
-                        <AIIcon sx={{ fontSize: 20, color: 'white' }} />
-                    </Box>
-                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Box>
-                            <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0F172A' }}>
-                                {activeSessionData?.title || 'Knowledge Base AI'}
-                            </Typography>
-                            <Typography sx={{ fontSize: '12px', color: '#64748B' }}>
-                                {activeSessionData?.targetDocumentId 
-                                    ? `Fokus Analisis: ${activeSessionData.title.replace('Analisis: ', '')}` 
-                                    : 'Sesi Obrolan General Knowledge Base'}
-                            </Typography>
+                        <Box sx={{
+                            width: 36, height: 36, borderRadius: 2,
+                            background: 'linear-gradient(135deg, #8B5CF6, #6366F1)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <AIIcon sx={{ fontSize: 20, color: 'white' }} />
                         </Box>
-                        {sessions.find(s => s.id === activeSession)?.targetDocumentId && (
-                            <Box sx={{
-                                display: 'flex', alignItems: 'center', gap: 1,
-                                px: 1.5, py: 0.5, borderRadius: 2,
-                                bgcolor: '#F0FDF4', border: '1px solid #BBF7D0'
-                            }}>
-                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#22C55E' }} />
-                                <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#166534' }}>
-                                    Deep Analysis Mode
+                        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box>
+                                <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0F172A' }}>
+                                    {activeSessionData?.title || 'Knowledge Base AI'}
+                                </Typography>
+                                <Typography sx={{ fontSize: '12px', color: '#64748B' }}>
+                                    {activeSessionData?.targetDocumentId
+                                        ? `Fokus Analisis: ${activeSessionData.title.replace('Analisis: ', '')}`
+                                        : 'Sesi Obrolan General Knowledge Base'}
                                 </Typography>
                             </Box>
-                        )}
-                    </Box>
-                </Box>
-
-                {/* Messages */}
-                <Box sx={{ flex: 1, overflowY: 'auto', px: 3, py: 3 }}>
-                    {messages.length === 0 && !loading && (
-                        <Box sx={{ textAlign: 'center', py: 8 }}>
-                            <AIIcon sx={{ fontSize: 64, color: '#E2E8F0', mb: 2 }} />
-                            <Typography sx={{ fontSize: '20px', fontWeight: 600, color: '#374151', mb: 1 }}>
-                                Mulai Percakapan
-                            </Typography>
-                            <Typography sx={{ fontSize: '14px', color: '#94A3B8', maxWidth: 400, mx: 'auto' }}>
-                                Tanyakan apa saja tentang dokumen, laporan, atau data organisasi Anda
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap', mt: 3 }}>
-                                {['Ringkas laporan keuangan 2025', 'Bandingkan data antar museum', 'Cari informasi cagar budaya'].map((q, i) => (
-                                    <Button key={i} variant="outlined" size="small"
-                                        onClick={() => setInput(q)}
-                                        sx={{
-                                            borderRadius: 5, fontSize: '12px', borderColor: '#E2E8F0',
-                                            color: '#64748B', textTransform: 'none',
-                                            '&:hover': { borderColor: '#6366F1', color: '#6366F1', bgcolor: '#EEF2FF' }
-                                        }}>
-                                        {q}
-                                    </Button>
-                                ))}
-                            </Box>
+                            {sessions.find(s => s.id === activeSession)?.targetDocumentId && (
+                                <Box sx={{
+                                    display: 'flex', alignItems: 'center', gap: 1,
+                                    px: 1.5, py: 0.5, borderRadius: 2,
+                                    bgcolor: '#F0FDF4', border: '1px solid #BBF7D0'
+                                }}>
+                                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#22C55E' }} />
+                                    <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#166534' }}>
+                                        Deep Analysis Mode
+                                    </Typography>
+                                </Box>
+                            )}
                         </Box>
-                    )}
+                    </Box>
 
-                    {messages.map((msg, i) => (
-                        <Box key={msg.id || i} sx={{
-                            display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                            mb: 2, animationDelay: '0.1s'
-                        }} className="fade-in-up">
-                            {msg.role !== 'user' && (
+                    {/* Messages */}
+                    <Box sx={{ flex: 1, overflowY: 'auto', px: 3, py: 3 }}>
+                        {messages.length === 0 && !loading && (
+                            <Box sx={{ textAlign: 'center', py: 8 }}>
+                                <AIIcon sx={{ fontSize: 64, color: '#E2E8F0', mb: 2 }} />
+                                <Typography sx={{ fontSize: '20px', fontWeight: 600, color: '#374151', mb: 1 }}>
+                                    Mulai Percakapan
+                                </Typography>
+                                <Typography sx={{ fontSize: '14px', color: '#94A3B8', maxWidth: 400, mx: 'auto' }}>
+                                    Tanyakan apa saja tentang dokumen, laporan, atau data organisasi Anda
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap', mt: 3 }}>
+                                    {['Ringkas laporan keuangan 2025', 'Bandingkan data antar museum', 'Cari informasi cagar budaya'].map((q, i) => (
+                                        <Button key={i} variant="outlined" size="small"
+                                            onClick={() => setInput(q)}
+                                            sx={{
+                                                borderRadius: 5, fontSize: '12px', borderColor: '#E2E8F0',
+                                                color: '#64748B', textTransform: 'none',
+                                                '&:hover': { borderColor: '#6366F1', color: '#6366F1', bgcolor: '#EEF2FF' }
+                                            }}>
+                                            {q}
+                                        </Button>
+                                    ))}
+                                </Box>
+                            </Box>
+                        )}
+
+                        {messages.map((msg, i) => (
+                            <Box key={msg.id || i} sx={{
+                                display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                                mb: 2, animationDelay: '0.1s'
+                            }} className="fade-in-up">
+                                {msg.role !== 'user' && (
+                                    <Avatar sx={{
+                                        width: 32, height: 32, mr: 1.5, mt: 0.5,
+                                        background: 'linear-gradient(135deg, #8B5CF6, #6366F1)', fontSize: '14px'
+                                    }}>
+                                        <AIIcon sx={{ fontSize: 18 }} />
+                                    </Avatar>
+                                )}
+                                <Paper elevation={0} sx={{
+                                    maxWidth: '70%', p: 2, borderRadius: 2.5,
+                                    bgcolor: msg.role === 'user' ? '#4F46E5' : 'white',
+                                    color: msg.role === 'user' ? 'white' : '#1F2937',
+                                    border: msg.role !== 'user' ? '1px solid #E2E8F0' : 'none',
+                                    wordBreak: 'break-word', overflowX: 'auto',
+                                    '& table': { borderCollapse: 'collapse', width: '100%', my: 1, fontSize: '13px' },
+                                    '& th, & td': { border: '1px solid #E2E8F0', px: 1.5, py: 0.8, textAlign: 'left' },
+                                    '& th': { bgcolor: '#F8FAFC', fontWeight: 600 },
+                                    '& ul, & ol': { pl: 2.5, my: 0.5 },
+                                    '& li': { mb: 0.3, fontSize: '14px' },
+                                    '& h1, & h2, & h3': { mt: 1, mb: 0.5 },
+                                    '& p': { my: 0.3, fontSize: '14px', lineHeight: 1.7 },
+                                    '& code': { bgcolor: '#F1F5F9', px: 0.8, py: 0.2, borderRadius: 1, fontSize: '12px' },
+                                    '& strong': { fontWeight: 600 }
+                                }}>
+                                    {msg.role === 'user' ? (
+                                        <Typography sx={{ fontSize: '14px', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                                            {msg.content}
+                                        </Typography>
+                                    ) : (
+                                        parseChartBlocks(msg.content).map((block, bi) =>
+                                            block.type === 'chart' ? (
+                                                <ChartRenderer key={bi} chartData={block.data} />
+                                            ) : (
+                                                <ReactMarkdown key={bi} remarkPlugins={[remarkGfm]}>
+                                                    {block.content}
+                                                </ReactMarkdown>
+                                            )
+                                        )
+                                    )}
+                                </Paper>
+                                {msg.role === 'user' && (
+                                    <Avatar sx={{
+                                        width: 32, height: 32, ml: 1.5, mt: 0.5,
+                                        bgcolor: '#6366F1', fontSize: '13px'
+                                    }}>
+                                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                                    </Avatar>
+                                )}
+                            </Box>
+                        ))}
+
+                        {loading && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                                 <Avatar sx={{
-                                    width: 32, height: 32, mr: 1.5, mt: 0.5,
-                                    background: 'linear-gradient(135deg, #8B5CF6, #6366F1)', fontSize: '14px'
+                                    width: 32, height: 32,
+                                    background: 'linear-gradient(135deg, #8B5CF6, #6366F1)'
                                 }}>
                                     <AIIcon sx={{ fontSize: 18 }} />
                                 </Avatar>
-                            )}
-                            <Paper elevation={0} sx={{
-                                maxWidth: '70%', p: 2, borderRadius: 2.5,
-                                bgcolor: msg.role === 'user' ? '#4F46E5' : 'white',
-                                color: msg.role === 'user' ? 'white' : '#1F2937',
-                                border: msg.role !== 'user' ? '1px solid #E2E8F0' : 'none',
-                                wordBreak: 'break-word', overflowX: 'auto',
-                                '& table': { borderCollapse: 'collapse', width: '100%', my: 1, fontSize: '13px' },
-                                '& th, & td': { border: '1px solid #E2E8F0', px: 1.5, py: 0.8, textAlign: 'left' },
-                                '& th': { bgcolor: '#F8FAFC', fontWeight: 600 },
-                                '& ul, & ol': { pl: 2.5, my: 0.5 },
-                                '& li': { mb: 0.3, fontSize: '14px' },
-                                '& h1, & h2, & h3': { mt: 1, mb: 0.5 },
-                                '& p': { my: 0.3, fontSize: '14px', lineHeight: 1.7 },
-                                '& code': { bgcolor: '#F1F5F9', px: 0.8, py: 0.2, borderRadius: 1, fontSize: '12px' },
-                                '& strong': { fontWeight: 600 }
-                            }}>
-                                {msg.role === 'user' ? (
-                                    <Typography sx={{ fontSize: '14px', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                                        {msg.content}
-                                    </Typography>
-                                ) : (
-                                    parseChartBlocks(msg.content).map((block, bi) =>
-                                        block.type === 'chart' ? (
-                                            <ChartRenderer key={bi} chartData={block.data} />
-                                        ) : (
-                                            <ReactMarkdown key={bi} remarkPlugins={[remarkGfm]}>
-                                                {block.content}
-                                            </ReactMarkdown>
-                                        )
-                                    )
-                                )}
-                            </Paper>
-                            {msg.role === 'user' && (
-                                <Avatar sx={{
-                                    width: 32, height: 32, ml: 1.5, mt: 0.5,
-                                    bgcolor: '#6366F1', fontSize: '13px'
-                                }}>
-                                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                                </Avatar>
-                            )}
-                        </Box>
-                    ))}
-
-                    {loading && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                            <Avatar sx={{
-                                width: 32, height: 32,
-                                background: 'linear-gradient(135deg, #8B5CF6, #6366F1)'
-                            }}>
-                                <AIIcon sx={{ fontSize: 18 }} />
-                            </Avatar>
-                            <Paper elevation={0} sx={{ p: 2, borderRadius: 2.5, border: '1px solid #E2E8F0' }}>
-                                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                    {[0, 1, 2].map(i => (
-                                        <Box key={i} sx={{
-                                            width: 8, height: 8, borderRadius: '50%', bgcolor: '#94A3B8',
-                                            animation: 'float 1.4s ease-in-out infinite',
-                                            animationDelay: `${i * 0.16}s`
-                                        }} />
-                                    ))}
-                                </Box>
-                            </Paper>
-                        </Box>
-                    )}
-                    <div ref={messagesEndRef} />
-                </Box>
-
-                {/* Input */}
-                <Box component="form" onSubmit={handleSend} sx={{
-                    px: 3, py: 2, borderTop: '1px solid #E2E8F0', bgcolor: 'white'
-                }}>
-                    <Box sx={{
-                        display: 'flex', alignItems: 'center', gap: 1,
-                        border: '2px solid #E2E8F0', borderRadius: 3, px: 2, py: 0.5,
-                        transition: 'border-color 0.3s', '&:focus-within': { borderColor: '#6366F1' }
-                    }}>
-                        <Tooltip title="Mode Chat 1 Dokumen Spesifik">
-                            <IconButton onClick={handleOpenDocModal} sx={{
-                                color: '#6366F1', bgcolor: '#EEF2FF', width: 36, height: 36,
-                                '&:hover': { bgcolor: '#E0E7FF' }
-                            }}>
-                                <AddIcon sx={{ fontSize: 20 }} />
-                            </IconButton>
-                        </Tooltip>
-                        <TextField
-                            fullWidth multiline maxRows={4} placeholder="Ketik pertanyaan Anda..."
-                            value={input} onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); } }}
-                            InputProps={{ sx: { '& fieldset': { border: 'none' } } }}
-                            sx={{ '& .MuiInputBase-root': { p: 0 } }}
-                        />
-                        <IconButton type="submit" disabled={!input.trim() || loading} sx={{
-                            bgcolor: input.trim() ? '#4F46E5' : '#E2E8F0',
-                            color: 'white', width: 40, height: 40,
-                            '&:hover': { bgcolor: '#3730A3' },
-                            '&.Mui-disabled': { bgcolor: '#E2E8F0', color: '#94A3B8' }
-                        }}>
-                            <SendIcon sx={{ fontSize: 18 }} />
-                        </IconButton>
+                                <Paper elevation={0} sx={{ p: 2, borderRadius: 2.5, border: '1px solid #E2E8F0' }}>
+                                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                        {[0, 1, 2].map(i => (
+                                            <Box key={i} sx={{
+                                                width: 8, height: 8, borderRadius: '50%', bgcolor: '#94A3B8',
+                                                animation: 'float 1.4s ease-in-out infinite',
+                                                animationDelay: `${i * 0.16}s`
+                                            }} />
+                                        ))}
+                                    </Box>
+                                </Paper>
+                            </Box>
+                        )}
+                        <div ref={messagesEndRef} />
                     </Box>
-                    <Typography sx={{ textAlign: 'center', mt: 1, fontSize: '11px', color: '#CBD5E1' }}>
-                        AI dapat membuat kesalahan. Verifikasi informasi penting secara manual.
-                    </Typography>
-                </Box>
-            </Box>
 
-            {/* Right Document Viewer Panel */}
-            {activeTargetId && (
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: 'white' }}>
-                    {/* Header */}
-                    <Box sx={{ px: 3, py: 2, borderBottom: '1px solid #E2E8F0', bgcolor: '#F8FAFC', display: 'flex', alignItems: 'center' }}>
-                        <KBIcon sx={{ color: '#64748B', mr: 1, fontSize: 18 }} />
-                        <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Dokumen Target Analisis
+                    {/* Input */}
+                    <Box component="form" onSubmit={handleSend} sx={{
+                        px: 3, py: 2, borderTop: '1px solid #E2E8F0', bgcolor: 'white'
+                    }}>
+                        <Box sx={{
+                            display: 'flex', alignItems: 'center', gap: 1,
+                            border: '2px solid #E2E8F0', borderRadius: 3, px: 2, py: 0.5,
+                            transition: 'border-color 0.3s', '&:focus-within': { borderColor: '#6366F1' }
+                        }}>
+                            <Tooltip title="Mode Chat 1 Dokumen Spesifik">
+                                <IconButton onClick={handleOpenDocModal} sx={{
+                                    color: '#6366F1', bgcolor: '#EEF2FF', width: 36, height: 36,
+                                    '&:hover': { bgcolor: '#E0E7FF' }
+                                }}>
+                                    <AddIcon sx={{ fontSize: 20 }} />
+                                </IconButton>
+                            </Tooltip>
+                            <TextField
+                                fullWidth multiline maxRows={4} placeholder="Ketik pertanyaan Anda..."
+                                value={input} onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); } }}
+                                InputProps={{ sx: { '& fieldset': { border: 'none' } } }}
+                                sx={{ '& .MuiInputBase-root': { p: 0 } }}
+                            />
+                            <IconButton type="submit" disabled={!input.trim() || loading} sx={{
+                                bgcolor: input.trim() ? '#4F46E5' : '#E2E8F0',
+                                color: 'white', width: 40, height: 40,
+                                '&:hover': { bgcolor: '#3730A3' },
+                                '&.Mui-disabled': { bgcolor: '#E2E8F0', color: '#94A3B8' }
+                            }}>
+                                <SendIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                        </Box>
+                        <Typography sx={{ textAlign: 'center', mt: 1, fontSize: '11px', color: '#CBD5E1' }}>
+                            AI dapat membuat kesalahan. Verifikasi informasi penting secara manual.
                         </Typography>
                     </Box>
-
-                    {/* Content */}
-                    <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
-                        {targetDocLoading ? (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-                                <CircularProgress size={30} />
-                            </Box>
-                        ) : targetDocContent ? (
-                            <Box>
-                                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                                    <Tabs value={docViewTab} onChange={(e, val) => setDocViewTab(val)} aria-label="document view tabs" sx={{ minHeight: 40 }}>
-                                        <Tab label="Summary" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '13px', minHeight: 40, py: 1 }} />
-                                        <Tab label="Teks OCR (Mentah)" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '13px', minHeight: 40, py: 1 }} />
-                                    </Tabs>
-                                </Box>
-
-                                <Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', mb: 1 }}>
-                                    {targetDocContent.title}
-                                </Typography>
-                                
-                                <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
-                                    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748B', bgcolor: '#F1F5F9', px: 1, py: 0.5, borderRadius: 1 }}>
-                                        {targetDocContent.summary.split('•')[0].trim()}
-                                    </Typography>
-                                    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748B', bgcolor: '#F1F5F9', px: 1, py: 0.5, borderRadius: 1 }}>
-                                        {new Date(targetDocContent.createdAt).toLocaleDateString('id-ID')}
-                                    </Typography>
-                                </Box>
-
-                                {docViewTab === 0 && (
-                                    <>
-                                        {targetDocContent.content?.Summary ? (
-                                            <Box sx={{ mb: 4 }}>
-                                                <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#4F46E5', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                                    Ringkasan Eksekutif
-                                                </Typography>
-                                                <Typography sx={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                                                    {targetDocContent.content.Summary}
-                                                </Typography>
-                                            </Box>
-                                        ) : (
-                                            <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
-                                                Summary dokumen tidak tersedia.
-                                            </Typography>
-                                        )}
-                                    </>
-                                )}
-
-                                {docViewTab === 1 && (
-                                    <>
-                                        {targetDocContent.content?.raw_text ? (
-                                            <Box>
-                                                <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#4F46E5', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                                    Teks Mentah (Raw Content)
-                                                </Typography>
-                                                <Paper elevation={0} sx={{ 
-                                                    p: 2, bgcolor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 2
-                                                }}>
-                                                    <Typography sx={{ fontSize: '12px', color: '#475569', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                                                        {targetDocContent.content.raw_text}
-                                                    </Typography>
-                                                </Paper>
-                                            </Box>
-                                        ) : (
-                                            <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
-                                                File mentah (raw text) belum diekstrak untuk dokumen ini.
-                                            </Typography>
-                                        )}
-                                    </>
-                                )}
-                                
-                                {!targetDocContent.content?.Summary && !targetDocContent.content?.raw_text && (
-                                    <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
-                                        Teks ekstraksi dokumen masih diproses atau tidak tersedia.
-                                    </Typography>
-                                )}
-                            </Box>
-                        ) : (
-                            <Typography sx={{ fontSize: '13px', color: '#EF4444', textAlign: 'center', mt: 4 }}>
-                                Gagal memuat dokumen.
-                            </Typography>
-                        )}
-                    </Box>
                 </Box>
-            )}
+
+                {/* Right Document Viewer Panel */}
+                {activeTargetId && (
+                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: 'white' }}>
+                        {/* Header */}
+                        <Box sx={{ px: 3, py: 2, borderBottom: '1px solid #E2E8F0', bgcolor: '#F8FAFC', display: 'flex', alignItems: 'center' }}>
+                            <KBIcon sx={{ color: '#64748B', mr: 1, fontSize: 18 }} />
+                            <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                                Dokumen Target Analisis
+                            </Typography>
+                        </Box>
+
+                        {/* Content */}
+                        <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+                            {targetDocLoading ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                                    <CircularProgress size={30} />
+                                </Box>
+                            ) : targetDocContent ? (
+                                <Box>
+                                    <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                                        <Tabs value={docViewTab} onChange={(e, val) => setDocViewTab(val)} aria-label="document view tabs" sx={{ minHeight: 40 }}>
+                                            <Tab label="Summary" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '13px', minHeight: 40, py: 1 }} />
+                                            {/* <Tab label="Teks OCR (Mentah)" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '13px', minHeight: 40, py: 1 }} /> */}
+                                        </Tabs>
+                                    </Box>
+
+                                    <Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', mb: 1 }}>
+                                        {targetDocContent.title}
+                                    </Typography>
+
+                                    <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+                                        <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748B', bgcolor: '#F1F5F9', px: 1, py: 0.5, borderRadius: 1 }}>
+                                            {targetDocContent.summary.split('•')[0].trim()}
+                                        </Typography>
+                                        <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748B', bgcolor: '#F1F5F9', px: 1, py: 0.5, borderRadius: 1 }}>
+                                            {new Date(targetDocContent.createdAt).toLocaleDateString('id-ID')}
+                                        </Typography>
+                                    </Box>
+
+                                    {docViewTab === 0 && (
+                                        <>
+                                            {targetDocContent.content?.Summary ? (
+                                                <Box sx={{ mb: 4 }}>
+                                                    <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#4F46E5', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                                        Ringkasan Eksekutif
+                                                    </Typography>
+                                                    <Typography sx={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                                                        {targetDocContent.content.Summary}
+                                                    </Typography>
+                                                </Box>
+                                            ) : (
+                                                <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
+                                                    Summary dokumen tidak tersedia.
+                                                </Typography>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {docViewTab === 1 && (
+                                        <>
+                                            {targetDocContent.content?.raw_text ? (
+                                                <Box>
+                                                    <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#4F46E5', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                                        Teks Mentah (Raw Content)
+                                                    </Typography>
+                                                    <Paper elevation={0} sx={{
+                                                        p: 2, bgcolor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 2
+                                                    }}>
+                                                        <Typography sx={{ fontSize: '12px', color: '#475569', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                                                            {targetDocContent.content.raw_text}
+                                                        </Typography>
+                                                    </Paper>
+                                                </Box>
+                                            ) : (
+                                                <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
+                                                    File mentah (raw text) belum diekstrak untuk dokumen ini.
+                                                </Typography>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {!targetDocContent.content?.Summary && !targetDocContent.content?.raw_text && (
+                                        <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
+                                            Teks ekstraksi dokumen masih diproses atau tidak tersedia.
+                                        </Typography>
+                                    )}
+                                </Box>
+                            ) : (
+                                <Typography sx={{ fontSize: '13px', color: '#EF4444', textAlign: 'center', mt: 4 }}>
+                                    Gagal memuat dokumen.
+                                </Typography>
+                            )}
+                        </Box>
+                    </Box>
+                )}
             </Box>
             {/* Find In Page / Select Doc Modal */}
             <Dialog open={docModalOpen} onClose={() => setDocModalOpen(false)} maxWidth="sm" fullWidth>
