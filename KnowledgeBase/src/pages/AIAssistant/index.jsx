@@ -17,7 +17,7 @@ import remarkGfm from 'remark-gfm';
 import ChartRenderer, { parseChartBlocks } from '../../components/ChartRenderer';
 import {
     getChatSessions, createChatSession, getChatMessages,
-    sendChatMessage, deleteChatSession, getPopularArticles
+    sendChatMessage, deleteChatSession, getPopularArticles, getArticle
 } from '../../services/api';
 import { useAuth } from '../../App';
 
@@ -39,6 +39,12 @@ const AIAssistant = () => {
     const deepScanTarget = location.state?.targetDocumentId || null;
     const deepScanTitle = location.state?.docTitle || 'Dokumen';
     const hasInitializedDeepScan = useRef(false);
+
+    const activeSessionData = sessions.find(s => s.id === activeSession);
+    const activeTargetId = activeSessionData?.targetDocumentId || null;
+
+    const [targetDocContent, setTargetDocContent] = useState(null);
+    const [targetDocLoading, setTargetDocLoading] = useState(false);
 
     const [docModalOpen, setDocModalOpen] = useState(false);
     const [recentDocs, setRecentDocs] = useState([]);
@@ -86,6 +92,27 @@ const AIAssistant = () => {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
+    // Fetch Target Document if Deep Analysis Mode
+    useEffect(() => {
+        if (activeTargetId) {
+            const fetchTargetDoc = async () => {
+                setTargetDocLoading(true);
+                try {
+                    const res = await getArticle(`doc-${activeTargetId}`);
+                    setTargetDocContent(res.data?.data || null);
+                } catch (e) {
+                    console.error('Failed fetching target document:', e);
+                    setTargetDocContent(null);
+                } finally {
+                    setTargetDocLoading(false);
+                }
+            };
+            fetchTargetDoc();
+        } else {
+            setTargetDocContent(null);
+        }
+    }, [activeTargetId]);
 
     const fetchSessions = async () => {
         try {
@@ -211,7 +238,6 @@ const AIAssistant = () => {
             setLoading(false);
         }
     };
-    const activeSessionData = sessions.find(s => s.id === activeSession);
 
     return (
         <Box sx={{ display: 'flex', height: '100vh', bgcolor: '#F8FAFC' }}>
@@ -291,8 +317,11 @@ const AIAssistant = () => {
                 </Box>
             </Box>
 
-            {/* Main Chat Area */}
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* Split Screen Area */}
+            <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                
+                {/* Main Chat Area */}
+                <Box sx={{ flex: activeTargetId ? 1.5 : 1, display: 'flex', flexDirection: 'column', borderRight: activeTargetId ? '1px solid #E2E8F0' : 'none' }}>
                 {/* Chat Header */}
                 <Box sx={{
                     px: 3, py: 2, borderBottom: '1px solid #E2E8F0', bgcolor: 'white',
@@ -475,6 +504,81 @@ const AIAssistant = () => {
                         AI dapat membuat kesalahan. Verifikasi informasi penting secara manual.
                     </Typography>
                 </Box>
+                </Box>
+            </Box>
+
+            {/* Right Document Viewer Panel */}
+            {activeTargetId && (
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: 'white' }}>
+                    {/* Header */}
+                    <Box sx={{ px: 3, py: 2, borderBottom: '1px solid #E2E8F0', bgcolor: '#F8FAFC', display: 'flex', alignItems: 'center' }}>
+                        <KBIcon sx={{ color: '#64748B', mr: 1, fontSize: 18 }} />
+                        <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                            Dokumen Target Analisis
+                        </Typography>
+                    </Box>
+
+                    {/* Content */}
+                    <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+                        {targetDocLoading ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                                <CircularProgress size={30} />
+                            </Box>
+                        ) : targetDocContent ? (
+                            <Box>
+                                <Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', mb: 1 }}>
+                                    {targetDocContent.title}
+                                </Typography>
+                                
+                                <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+                                    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748B', bgcolor: '#F1F5F9', px: 1, py: 0.5, borderRadius: 1 }}>
+                                        {targetDocContent.summary.split('•')[0].trim()}
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748B', bgcolor: '#F1F5F9', px: 1, py: 0.5, borderRadius: 1 }}>
+                                        {new Date(targetDocContent.createdAt).toLocaleDateString('id-ID')}
+                                    </Typography>
+                                </Box>
+
+                                {targetDocContent.content?.Summary && (
+                                    <Box sx={{ mb: 4 }}>
+                                        <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#4F46E5', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                            Ringkasan Eksekutif
+                                        </Typography>
+                                        <Typography sx={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                                            {targetDocContent.content.Summary}
+                                        </Typography>
+                                    </Box>
+                                )}
+
+                                {targetDocContent.content?.raw_text && (
+                                    <Box>
+                                        <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#4F46E5', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                            Teks Mentah (Raw Content)
+                                        </Typography>
+                                        <Paper elevation={0} sx={{ 
+                                            p: 2, bgcolor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 2
+                                        }}>
+                                            <Typography sx={{ fontSize: '12px', color: '#475569', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                                                {targetDocContent.content.raw_text}
+                                            </Typography>
+                                        </Paper>
+                                    </Box>
+                                )}
+                                
+                                {!targetDocContent.content?.Summary && !targetDocContent.content?.raw_text && (
+                                    <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
+                                        Isi dokumen (teks) tidak dapat ditampilkan atau masih diproses.
+                                    </Typography>
+                                )}
+                            </Box>
+                        ) : (
+                            <Typography sx={{ fontSize: '13px', color: '#EF4444', textAlign: 'center', mt: 4 }}>
+                                Gagal memuat dokumen.
+                            </Typography>
+                        )}
+                    </Box>
+                </Box>
+            )}
             </Box>
             {/* Find In Page / Select Doc Modal */}
             <Dialog open={docModalOpen} onClose={() => setDocModalOpen(false)} maxWidth="sm" fullWidth>
