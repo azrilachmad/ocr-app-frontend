@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
     Box, Typography, Paper, Chip, IconButton, TextField, InputAdornment,
     ToggleButton, ToggleButtonGroup, CircularProgress, Select, MenuItem,
-    FormControl, InputLabel, Button
+    FormControl, InputLabel, Button, Tooltip
 } from '@mui/material';
 import {
     ArrowBack, Search as SearchIcon, GridView, ViewList,
     PictureAsPdf, TableChart, Description as DocIcon,
     Download as DownloadIcon, Folder as FolderIcon,
-    InsertDriveFile as FileIcon
+    InsertDriveFile as FileIcon, Person as PersonIcon
 } from '@mui/icons-material';
 import { getFiles, getCategories } from '../../services/api';
 
@@ -142,6 +142,11 @@ const FileExplorer = () => {
                                         mt: 1, fontSize: '10px', height: 20, bgcolor: '#F1F5F9'
                                     }} />
                                 )}
+                                {file.uploadedBy && (
+                                    <Typography sx={{ fontSize: '10px', color: '#B0B8C4', mt: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.3 }}>
+                                        <PersonIcon sx={{ fontSize: 12 }} /> {file.uploadedBy}
+                                    </Typography>
+                                )}
                             </Paper>
                         ))}
                     </Box>
@@ -173,6 +178,11 @@ const FileExplorer = () => {
                                 </Typography>
                                 {file.category && (
                                     <Chip label={file.category.name} size="small" sx={{ fontSize: '11px', height: 22 }} />
+                                )}
+                                {file.uploadedBy && (
+                                    <Tooltip title={`Diproses oleh ${file.uploadedBy}`} arrow>
+                                        <Chip icon={<PersonIcon sx={{ fontSize: 14 }} />} label={file.uploadedBy} size="small" variant="outlined" sx={{ fontSize: '11px', height: 22, borderColor: '#E2E8F0' }} />
+                                    </Tooltip>
                                 )}
                                 <IconButton size="small" sx={{ color: '#6366F1' }}>
                                     <DownloadIcon sx={{ fontSize: 18 }} />

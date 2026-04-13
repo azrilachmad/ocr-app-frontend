@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
-const { Document, DocumentType } = require('../models');
+const { Document, DocumentType, User } = require('../models');
+const userInclude = { model: User, as: 'user', attributes: ['id', 'name'] };
 const { Op } = require('sequelize');
 const path = require('path');
 const fs = require('fs');
@@ -54,6 +55,7 @@ router.get('/popular', authenticate, async (req, res, next) => {
         const documents = await Document.findAll({
             where: { saved: true, status: 'completed' },
             attributes: ['id', 'fileName', 'documentType', 'fileSize', 'confidenceScore', 'scannedAt'],
+            include: [userInclude],
             order: [['scannedAt', 'DESC']],
             limit: 5
         });
@@ -241,6 +243,7 @@ router.get('/files', authenticate, async (req, res, next) => {
 
         const documents = await Document.findAll({
             where,
+            include: [userInclude],
             order: [['scannedAt', 'DESC']]
         });
 
@@ -254,6 +257,7 @@ router.get('/files', authenticate, async (req, res, next) => {
                 fileSize: doc.fileSize || 'N/A',
                 fileType: ext || 'image',
                 description: `${doc.documentType} • Confidence: ${doc.confidenceScore || 'N/A'}%`,
+                uploadedBy: doc.user?.name || 'Unknown',
                 category: {
                     id: null,
                     name: doc.documentType,
@@ -331,6 +335,7 @@ router.get('/search', authenticate, async (req, res, next) => {
                     { documentType: { [Op.like]: searchTerm } }
                 ]
             },
+            include: [userInclude],
             order: [['scannedAt', 'DESC']],
             limit: 20
         });

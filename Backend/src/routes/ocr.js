@@ -80,11 +80,13 @@ router.post('/process', authenticate, uploadMiddleware.multiple, async (req, res
         // ---------------------------------------
 
         // AI options strictly map from user settings + available templates
+        // Auto-detect: PDFs default to 'insight' mode (summary extraction) unless explicitly set
+        const requestedMode = options.mode || 'template';
         const aiOptions = {
             apiKey: userSettings.apiKey,
             aiModel: userSettings.aiModel,
             availableTemplates: availableTemplates.map(t => t.toJSON()),
-            mode: options.mode || 'template',
+            mode: requestedMode,
             languageDetection: userSettings.languageDetection
         };
 
@@ -94,8 +96,15 @@ router.post('/process', authenticate, uploadMiddleware.multiple, async (req, res
 
         for (const file of files) {
             try {
+                // Auto-switch to insight mode for PDFs (unless user explicitly picked a template mode)
+                const isPdf = path.extname(file.originalname).toLowerCase() === '.pdf';
+                const fileAiOptions = { ...aiOptions };
+                if (isPdf && requestedMode === 'template' && documentType === 'auto') {
+                    fileAiOptions.mode = 'insight';
+                }
+
                 // Call Gemini AI for OCR processing with user settings and available templates
-                const ocrResult = await processDocument(file.path, documentType, aiOptions);
+                const ocrResult = await processDocument(file.path, documentType, fileAiOptions);
 
                 const processingTime = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
 

@@ -441,7 +441,7 @@ const Home = () => {
                                     {doc.fileName}
                                 </Typography>
                                 <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>
-                                    {doc.documentType} • {doc.fileSize || 'N/A'} • {new Date(doc.scannedAt).toLocaleDateString('id-ID')}
+                                    {doc.documentType} • {doc.fileSize || 'N/A'} • {new Date(doc.scannedAt).toLocaleDateString('id-ID')}{doc.user?.name ? ` • oleh ${doc.user.name}` : ''}
                                 </Typography>
                             </Box>
                             <Button size="small" sx={{ fontSize: '12px', color: '#6366F1', flexShrink: 0, minWidth: 'auto' }}>
