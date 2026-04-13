@@ -216,8 +216,9 @@ const processDocument = async (filePath, documentType = 'auto', options = {}) =>
             prompt = `Analyze this document image thoroughly. Read the entire document carefully.
 Extract the essence of it, regardless of how many pages or how dense the text is. 
 
-Return the data in STRICT JSON format with exactly TWO fields:
+Return the data in STRICT JSON format with exactly THREE fields:
 {
+    "Category": "A short topic/category label for this document (e.g. Museum & Galeri, Cagar Budaya, Keuangan, Laporan Tahunan, Infrastruktur, Kebudayaan, Pendidikan, Kesehatan, Pariwisata, SDM, Data & Informasi, etc.). Pick the most fitting label based on the document content.",
     "Report Title": "The exact or inferred title of the document or report.",
     "Summary": "An extensive, highly detailed multi-paragraph summary covering all key points, statistics, main themes, and conclusions present in the document."
 }
@@ -260,9 +261,10 @@ Only return the valid JSON object, no additional text. Do not wrap in markdown b
             if (jsonMatch) {
                 extractedData = JSON.parse(jsonMatch[0]);
 
-                // If insight mode, enforce exactly the two requested fields
+                // If insight mode, enforce the three requested fields
                 if (mode === 'insight') {
                     extractedData = {
+                        "Category": extractedData["Category"] || "Lainnya",
                         "Report Title": extractedData["Report Title"] || "Unknown Document",
                         "Summary": extractedData["Summary"] || extractedData.Ringkasan_Dokumen || Object.values(extractedData).join('\n\n')
                     };
@@ -286,7 +288,13 @@ Only return the valid JSON object, no additional text. Do not wrap in markdown b
         // Determine final document type
         let finalDocumentType = documentType;
         if (mode === 'insight') {
-            finalDocumentType = 'Insight / Summary';
+            // Use the AI-detected category as the document type
+            finalDocumentType = extractedData["Category"] || 'Insight / Summary';
+            // Remove Category from the stored content (it's now in documentType)
+            if (extractedData["Category"]) {
+                const { Category, ...contentWithoutCategory } = extractedData;
+                extractedData = contentWithoutCategory;
+            }
         } else if (documentType === 'auto' && extractedData.detected_type) {
             finalDocumentType = extractedData.detected_type;
             // Move fields to top level if auto-detected
