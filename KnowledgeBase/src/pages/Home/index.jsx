@@ -407,60 +407,60 @@ const Home = () => {
 
             {/* Dokumen Terbaru */}
             {popularDocs.length > 0 && (
-            <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, pb: 6 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                    <Box>
-                        <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#0F172A' }}>
-                            Dokumen Terbaru
-                        </Typography>
-                        <Typography sx={{ fontSize: '14px', color: '#64748B', mt: 0.5 }}>
-                            Dokumen yang baru saja di-scan dan disimpan
-                        </Typography>
-                    </Box>
-                    <Button 
-                        endIcon={<ArrowIcon />} 
-                        onClick={() => navigate('/explorer')}
-                        sx={{ 
-                            color: '#6366F1', fontWeight: 600, textTransform: 'none',
-                            '&:hover': { bgcolor: '#EEF2FF' }
-                        }}
-                    >
-                        Lihat Semua
-                    </Button>
-                </Box>
-
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-                    {popularDocs.map((doc) => (
-                        <Paper key={doc.id} elevation={0}
-                            onClick={() => navigate(`/articles/doc-${doc.id}`)}
+                <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, pb: 6 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                        <Box>
+                            <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#0F172A' }}>
+                                Dokumen Terbaru
+                            </Typography>
+                            <Typography sx={{ fontSize: '14px', color: '#64748B', mt: 0.5 }}>
+                                Dokumen yang baru saja di-scan dan disimpan
+                            </Typography>
+                        </Box>
+                        <Button
+                            endIcon={<ArrowIcon />}
+                            onClick={() => navigate('/files')}
                             sx={{
-                                p: 2.5, borderRadius: 2, border: '1px solid #E2E8F0', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: 2,
-                                transition: 'all 0.2s',
-                                '&:hover': { borderColor: '#6366F1', transform: 'translateX(4px)', boxShadow: '0 4px 12px rgba(99,102,241,0.08)' }
-                            }}>
-                            <Box sx={{
-                                width: 40, height: 40, borderRadius: 2, flexShrink: 0,
-                                bgcolor: '#EEF2FF', color: '#6366F1',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}>
-                                <DocIcon sx={{ fontSize: 20 }} />
-                            </Box>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }} noWrap>
-                                    {doc.fileName}
-                                </Typography>
-                                <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>
-                                    {doc.documentType} • {doc.fileSize || 'N/A'} • {new Date(doc.scannedAt).toLocaleDateString('id-ID')}{doc.user?.name ? ` • oleh ${doc.user.name}` : ''}
-                                </Typography>
-                            </Box>
-                            <Button size="small" sx={{ fontSize: '12px', color: '#6366F1', flexShrink: 0, minWidth: 'auto' }}>
-                                Lihat <ArrowIcon sx={{ fontSize: 14, ml: 0.3 }} />
-                            </Button>
-                        </Paper>
-                    ))}
+                                color: '#6366F1', fontWeight: 600, textTransform: 'none',
+                                '&:hover': { bgcolor: '#EEF2FF' }
+                            }}
+                        >
+                            Lihat Semua
+                        </Button>
+                    </Box>
+
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                        {popularDocs.map((doc) => (
+                            <Paper key={doc.id} elevation={0}
+                                onClick={() => navigate(`/articles/doc-${doc.id}`)}
+                                sx={{
+                                    p: 2.5, borderRadius: 2, border: '1px solid #E2E8F0', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: 2,
+                                    transition: 'all 0.2s',
+                                    '&:hover': { borderColor: '#6366F1', transform: 'translateX(4px)', boxShadow: '0 4px 12px rgba(99,102,241,0.08)' }
+                                }}>
+                                <Box sx={{
+                                    width: 40, height: 40, borderRadius: 2, flexShrink: 0,
+                                    bgcolor: '#EEF2FF', color: '#6366F1',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    <DocIcon sx={{ fontSize: 20 }} />
+                                </Box>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }} noWrap>
+                                        {doc.fileName}
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>
+                                        {doc.documentType} • {doc.fileSize || 'N/A'} • {new Date(doc.scannedAt).toLocaleDateString('id-ID')}{doc.user?.name ? ` • oleh ${doc.user.name}` : ''}
+                                    </Typography>
+                                </Box>
+                                <Button size="small" sx={{ fontSize: '12px', color: '#6366F1', flexShrink: 0, minWidth: 'auto' }}>
+                                    Lihat <ArrowIcon sx={{ fontSize: 14, ml: 0.3 }} />
+                                </Button>
+                            </Paper>
+                        ))}
+                    </Box>
                 </Box>
-            </Box>
             )}
 
             {/* AI CTA Section */}

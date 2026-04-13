@@ -144,59 +144,54 @@ const sendMessage = async (req, res) => {
             await session.save();
         }
 
-        // 4. Fetch context — OCR documents + KB articles + KB files
-        // OCR documents (user's scanned docs)
-        const recentDocs = await Document.findAll({
-            where: { userId: req.userId },
-            order: [['createdAt', 'DESC']],
-            limit: 20
+        // 4. Fetch context — OCR documents from KB
+        const User = require('../models').User; // Ensure User is accessible
+        const kbDocs = await Document.findAll({
+            where: { saved: true },
+            order: [['scannedAt', 'DESC']],
+            include: [{ model: User, as: 'user', attributes: ['name'] }],
+            limit: 50 // Limit to avoid hitting token caps
         });
 
-        let documentContext = '';
-        recentDocs.forEach(doc => {
+        let documentContext = '--- ORGANIZATIONAL KNOWLEDGE BASE DOCUMENTS ---\n\n';
+        kbDocs.forEach(doc => {
+            documentContext += `[Document ID: ${doc.id}] File: ${doc.fileName}\n`;
+            documentContext += `Category/Type: ${doc.documentType}\n`;
+            documentContext += `Uploaded By: ${doc.user?.name || 'System'}\n`;
+            documentContext += `Date Scanned: ${new Date(doc.scannedAt).toLocaleDateString('id-ID')}\n`;
+            
             if (doc.content) {
-                const textContext = typeof doc.content === 'object' ? JSON.stringify(doc.content, null, 2) : doc.content;
-                documentContext += `--- OCR Document: ${doc.fileName} ---\n${textContext}\n\n`;
+                let parsedContent = doc.content;
+                if (typeof parsedContent === 'string') {
+                    try { parsedContent = JSON.parse(parsedContent); } catch { /* ignore */ }
+                }
+
+                if (typeof parsedContent === 'object' && parsedContent !== null) {
+                    if (parsedContent['Report Title']) {
+                        documentContext += `Title: ${parsedContent['Report Title']}\n`;
+                    }
+                    if (parsedContent['Summary']) {
+                        documentContext += `Summary: ${parsedContent['Summary']}\n`;
+                    }
+                    
+                    // Add other structured fields but exclude large raw text to keep it concise
+                    const cleanContext = { ...parsedContent };
+                    delete cleanContext['Report Title'];
+                    delete cleanContext['Summary'];
+                    delete cleanContext['raw_text'];
+                    delete cleanContext['summary'];
+                    
+                    if (Object.keys(cleanContext).length > 0) {
+                        documentContext += `Data: ${JSON.stringify(cleanContext)}\n`;
+                    }
+                } else if (typeof parsedContent === 'string') {
+                    // Truncate raw text to 1000 chars to avoid flooding
+                    const truncatedText = parsedContent.length > 1000 ? parsedContent.substring(0, 1000) + '...' : parsedContent;
+                    documentContext += `Content: ${truncatedText}\n`;
+                }
             }
+            documentContext += `\n--------------------------------------------\n\n`;
         });
-
-        // KB Articles (all published knowledge base articles)
-        const kbArticles = await KBArticle.findAll({
-            where: { status: 'published' },
-            include: [{ model: KBCategory, as: 'category', attributes: ['name', 'slug'] }],
-            order: [['createdAt', 'DESC']],
-            limit: 30
-        });
-
-        kbArticles.forEach(art => {
-            if (art.content) {
-                const catName = art.category?.name || 'Uncategorized';
-                documentContext += `--- KB Article [${catName}]: ${art.title} ---\n`;
-                if (art.summary) documentContext += `Summary: ${art.summary}\n`;
-                // Truncate individual article content to prevent context overflow
-                const truncatedContent = art.content.length > 500
-                    ? art.content.substring(0, 500) + '...'
-                    : art.content;
-                documentContext += `${truncatedContent}\n\n`;
-            }
-        });
-
-        // KB File metadata (so AI knows what files exist)
-        const kbFiles = await KBFile.findAll({
-            include: [{ model: KBCategory, as: 'category', attributes: ['name'] }],
-            order: [['createdAt', 'DESC']],
-            limit: 50
-        });
-
-        if (kbFiles.length > 0) {
-            documentContext += `--- Available Files in Knowledge Base ---\n`;
-            kbFiles.forEach(f => {
-                documentContext += `• ${f.fileName} (${f.fileType?.toUpperCase()}, ${f.fileSize}) — Category: ${f.category?.name || 'General'}`;
-                if (f.description) documentContext += ` — ${f.description}`;
-                documentContext += `\n`;
-            });
-            documentContext += `\n`;
-        }
 
         // 5. Generate AI Response
         const aiResponseText = await aiService.generateChatResponse(history, prompt, documentContext, aiModel, apiKey, temperature, languageDetection);
