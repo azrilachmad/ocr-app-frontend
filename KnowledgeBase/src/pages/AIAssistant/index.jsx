@@ -3,19 +3,21 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Box, Typography, TextField, Button, Paper, IconButton,
     CircularProgress, Avatar, Drawer, List, ListItemButton,
-    ListItemText, ListItemIcon, Divider, Tooltip
+    ListItemText, ListItemIcon, Divider, Tooltip,
+    Dialog, DialogTitle, DialogContent
 } from '@mui/material';
 import {
     Send as SendIcon, ArrowBack, Add as AddIcon,
     Delete as DeleteIcon, SmartToy as AIIcon,
-    Chat as ChatIcon, AutoStories as KBIcon
+    Chat as ChatIcon, AutoStories as KBIcon,
+    FindInPage as FindInPageIcon
 } from '@mui/icons-material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ChartRenderer, { parseChartBlocks } from '../../components/ChartRenderer';
 import {
     getChatSessions, createChatSession, getChatMessages,
-    sendChatMessage, deleteChatSession
+    sendChatMessage, deleteChatSession, getPopularArticles
 } from '../../services/api';
 import { useAuth } from '../../App';
 
@@ -37,6 +39,37 @@ const AIAssistant = () => {
     const deepScanTarget = location.state?.targetDocumentId || null;
     const deepScanTitle = location.state?.docTitle || 'Dokumen';
     const hasInitializedDeepScan = useRef(false);
+
+    const [docModalOpen, setDocModalOpen] = useState(false);
+    const [recentDocs, setRecentDocs] = useState([]);
+    const [docsLoading, setDocsLoading] = useState(false);
+
+    const handleOpenDocModal = async () => {
+        setDocModalOpen(true);
+        setDocsLoading(true);
+        try {
+            const res = await getPopularArticles();
+            setRecentDocs(res.data?.data || []);
+        } catch(e) {
+            console.error('Failed fetching docs', e);
+        } finally {
+            setDocsLoading(false);
+        }
+    };
+
+    const handleSelectDeepScan = async (doc) => {
+        try {
+            const createRes = await createChatSession(`Analisis: ${doc.fileName}`, doc.id);
+            if (createRes.data?.data) {
+                setSessions(prev => [createRes.data.data, ...prev]);
+                setActiveSession(createRes.data.data.id);
+                setMessages([]);
+            }
+        } catch(e) {
+            console.error('Failed creating deep scan session', e);
+        }
+        setDocModalOpen(false);
+    };
 
     // Fetch sessions on mount
     useEffect(() => {
@@ -411,6 +444,14 @@ const AIAssistant = () => {
                         border: '2px solid #E2E8F0', borderRadius: 3, px: 2, py: 0.5,
                         transition: 'border-color 0.3s', '&:focus-within': { borderColor: '#6366F1' }
                     }}>
+                        <Tooltip title="Mode Chat 1 Dokumen Spesifik">
+                            <IconButton onClick={handleOpenDocModal} sx={{
+                                color: '#6366F1', bgcolor: '#EEF2FF', width: 36, height: 36,
+                                '&:hover': { bgcolor: '#E0E7FF' }
+                            }}>
+                                <FindInPageIcon sx={{ fontSize: 20 }} />
+                            </IconButton>
+                        </Tooltip>
                         <TextField
                             fullWidth multiline maxRows={4} placeholder="Ketik pertanyaan Anda..."
                             value={input} onChange={(e) => setInput(e.target.value)}
@@ -432,6 +473,53 @@ const AIAssistant = () => {
                     </Typography>
                 </Box>
             </Box>
+            {/* Find In Page / Select Doc Modal */}
+            <Dialog open={docModalOpen} onClose={() => setDocModalOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '16px', fontWeight: 600 }}>
+                    <FindInPageIcon sx={{ color: '#6366F1' }} />
+                    Pilih Dokumen untuk Deep Analysis
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Typography sx={{ fontSize: '13px', color: '#64748B', mb: 2 }}>
+                        Pilih satu dokumen untuk dianasilis secara mendalam tanpa batasan karakter. 
+                        AI akan memfokuskan memori hanya pada isi dokumen ini.
+                    </Typography>
+                    
+                    {docsLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                            <CircularProgress size={24} />
+                        </Box>
+                    ) : recentDocs.length === 0 ? (
+                        <Typography sx={{ textAlign: 'center', py: 2, color: '#94A3B8', fontSize: '14px' }}>
+                            Oops, Anda belum memiliki dokumen yang diproses.
+                        </Typography>
+                    ) : (
+                        <List sx={{ p: 0 }}>
+                            {recentDocs.map((doc) => (
+                                <ListItemButton key={doc.id} onClick={() => handleSelectDeepScan(doc)}
+                                    sx={{ 
+                                        borderRadius: 2, mb: 1, border: '1px solid #E2E8F0',
+                                        '&:hover': { borderColor: '#6366F1', bgcolor: '#EEF2FF' }
+                                    }}
+                                >
+                                    <ListItemIcon sx={{ minWidth: 36 }}>
+                                        <KBIcon sx={{ fontSize: 20, color: '#64748B' }} />
+                                    </ListItemIcon>
+                                    <ListItemText 
+                                        primary={doc.fileName} 
+                                        secondary={`${doc.documentType} • ${new Date(doc.scannedAt).toLocaleDateString('id-ID')}`}
+                                        primaryTypographyProps={{ fontSize: '13px', fontWeight: 600, color: '#1E293B', noWrap: true }}
+                                        secondaryTypographyProps={{ fontSize: '11px' }}
+                                    />
+                                    <Button size="small" variant="text" sx={{ minWidth: 'auto', textTransform: 'none', fontSize: '12px', fontWeight: 600 }}>
+                                        Pilih
+                                    </Button>
+                                </ListItemButton>
+                            ))}
+                        </List>
+                    )}
+                </DialogContent>
+            </Dialog>
         </Box>
     );
 };
