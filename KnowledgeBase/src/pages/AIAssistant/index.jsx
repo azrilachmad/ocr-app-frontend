@@ -593,9 +593,6 @@ const AIAssistant = () => {
                                         Teks ekstraksi dokumen masih diproses atau tidak tersedia.
                                     </Typography>
                                 )}
-                                        Teks ekstraksi dokumen masih diproses atau tidak tersedia.
-                                    </Typography>
-                                )}
                             </Box>
                         ) : (
                             <Typography sx={{ fontSize: '13px', color: '#EF4444', textAlign: 'center', mt: 4 }}>
