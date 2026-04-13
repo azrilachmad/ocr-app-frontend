@@ -211,6 +211,7 @@ const AIAssistant = () => {
             setLoading(false);
         }
     };
+    const activeSessionData = sessions.find(s => s.id === activeSession);
 
     return (
         <Box sx={{ display: 'flex', height: '100vh', bgcolor: '#F8FAFC' }}>
@@ -307,10 +308,12 @@ const AIAssistant = () => {
                     <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Box>
                             <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0F172A' }}>
-                                Knowledge Base AI
+                                {activeSessionData?.title || 'Knowledge Base AI'}
                             </Typography>
                             <Typography sx={{ fontSize: '12px', color: '#64748B' }}>
-                                Analisis dokumen dan data organisasi Anda
+                                {activeSessionData?.targetDocumentId 
+                                    ? `Fokus Analisis: ${activeSessionData.title.replace('Analisis: ', '')}` 
+                                    : 'Sesi Obrolan General Knowledge Base'}
                             </Typography>
                         </Box>
                         {sessions.find(s => s.id === activeSession)?.targetDocumentId && (
