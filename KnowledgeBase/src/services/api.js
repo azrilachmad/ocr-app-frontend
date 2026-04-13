@@ -1,7 +1,19 @@
 import axios from 'axios';
 
+// Dynamic Base URL Resolution
+const getApiBaseUrl = () => {
+    const envUrl = import.meta.env.VITE_API_BASE_URL;
+    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+        return envUrl;
+    }
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return `${window.location.protocol}//${window.location.host}/api`;
+    }
+    return envUrl || '/api';
+};
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+    baseURL: getApiBaseUrl(),
     withCredentials: true,
     headers: { 'Content-Type': 'application/json' }
 });
