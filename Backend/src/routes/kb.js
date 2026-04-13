@@ -312,7 +312,19 @@ router.get('/files/:id/download', authenticate, async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Physical file not found on server.' });
         }
 
-        res.download(absolutePath, document.fileName);
+        // Ensure download filename has the correct extension
+        let downloadName = document.fileName;
+        const actualExt = path.extname(absolutePath).toLowerCase(); // e.g. '.pdf'
+        const nameExt = path.extname(downloadName).toLowerCase();
+        if (!nameExt && actualExt) {
+            // fileName has no extension — append from actual file
+            downloadName += actualExt;
+        } else if (nameExt !== actualExt && actualExt) {
+            // fileName has wrong extension — replace with actual
+            downloadName = path.basename(downloadName, nameExt) + actualExt;
+        }
+
+        res.download(absolutePath, downloadName);
     } catch (error) {
         next(error);
     }
