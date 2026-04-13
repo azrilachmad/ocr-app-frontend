@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Box, Typography, TextField, Button, Paper, IconButton,
     CircularProgress, Avatar, Drawer, List, ListItemButton,
@@ -32,6 +32,11 @@ const AIAssistant = () => {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [sessionsLoading, setSessionsLoading] = useState(true);
+    
+    const location = useLocation();
+    const deepScanTarget = location.state?.targetDocumentId || null;
+    const deepScanTitle = location.state?.docTitle || 'Dokumen';
+    const hasInitializedDeepScan = useRef(false);
 
     // Fetch sessions on mount
     useEffect(() => {
@@ -53,9 +58,31 @@ const AIAssistant = () => {
         try {
             setSessionsLoading(true);
             const res = await getChatSessions();
-            const list = res.data?.data || [];
+            let list = res.data?.data || [];
+            
+            // Check if we need to initialize a deep scan
+            if (deepScanTarget && !hasInitializedDeepScan.current) {
+                hasInitializedDeepScan.current = true;
+                const existingSession = list.find(s => s.targetDocumentId === deepScanTarget);
+                
+                if (existingSession) {
+                    setActiveSession(existingSession.id);
+                } else {
+                    // Create new deep scan session
+                    const createRes = await createChatSession(`Analisis: ${deepScanTitle}`, deepScanTarget);
+                    if (createRes.data?.data) {
+                        list = [createRes.data.data, ...list];
+                        setActiveSession(createRes.data.data.id);
+                    }
+                }
+                
+                // Clear location state to prevent re-triggering on refresh
+                navigate('/ai-assistant', { replace: true, state: {} });
+            } else if (!activeSession && list.length > 0) {
+                setActiveSession(list[0].id);
+            }
+            
             setSessions(list);
-            if (list.length > 0) setActiveSession(list[0].id);
         } catch (e) {
             console.error('Failed to fetch sessions:', e);
         } finally {
@@ -244,13 +271,27 @@ const AIAssistant = () => {
                     }}>
                         <AIIcon sx={{ fontSize: 20, color: 'white' }} />
                     </Box>
-                    <Box>
-                        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0F172A' }}>
-                            Knowledge Base AI
-                        </Typography>
-                        <Typography sx={{ fontSize: '12px', color: '#64748B' }}>
-                            Analisis dokumen dan data organisasi Anda
-                        </Typography>
+                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box>
+                            <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0F172A' }}>
+                                Knowledge Base AI
+                            </Typography>
+                            <Typography sx={{ fontSize: '12px', color: '#64748B' }}>
+                                Analisis dokumen dan data organisasi Anda
+                            </Typography>
+                        </Box>
+                        {sessions.find(s => s.id === activeSession)?.targetDocumentId && (
+                            <Box sx={{ 
+                                display: 'flex', alignItems: 'center', gap: 1, 
+                                px: 1.5, py: 0.5, borderRadius: 2, 
+                                bgcolor: '#F0FDF4', border: '1px solid #BBF7D0' 
+                            }}>
+                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#22C55E' }} />
+                                <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#166534' }}>
+                                    Deep Analysis Mode
+                                </Typography>
+                            </Box>
+                        )}
                     </Box>
                 </Box>
 

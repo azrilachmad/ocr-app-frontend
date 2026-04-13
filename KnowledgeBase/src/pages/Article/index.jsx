@@ -297,14 +297,14 @@ const Article = () => {
                             </Typography>
                             <Button
                                 fullWidth variant="contained"
-                                onClick={() => navigate('/ai-assistant')}
+                                onClick={() => navigate('/ai-assistant', { state: { targetDocumentId: article.id, docTitle: article.title } })}
                                 sx={{
-                                    bgcolor: 'rgba(255,255,255,0.2)', color: 'white', textTransform: 'none',
-                                    fontWeight: 600, borderRadius: 2, backdropFilter: 'blur(4px)',
-                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
+                                    bgcolor: 'white', color: '#6366F1', textTransform: 'none',
+                                    fontWeight: 600, borderRadius: 2,
+                                    '&:hover': { bgcolor: '#F8FAFC' }
                                 }}
                             >
-                                Buka AI Assistant
+                                Chat Dokumen Ini
                             </Button>
                         </Paper>
                     </Box>

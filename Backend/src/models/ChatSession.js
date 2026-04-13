@@ -21,6 +21,11 @@ const ChatSession = sequelize.define('ChatSession', {
         allowNull: false,
         defaultValue: 'New Chat'
     },
+    targetDocumentId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'If set, this chat session is deeply focused on this specific document'
+    },
     isActive: {
         type: DataTypes.BOOLEAN,
         defaultValue: true

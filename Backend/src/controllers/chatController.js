@@ -63,11 +63,12 @@ const getSessionMessages = async (req, res) => {
  */
 const createSession = async (req, res) => {
     try {
-        const { title } = req.body;
+        const { title, targetDocumentId } = req.body;
 
         const session = await ChatSession.create({
             userId: req.userId,
-            title: title || 'New Chat'
+            title: title || 'New Chat',
+            targetDocumentId: targetDocumentId || null
         });
 
         res.status(201).json({
@@ -144,54 +145,93 @@ const sendMessage = async (req, res) => {
             await session.save();
         }
 
-        // 4. Fetch context — OCR documents from KB
+        // 4. Fetch context
         const User = require('../models').User; // Ensure User is accessible
-        const kbDocs = await Document.findAll({
-            where: { saved: true },
-            order: [['scannedAt', 'DESC']],
-            include: [{ model: User, as: 'user', attributes: ['name'] }],
-            limit: 50 // Limit to avoid hitting token caps
-        });
+        let documentContext = '';
 
-        let documentContext = '--- ORGANIZATIONAL KNOWLEDGE BASE DOCUMENTS ---\n\n';
-        kbDocs.forEach(doc => {
-            documentContext += `[Document ID: ${doc.id}] File: ${doc.fileName}\n`;
-            documentContext += `Category/Type: ${doc.documentType}\n`;
-            documentContext += `Uploaded By: ${doc.user?.name || 'System'}\n`;
-            documentContext += `Date Scanned: ${new Date(doc.scannedAt).toLocaleDateString('id-ID')}\n`;
-            
-            if (doc.content) {
-                let parsedContent = doc.content;
-                if (typeof parsedContent === 'string') {
-                    try { parsedContent = JSON.parse(parsedContent); } catch { /* ignore */ }
-                }
+        if (session.targetDocumentId) {
+            // SINGLE-DOC DEEP CHAT MODE
+            const targetDoc = await Document.findOne({
+                where: { id: session.targetDocumentId, saved: true },
+                include: [{ model: User, as: 'user', attributes: ['name'] }]
+            });
 
-                if (typeof parsedContent === 'object' && parsedContent !== null) {
-                    if (parsedContent['Report Title']) {
-                        documentContext += `Title: ${parsedContent['Report Title']}\n`;
+            if (targetDoc) {
+                documentContext = `--- [DEEP ANALYSIS MODE] ORGANIZATIONAL KNOWLEDGE BASE DOCUMENT ---\n\n`;
+                documentContext += `[Document ID: ${targetDoc.id}] File: ${targetDoc.fileName}\n`;
+                documentContext += `Category/Type: ${targetDoc.documentType}\n`;
+                documentContext += `Uploaded By: ${targetDoc.user?.name || 'System'}\n`;
+                documentContext += `Date Scanned: ${new Date(targetDoc.scannedAt).toLocaleDateString('id-ID')}\n\n`;
+                
+                documentContext += `INSTRUCTION: You are in Deep Analysis Mode for this specific document. The user is asking questions strictly about this document. Below is the FULL EXTRACTED TEXT and data.\n\n`;
+
+                if (targetDoc.content) {
+                    let parsedContent = targetDoc.content;
+                    if (typeof parsedContent === 'string') {
+                        try { parsedContent = JSON.parse(parsedContent); } catch { /* ignore */ }
                     }
-                    if (parsedContent['Summary']) {
-                        documentContext += `Summary: ${parsedContent['Summary']}\n`;
+
+                    if (typeof parsedContent === 'object' && parsedContent !== null) {
+                        documentContext += `--- STRUCTURED DATA ---\n${JSON.stringify(parsedContent, null, 2)}\n\n`;
+                        if (parsedContent['raw_text']) {
+                            documentContext += `--- FULL RAW TEXT ---\n${parsedContent['raw_text']}\n\n`;
+                        }
+                    } else if (typeof parsedContent === 'string') {
+                        documentContext += `--- FULL RAW TEXT ---\n${parsedContent}\n\n`;
                     }
-                    
-                    // Add other structured fields but exclude large raw text to keep it concise
-                    const cleanContext = { ...parsedContent };
-                    delete cleanContext['Report Title'];
-                    delete cleanContext['Summary'];
-                    delete cleanContext['raw_text'];
-                    delete cleanContext['summary'];
-                    
-                    if (Object.keys(cleanContext).length > 0) {
-                        documentContext += `Data: ${JSON.stringify(cleanContext)}\n`;
-                    }
-                } else if (typeof parsedContent === 'string') {
-                    // Truncate raw text to 1000 chars to avoid flooding
-                    const truncatedText = parsedContent.length > 1000 ? parsedContent.substring(0, 1000) + '...' : parsedContent;
-                    documentContext += `Content: ${truncatedText}\n`;
                 }
+            } else {
+                documentContext = 'Document not found or inaccessible.';
             }
-            documentContext += `\n--------------------------------------------\n\n`;
-        });
+        } else {
+            // GENERAL KB MODE
+            const kbDocs = await Document.findAll({
+                where: { saved: true },
+                order: [['scannedAt', 'DESC']],
+                include: [{ model: User, as: 'user', attributes: ['name'] }],
+                limit: 50 // Limit to avoid hitting token caps
+            });
+
+            documentContext = '--- ORGANIZATIONAL KNOWLEDGE BASE DOCUMENTS ---\n\n';
+            kbDocs.forEach(doc => {
+                documentContext += `[Document ID: ${doc.id}] File: ${doc.fileName}\n`;
+                documentContext += `Category/Type: ${doc.documentType}\n`;
+                documentContext += `Uploaded By: ${doc.user?.name || 'System'}\n`;
+                documentContext += `Date Scanned: ${new Date(doc.scannedAt).toLocaleDateString('id-ID')}\n`;
+                
+                if (doc.content) {
+                    let parsedContent = doc.content;
+                    if (typeof parsedContent === 'string') {
+                        try { parsedContent = JSON.parse(parsedContent); } catch { /* ignore */ }
+                    }
+
+                    if (typeof parsedContent === 'object' && parsedContent !== null) {
+                        if (parsedContent['Report Title']) {
+                            documentContext += `Title: ${parsedContent['Report Title']}\n`;
+                        }
+                        if (parsedContent['Summary']) {
+                            documentContext += `Summary: ${parsedContent['Summary']}\n`;
+                        }
+                        
+                        // Add other structured fields but exclude large raw text to keep it concise
+                        const cleanContext = { ...parsedContent };
+                        delete cleanContext['Report Title'];
+                        delete cleanContext['Summary'];
+                        delete cleanContext['raw_text'];
+                        delete cleanContext['summary'];
+                        
+                        if (Object.keys(cleanContext).length > 0) {
+                            documentContext += `Data: ${JSON.stringify(cleanContext)}\n`;
+                        }
+                    } else if (typeof parsedContent === 'string') {
+                        // Truncate raw text to 1000 chars to avoid flooding
+                        const truncatedText = parsedContent.length > 1000 ? parsedContent.substring(0, 1000) + '...' : parsedContent;
+                        documentContext += `Content: ${truncatedText}\n`;
+                    }
+                }
+                documentContext += `\n--------------------------------------------\n\n`;
+            });
+        }
 
         // 5. Generate AI Response
         const aiResponseText = await aiService.generateChatResponse(history, prompt, documentContext, aiModel, apiKey, temperature, languageDetection);

@@ -29,7 +29,7 @@ export const downloadFile = (id) => api.get(`/kb/files/${id}/download`, { respon
 
 // AI Chat (reuse existing chat endpoints)
 export const getChatSessions = () => api.get('/chat/sessions');
-export const createChatSession = (title) => api.post('/chat/sessions', { title });
+export const createChatSession = (title, targetDocumentId = null) => api.post('/chat/sessions', { title, targetDocumentId });
 export const getChatMessages = (sessionId) => api.get(`/chat/sessions/${sessionId}/messages`);
 export const sendChatMessage = (sessionId, prompt) => api.post(`/chat/sessions/${sessionId}/message`, { prompt });
 export const deleteChatSession = (sessionId) => api.delete(`/chat/sessions/${sessionId}`);
