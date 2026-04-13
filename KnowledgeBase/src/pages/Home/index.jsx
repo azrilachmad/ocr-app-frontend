@@ -417,6 +417,16 @@ const Home = () => {
                             Dokumen yang baru saja di-scan dan disimpan
                         </Typography>
                     </Box>
+                    <Button 
+                        endIcon={<ArrowIcon />} 
+                        onClick={() => navigate('/explorer')}
+                        sx={{ 
+                            color: '#6366F1', fontWeight: 600, textTransform: 'none',
+                            '&:hover': { bgcolor: '#EEF2FF' }
+                        }}
+                    >
+                        Lihat Semua
+                    </Button>
                 </Box>
 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>

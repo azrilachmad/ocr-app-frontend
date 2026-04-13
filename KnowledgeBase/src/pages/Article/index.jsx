@@ -129,22 +129,6 @@ const Article = () => {
                                     size="small" variant="outlined"
                                     sx={{ fontSize: '12px', borderColor: '#E2E8F0' }}
                                 />
-                                {article.confidenceScore && (
-                                    <Chip
-                                        icon={<ConfidenceIcon sx={{ fontSize: 14 }} />}
-                                        label={`Confidence: ${article.confidenceScore}%`}
-                                        size="small" variant="outlined"
-                                        sx={{ fontSize: '12px', borderColor: '#E2E8F0', color: '#10B981' }}
-                                    />
-                                )}
-                                {article.processingTime && (
-                                    <Chip
-                                        icon={<SpeedIcon sx={{ fontSize: 14 }} />}
-                                        label={`Proses: ${article.processingTime}`}
-                                        size="small" variant="outlined"
-                                        sx={{ fontSize: '12px', borderColor: '#E2E8F0' }}
-                                    />
-                                )}
                             </Box>
 
                             <Divider sx={{ mb: 3 }} />
@@ -269,8 +253,6 @@ const Article = () => {
                                 { label: 'Nama File', value: article.title },
                                 { label: 'Tipe', value: article.category?.name },
                                 { label: 'Ukuran', value: article.fileSize },
-                                { label: 'Confidence', value: article.confidenceScore ? `${article.confidenceScore}%` : null },
-                                { label: 'Waktu Proses', value: article.processingTime },
                                 { label: 'Tanggal Scan', value: formatDate(article.createdAt) },
                             ].filter(item => item.value).map((item, i) => (
                                 <Box key={i} sx={{
