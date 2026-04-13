@@ -178,17 +178,25 @@ router.get('/articles/:slug', authenticate, async (req, res, next) => {
         if (slug.startsWith('doc-')) {
             const docId = slug.replace('doc-', '');
             document = await Document.findOne({
-                where: { id: docId, saved: true }
+                where: { id: docId, saved: true },
+                include: [userInclude]
             });
         } else {
             // Fallback: try to find by fileName similarity
             document = await Document.findOne({
-                where: { saved: true, fileName: { [Op.like]: `%${slug.replace(/-/g, ' ')}%` } }
+                where: { saved: true, fileName: { [Op.like]: `%${slug.replace(/-/g, ' ')}%` } },
+                include: [userInclude]
             });
         }
 
         if (!document) {
             return res.status(404).json({ success: false, message: 'Document not found.' });
+        }
+
+        // Parse content to extract useful fields
+        let parsedContent = document.content;
+        if (typeof parsedContent === 'string') {
+            try { parsedContent = JSON.parse(parsedContent); } catch { /* keep as string */ }
         }
 
         // Format as article-like structure
@@ -197,7 +205,7 @@ router.get('/articles/:slug', authenticate, async (req, res, next) => {
             title: document.fileName,
             slug: `doc-${document.id}`,
             summary: `${document.documentType} • ${document.fileSize || 'N/A'}`,
-            content: typeof document.content === 'string' ? document.content : JSON.stringify(document.content, null, 2),
+            content: parsedContent,
             tags: document.documentType,
             status: 'published',
             createdAt: document.scannedAt,
@@ -207,6 +215,7 @@ router.get('/articles/:slug', authenticate, async (req, res, next) => {
                 color: '#6366F1'
             },
             // Extra OCR data
+            uploadedBy: document.user?.name || 'Unknown',
             confidenceScore: document.confidenceScore,
             processingTime: document.processingTime,
             resolution: document.resolution,
