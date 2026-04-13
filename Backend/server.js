@@ -4,7 +4,7 @@ const { testConnection } = require('./src/config/database');
 const { syncModels } = require('./src/models');
 const { seedDocumentTypes } = require('./src/seeders/documentTypes');
 const { seedSuperAdmin } = require('./src/seeders/superadminSeeder');
-const { seedKB } = require('./src/seeders/kbSeeder');
+// KB no longer uses seeder data — it displays real OCR documents from the documents table
 
 const PORT = process.env.PORT || 3001;
 
@@ -22,8 +22,7 @@ const startServer = async () => {
         // Seed default superadmin account
         await seedSuperAdmin();
 
-        // Seed KB categories, articles, and files
-        await seedKB();
+        // KB data comes from real OCR documents — no seeding needed
 
         // Start server
         app.listen(PORT, () => {

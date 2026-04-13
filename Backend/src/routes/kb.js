@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
-const { KBCategory, KBArticle, KBFile, Document, sequelize } = require('../models');
+const { Document, DocumentType } = require('../models');
 const { Op } = require('sequelize');
+const path = require('path');
+const fs = require('fs');
 
 // =============================================
 // STATS & DASHBOARD
@@ -10,22 +12,32 @@ const { Op } = require('sequelize');
 
 /**
  * GET /api/kb/stats
- * Quick statistics for dashboard
+ * Quick statistics for dashboard — from real OCR documents
  */
 router.get('/stats', authenticate, async (req, res, next) => {
     try {
-        const totalArticles = await KBArticle.count({ where: { status: 'published' } });
-        const totalCategories = await KBCategory.count();
-        const totalFiles = await KBFile.count();
-        const lastArticle = await KBArticle.findOne({ order: [['createdAt', 'DESC']], attributes: ['createdAt'] });
+        const totalDocuments = await Document.count({ where: { saved: true } });
+        const documentTypes = await Document.count({
+            where: { saved: true },
+            distinct: true,
+            col: 'documentType'
+        });
+        const totalFiles = await Document.count({
+            where: { saved: true, filePath: { [Op.ne]: null } }
+        });
+        const lastDocument = await Document.findOne({
+            where: { saved: true },
+            order: [['scannedAt', 'DESC']],
+            attributes: ['scannedAt']
+        });
 
         res.json({
             success: true,
             data: {
-                totalArticles,
-                totalCategories,
+                totalDocuments,
+                totalCategories: documentTypes,
                 totalFiles,
-                lastUpdated: lastArticle?.createdAt || new Date()
+                lastUpdated: lastDocument?.scannedAt || null
             }
         });
     } catch (error) {
@@ -35,50 +47,74 @@ router.get('/stats', authenticate, async (req, res, next) => {
 
 /**
  * GET /api/kb/popular
- * Popular / recent articles for dashboard
+ * Most recent saved documents for dashboard
  */
 router.get('/popular', authenticate, async (req, res, next) => {
     try {
-        const articles = await KBArticle.findAll({
-            where: { status: 'published' },
-            attributes: ['id', 'title', 'slug', 'summary', 'tags', 'viewCount', 'createdAt'],
-            include: [{ model: KBCategory, as: 'category', attributes: ['name', 'slug', 'color', 'icon'] }],
-            order: [['viewCount', 'DESC'], ['createdAt', 'DESC']],
+        const documents = await Document.findAll({
+            where: { saved: true, status: 'completed' },
+            attributes: ['id', 'fileName', 'documentType', 'fileSize', 'confidenceScore', 'scannedAt'],
+            order: [['scannedAt', 'DESC']],
             limit: 5
         });
-        res.json({ success: true, data: articles });
+
+        res.json({ success: true, data: documents });
     } catch (error) {
         next(error);
     }
 });
 
 // =============================================
-// CATEGORIES
+// CATEGORIES (Document Types)
 // =============================================
 
 /**
  * GET /api/kb/categories
- * List all categories with article counts
+ * List document types used in saved documents
  */
 router.get('/categories', authenticate, async (req, res, next) => {
     try {
-        const categories = await KBCategory.findAll({
-            order: [['order', 'ASC'], ['name', 'ASC']],
-            include: [
-                { model: KBArticle, as: 'articles', attributes: ['id'] },
-                { model: KBFile, as: 'files', attributes: ['id'] }
-            ]
+        // Get distinct document types with counts from actual documents
+        const results = await Document.findAll({
+            where: { saved: true },
+            attributes: [
+                'documentType',
+                [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'documentCount']
+            ],
+            group: ['documentType'],
+            order: [[require('sequelize').fn('COUNT', require('sequelize').col('id')), 'DESC']],
+            raw: true
         });
 
-        const result = categories.map(cat => ({
-            ...cat.toJSON(),
-            articleCount: cat.articles?.length || 0,
-            fileCount: cat.files?.length || 0,
-            articles: undefined,
-            files: undefined
+        // Map to category-like structure for frontend compatibility
+        const ICON_MAP = {
+            'KTP': 'Assessment',
+            'NPWP': 'TrendingUp',
+            'Invoice': 'Article',
+            'Receipt': 'FolderOpen',
+            'General': 'Article',
+        };
+        const COLOR_MAP = {
+            'KTP': '#6366F1',
+            'NPWP': '#0EA5E9',
+            'Invoice': '#10B981',
+            'Receipt': '#F59E0B',
+            'General': '#8B5CF6',
+        };
+
+        const categories = results.map((row, idx) => ({
+            id: idx + 1,
+            name: row.documentType || 'Lainnya',
+            slug: (row.documentType || 'lainnya').toLowerCase().replace(/\s+/g, '-'),
+            description: `Dokumen tipe ${row.documentType || 'Lainnya'} yang sudah di-scan`,
+            icon: ICON_MAP[row.documentType] || 'Article',
+            color: COLOR_MAP[row.documentType] || '#6366F1',
+            articleCount: parseInt(row.documentCount) || 0,
+            fileCount: parseInt(row.documentCount) || 0,
+            order: idx + 1
         }));
 
-        res.json({ success: true, data: result });
+        res.json({ success: true, data: categories });
     } catch (error) {
         next(error);
     }
@@ -86,23 +122,37 @@ router.get('/categories', authenticate, async (req, res, next) => {
 
 /**
  * GET /api/kb/categories/:slug/articles
- * List articles in a category
+ * List documents filtered by document type
  */
 router.get('/categories/:slug/articles', authenticate, async (req, res, next) => {
     try {
-        const category = await KBCategory.findOne({
-            where: { slug: req.params.slug },
-            include: [{
-                model: KBArticle, as: 'articles',
-                where: { status: 'published' },
-                required: false,
-                order: [['createdAt', 'DESC']]
-            }]
+        const slug = req.params.slug;
+        // Convert slug back to document type name
+        const documentType = slug.replace(/-/g, ' ');
+
+        const documents = await Document.findAll({
+            where: {
+                saved: true,
+                documentType: { [Op.like]: `%${documentType}%` }
+            },
+            order: [['scannedAt', 'DESC']]
         });
 
-        if (!category) {
-            return res.status(404).json({ success: false, message: 'Category not found.' });
-        }
+        // Wrap in category-like structure for frontend compatibility
+        const category = {
+            name: documents[0]?.documentType || slug,
+            slug: slug,
+            description: `Dokumen tipe ${documents[0]?.documentType || slug}`,
+            articles: documents.map(doc => ({
+                id: doc.id,
+                title: doc.fileName,
+                slug: `doc-${doc.id}`,
+                summary: `${doc.documentType} • ${doc.fileSize || 'N/A'} • Confidence: ${doc.confidenceScore || 'N/A'}%`,
+                content: typeof doc.content === 'string' ? doc.content : JSON.stringify(doc.content),
+                status: 'published',
+                createdAt: doc.scannedAt
+            }))
+        };
 
         res.json({ success: true, data: category });
     } catch (error) {
@@ -111,63 +161,106 @@ router.get('/categories/:slug/articles', authenticate, async (req, res, next) =>
 });
 
 // =============================================
-// ARTICLES
+// ARTICLES (Individual Documents)
 // =============================================
 
 /**
  * GET /api/kb/articles/:slug
- * Get single article with related articles
+ * Get single document — slug format: doc-{id}
  */
 router.get('/articles/:slug', authenticate, async (req, res, next) => {
     try {
-        const article = await KBArticle.findOne({
-            where: { slug: req.params.slug, status: 'published' },
-            include: [{ model: KBCategory, as: 'category', attributes: ['id', 'name', 'slug', 'icon', 'color'] }]
-        });
+        const slug = req.params.slug;
+        let document;
 
-        if (!article) {
-            return res.status(404).json({ success: false, message: 'Article not found.' });
-        }
-
-        // Increment view count
-        await article.increment('viewCount');
-
-        // Fetch related articles
-        let relatedArticles = [];
-        if (article.relatedArticleIds && article.relatedArticleIds.length > 0) {
-            relatedArticles = await KBArticle.findAll({
-                where: { id: article.relatedArticleIds, status: 'published' },
-                attributes: ['id', 'title', 'slug', 'summary', 'tags']
+        if (slug.startsWith('doc-')) {
+            const docId = slug.replace('doc-', '');
+            document = await Document.findOne({
+                where: { id: docId, saved: true }
+            });
+        } else {
+            // Fallback: try to find by fileName similarity
+            document = await Document.findOne({
+                where: { saved: true, fileName: { [Op.like]: `%${slug.replace(/-/g, ' ')}%` } }
             });
         }
 
-        res.json({ success: true, data: { ...article.toJSON(), relatedArticles } });
+        if (!document) {
+            return res.status(404).json({ success: false, message: 'Document not found.' });
+        }
+
+        // Format as article-like structure
+        const article = {
+            id: document.id,
+            title: document.fileName,
+            slug: `doc-${document.id}`,
+            summary: `${document.documentType} • ${document.fileSize || 'N/A'}`,
+            content: typeof document.content === 'string' ? document.content : JSON.stringify(document.content, null, 2),
+            tags: document.documentType,
+            status: 'published',
+            createdAt: document.scannedAt,
+            category: {
+                name: document.documentType,
+                slug: document.documentType?.toLowerCase().replace(/\s+/g, '-'),
+                color: '#6366F1'
+            },
+            // Extra OCR data
+            confidenceScore: document.confidenceScore,
+            processingTime: document.processingTime,
+            resolution: document.resolution,
+            fileSize: document.fileSize,
+            filePath: document.filePath,
+            relatedArticles: []
+        };
+
+        res.json({ success: true, data: article });
     } catch (error) {
         next(error);
     }
 });
 
 // =============================================
-// FILES
+// FILES (Document files from uploads)
 // =============================================
 
 /**
  * GET /api/kb/files
- * List files with optional filters
+ * List documents with file info
  */
 router.get('/files', authenticate, async (req, res, next) => {
     try {
-        const { categoryId, fileType, search } = req.query;
-        const where = {};
+        const { documentType, search } = req.query;
+        const where = { saved: true };
 
-        if (categoryId) where.categoryId = categoryId;
-        if (fileType) where.fileType = fileType;
-        if (search) where.fileName = { [Op.like]: `%${search}%` };
+        if (documentType) {
+            where.documentType = documentType;
+        }
+        if (search) {
+            where.fileName = { [Op.like]: `%${search}%` };
+        }
 
-        const files = await KBFile.findAll({
+        const documents = await Document.findAll({
             where,
-            include: [{ model: KBCategory, as: 'category', attributes: ['id', 'name', 'slug'] }],
-            order: [['createdAt', 'DESC']]
+            order: [['scannedAt', 'DESC']]
+        });
+
+        // Map to file-like structure for frontend compatibility
+        const files = documents.map(doc => {
+            const ext = doc.fileName ? path.extname(doc.fileName).replace('.', '').toLowerCase() : '';
+            return {
+                id: doc.id,
+                fileName: doc.fileName,
+                filePath: doc.filePath,
+                fileSize: doc.fileSize || 'N/A',
+                fileType: ext || 'image',
+                description: `${doc.documentType} • Confidence: ${doc.confidenceScore || 'N/A'}%`,
+                category: {
+                    id: null,
+                    name: doc.documentType,
+                    slug: doc.documentType?.toLowerCase().replace(/\s+/g, '-')
+                },
+                createdAt: doc.scannedAt
+            };
         });
 
         res.json({ success: true, data: files });
@@ -178,36 +271,47 @@ router.get('/files', authenticate, async (req, res, next) => {
 
 /**
  * GET /api/kb/files/:id/download
- * Download a file
+ * Download a document's original file
  */
 router.get('/files/:id/download', authenticate, async (req, res, next) => {
     try {
-        const file = await KBFile.findByPk(req.params.id);
-        if (!file) {
-            return res.status(404).json({ success: false, message: 'File not found.' });
+        const document = await Document.findOne({
+            where: { id: req.params.id, saved: true }
+        });
+
+        if (!document) {
+            return res.status(404).json({ success: false, message: 'Document not found.' });
         }
 
-        const path = require('path');
-        const fs = require('fs');
-        const absolutePath = path.resolve(file.filePath);
+        if (!document.filePath) {
+            return res.status(404).json({ success: false, message: 'No file associated with this document.' });
+        }
+
+        const absolutePath = path.resolve(document.filePath);
+        const uploadsDir = path.resolve(__dirname, '../../uploads');
+
+        // Security: ensure file is within uploads directory
+        if (!absolutePath.startsWith(uploadsDir)) {
+            return res.status(403).json({ success: false, message: 'Access denied.' });
+        }
 
         if (!fs.existsSync(absolutePath)) {
             return res.status(404).json({ success: false, message: 'Physical file not found on server.' });
         }
 
-        res.download(absolutePath, file.fileName);
+        res.download(absolutePath, document.fileName);
     } catch (error) {
         next(error);
     }
 });
 
 // =============================================
-// SEARCH (across articles, files, and OCR data)
+// SEARCH (across saved OCR documents)
 // =============================================
 
 /**
  * GET /api/kb/search?q=query
- * Global search across KB content
+ * Search across saved documents
  */
 router.get('/search', authenticate, async (req, res, next) => {
     try {
@@ -218,47 +322,43 @@ router.get('/search', authenticate, async (req, res, next) => {
 
         const searchTerm = `%${q.trim()}%`;
 
-        // Search articles
-        const articles = await KBArticle.findAll({
-            where: {
-                status: 'published',
-                [Op.or]: [
-                    { title: { [Op.like]: searchTerm } },
-                    { content: { [Op.like]: searchTerm } },
-                    { tags: { [Op.like]: searchTerm } },
-                    { summary: { [Op.like]: searchTerm } }
-                ]
-            },
-            attributes: ['id', 'title', 'slug', 'summary', 'tags', 'categoryId'],
-            include: [{ model: KBCategory, as: 'category', attributes: ['name', 'slug', 'color'] }],
-            limit: 10
-        });
-
-        // Search files
-        const files = await KBFile.findAll({
-            where: {
-                [Op.or]: [
-                    { fileName: { [Op.like]: searchTerm } },
-                    { description: { [Op.like]: searchTerm } }
-                ]
-            },
-            include: [{ model: KBCategory, as: 'category', attributes: ['name', 'slug'] }],
-            limit: 10
-        });
-
-        // Search OCR documents (saved ones)
+        // Search saved documents
         const documents = await Document.findAll({
             where: {
                 saved: true,
                 [Op.or]: [
-                    { fileName: { [Op.like]: searchTerm } }
+                    { fileName: { [Op.like]: searchTerm } },
+                    { documentType: { [Op.like]: searchTerm } }
                 ]
             },
-            attributes: ['id', 'fileName', 'documentType', 'status', 'scannedAt'],
-            limit: 10
+            order: [['scannedAt', 'DESC']],
+            limit: 20
         });
 
-        res.json({ success: true, data: { articles, files, documents } });
+        // Split into articles (with content) and files (with filePath)
+        const articles = documents.map(doc => ({
+            id: doc.id,
+            title: doc.fileName,
+            slug: `doc-${doc.id}`,
+            summary: `${doc.documentType} • ${doc.fileSize || 'N/A'} • Confidence: ${doc.confidenceScore || 'N/A'}%`,
+            category: {
+                name: doc.documentType,
+                slug: doc.documentType?.toLowerCase().replace(/\s+/g, '-'),
+                color: '#6366F1'
+            }
+        }));
+
+        const files = documents.filter(doc => doc.filePath).map(doc => ({
+            id: doc.id,
+            fileName: doc.fileName,
+            fileSize: doc.fileSize || 'N/A',
+            category: {
+                name: doc.documentType,
+                slug: doc.documentType?.toLowerCase().replace(/\s+/g, '-')
+            }
+        }));
+
+        res.json({ success: true, data: { articles, files, documents: [] } });
     } catch (error) {
         next(error);
     }

@@ -14,7 +14,7 @@ import {
     Category as CatIcon, Update as UpdateIcon,
     ArrowForward as ArrowIcon
 } from '@mui/icons-material';
-import { logout, getCategories, searchKB, getKBStats } from '../../services/api';
+import { logout, getCategories, searchKB, getKBStats, getPopularArticles } from '../../services/api';
 import { useAuth } from '../../App';
 
 const ICON_MAP = {
@@ -23,14 +23,7 @@ const ICON_MAP = {
     Article: <ArticleIcon />, FolderOpen: <FolderIcon />
 };
 
-// Dummy popular articles (will be replaced with API data later)
-const DUMMY_POPULAR = [
-    { id: 1, title: 'Laporan Museum Nasional Indonesia 2025', category: 'Museum & Galeri', date: '2 Mar 2025', slug: 'laporan-museum-nasional-indonesia-2025' },
-    { id: 2, title: 'Wardun Borobudur 2025', category: 'Cagar Budaya', date: '1 Mar 2025', slug: 'wardun-borobudur-2025' },
-    { id: 3, title: 'Laporan Tim Data dan Informasi 2025', category: 'Data & Informasi', date: '28 Feb 2025', slug: 'laporan-tim-data-informasi-2025' },
-    { id: 4, title: 'Laporan Galeri Nasional Indonesia 2025', category: 'Museum & Galeri', date: '27 Feb 2025', slug: 'laporan-galeri-nasional-indonesia-2025' },
-    { id: 5, title: 'MINHA MCB 2025', category: 'Cagar Budaya', date: '25 Feb 2025', slug: 'minha-mcb-2025' },
-];
+
 
 const Home = () => {
     const navigate = useNavigate();
@@ -42,6 +35,7 @@ const Home = () => {
     const [searchResults, setSearchResults] = useState(null);
     const [searching, setSearching] = useState(false);
     const [stats, setStats] = useState(null);
+    const [popularDocs, setPopularDocs] = useState([]);
 
     // Live search suggestions
     const [suggestions, setSuggestions] = useState([]);
@@ -54,6 +48,7 @@ const Home = () => {
         Promise.all([
             getCategories().then(res => setCategories(res.data?.data || [])).catch(console.error),
             getKBStats().then(res => setStats(res.data?.data || null)).catch(console.error),
+            getPopularArticles().then(res => setPopularDocs(res.data?.data || [])).catch(console.error),
         ]).finally(() => setLoading(false));
     }, []);
 
@@ -279,10 +274,10 @@ const Home = () => {
                 <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, mt: 4, position: 'relative', zIndex: 1 }}>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 2 }}>
                         {[
-                            { label: 'Total Artikel', value: stats.totalArticles, icon: <ArticleIcon />, color: '#6366F1' },
-                            { label: 'Kategori', value: stats.totalCategories, icon: <CatIcon />, color: '#0EA5E9' },
+                            { label: 'Total Dokumen', value: stats.totalDocuments, icon: <ArticleIcon />, color: '#6366F1' },
+                            { label: 'Tipe Dokumen', value: stats.totalCategories, icon: <CatIcon />, color: '#0EA5E9' },
                             { label: 'Total File', value: stats.totalFiles, icon: <FolderIcon />, color: '#10B981' },
-                            { label: 'Terakhir Update', value: 'Hari ini', icon: <UpdateIcon />, color: '#F59E0B', isText: true },
+                            { label: 'Terakhir Update', value: stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleDateString('id-ID') : '-', icon: <UpdateIcon />, color: '#F59E0B', isText: true },
                         ].map((stat, i) => (
                             <Paper key={i} elevation={0} sx={{
                                 p: 2.5, borderRadius: 3, border: '1px solid #E2E8F0',
@@ -396,7 +391,7 @@ const Home = () => {
                                     {cat.description}
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Chip label={`${cat.articleCount || 0} articles`} size="small" sx={{
+                                    <Chip label={`${cat.articleCount || 0} dokumen`} size="small" sx={{
                                         bgcolor: `${cat.color}10`, color: cat.color, fontWeight: 500, fontSize: '11px'
                                     }} />
                                     <Chip label="AI Ready" size="small" sx={{
@@ -410,23 +405,24 @@ const Home = () => {
                 )}
             </Box>
 
-            {/* Popular Articles (dummy data) */}
+            {/* Dokumen Terbaru */}
+            {popularDocs.length > 0 && (
             <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, pb: 6 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                     <Box>
                         <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#0F172A' }}>
-                            Artikel Populer
+                            Dokumen Terbaru
                         </Typography>
                         <Typography sx={{ fontSize: '14px', color: '#64748B', mt: 0.5 }}>
-                            Artikel yang paling banyak dibaca
+                            Dokumen yang baru saja di-scan dan disimpan
                         </Typography>
                     </Box>
                 </Box>
 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-                    {DUMMY_POPULAR.map((art) => (
-                        <Paper key={art.id} elevation={0}
-                            onClick={() => navigate(`/articles/${art.slug}`)}
+                    {popularDocs.map((doc) => (
+                        <Paper key={doc.id} elevation={0}
+                            onClick={() => navigate(`/articles/doc-${doc.id}`)}
                             sx={{
                                 p: 2.5, borderRadius: 2, border: '1px solid #E2E8F0', cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', gap: 2,
@@ -438,23 +434,24 @@ const Home = () => {
                                 bgcolor: '#EEF2FF', color: '#6366F1',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center'
                             }}>
-                                <ArticleIcon sx={{ fontSize: 20 }} />
+                                <DocIcon sx={{ fontSize: 20 }} />
                             </Box>
                             <Box sx={{ flex: 1, minWidth: 0 }}>
                                 <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }} noWrap>
-                                    {art.title}
+                                    {doc.fileName}
                                 </Typography>
                                 <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>
-                                    {art.category} • {art.date}
+                                    {doc.documentType} • {doc.fileSize || 'N/A'} • {new Date(doc.scannedAt).toLocaleDateString('id-ID')}
                                 </Typography>
                             </Box>
                             <Button size="small" sx={{ fontSize: '12px', color: '#6366F1', flexShrink: 0, minWidth: 'auto' }}>
-                                Read <ArrowIcon sx={{ fontSize: 14, ml: 0.3 }} />
+                                Lihat <ArrowIcon sx={{ fontSize: 14, ml: 0.3 }} />
                             </Button>
                         </Paper>
                     ))}
                 </Box>
             </Box>
+            )}
 
             {/* AI CTA Section */}
             <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, pb: 6 }}>

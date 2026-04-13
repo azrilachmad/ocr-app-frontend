@@ -34,7 +34,7 @@ const FileExplorer = () => {
 
     useEffect(() => {
         Promise.all([
-            getFiles({ search: searchQuery || undefined, fileType: filterType || undefined, categoryId: filterCategory || undefined }),
+            getFiles({ search: searchQuery || undefined, documentType: filterCategory || undefined }),
             getCategories()
         ])
             .then(([filesRes, catRes]) => {
@@ -46,13 +46,14 @@ const FileExplorer = () => {
     }, [searchQuery, filterType, filterCategory]);
 
     const handleDownload = (fileId, fileName) => {
-        window.open(`/api/kb/files/${fileId}/download`, '_blank');
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+        window.open(`${baseUrl}/kb/files/${fileId}/download`, '_blank');
     };
 
     const getFileIcon = (type) => FILE_ICONS[type] || FILE_ICONS.default;
 
     return (
-        <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC' }}>
+        <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC', overflow: 'hidden' }}>
             {/* Header */}
             <Box sx={{
                 px: 4, py: 2, bgcolor: 'white', borderBottom: '1px solid #E2E8F0',
@@ -90,11 +91,11 @@ const FileExplorer = () => {
                 </FormControl>
 
                 <FormControl size="small" sx={{ minWidth: 160 }}>
-                    <InputLabel>Kategori</InputLabel>
-                    <Select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} label="Kategori" sx={{ borderRadius: 2 }}>
+                    <InputLabel>Tipe Dokumen</InputLabel>
+                    <Select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} label="Tipe Dokumen" sx={{ borderRadius: 2 }}>
                         <MenuItem value="">Semua</MenuItem>
                         {categories.map(cat => (
-                            <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>
+                            <MenuItem key={cat.id} value={cat.name}>{cat.name}</MenuItem>
                         ))}
                     </Select>
                 </FormControl>
@@ -108,7 +109,7 @@ const FileExplorer = () => {
             </Box>
 
             {/* Content */}
-            <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, py: 4 }}>
+            <Box sx={{ maxWidth: 1200, mx: 'auto', px: 4, py: 4, boxSizing: 'border-box' }}>
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
                         <CircularProgress />
@@ -120,17 +121,17 @@ const FileExplorer = () => {
                     </Box>
                 ) : viewMode === 'grid' ? (
                     /* Grid View */
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: '1fr 1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2, width: '100%' }}>
                         {files.map(file => (
                             <Paper key={file.id} elevation={0} sx={{
                                 p: 3, borderRadius: 2, border: '1px solid #E2E8F0', textAlign: 'center',
-                                cursor: 'pointer', transition: 'all 0.2s',
+                                cursor: 'pointer', transition: 'all 0.2s', minWidth: 0, overflow: 'hidden',
                                 '&:hover': { borderColor: '#6366F1', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', transform: 'translateY(-2px)' }
                             }}
                                 onClick={() => handleDownload(file.id, file.fileName)}
                             >
                                 <Box sx={{ mb: 2 }}>{getFileIcon(file.fileType)}</Box>
-                                <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#1F2937', mb: 0.5 }} noWrap>
+                                <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#1F2937', mb: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {file.fileName}
                                 </Typography>
                                 <Typography sx={{ fontSize: '11px', color: '#94A3B8' }}>
