@@ -20,9 +20,66 @@ import {
     sendChatMessage, deleteChatSession, getPopularArticles, getArticle
 } from '../../services/api';
 import { useAuth } from '../../App';
-import DocViewer, { DocViewerRenderers } from "@cyntler/react-doc-viewer";
-import "@cyntler/react-doc-viewer/dist/index.css";
 
+const ProtectedIframe = ({ fileUrl, title }) => {
+    const [blobUrl, setBlobUrl] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        let active = true;
+        setLoading(true);
+        fetch(fileUrl)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch file');
+                return res.blob();
+            })
+            .then(blob => {
+                if (!active) return;
+                const url = URL.createObjectURL(blob);
+                setBlobUrl(url);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Fetch error:", err);
+                if (active) {
+                    setError(true);
+                    setLoading(false);
+                }
+            });
+        return () => {
+            active = false;
+            if (blobUrl) URL.revokeObjectURL(blobUrl);
+        };
+    }, [fileUrl]);
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8 }}>
+                <CircularProgress size={30} sx={{ mb: 2 }} />
+                <Typography sx={{ fontSize: '13px', color: '#64748B' }}>Memuat dokumen anti-IDM...</Typography>
+            </Box>
+        );
+    }
+
+    if (error) {
+        return (
+            <Typography sx={{ textAlign: 'center', color: '#EF4444', py: 4 }}>
+                Gagal memuat dokumen. Pastikan file tersedia di server.
+            </Typography>
+        );
+    }
+
+    return (
+        <iframe 
+            src={`${blobUrl}#toolbar=0`} 
+            width="100%" 
+            height="800px" 
+            style={{ border: 'none', borderRadius: '8px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }} 
+            title={title} 
+        />
+    );
+};
 const DRAWER_WIDTH = 280;
 
 const AIAssistant = () => {
@@ -610,18 +667,18 @@ const AIAssistant = () => {
 
                                             if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
                                                 return <Box component="img" src={fileUrl} sx={{ width: '100%', borderRadius: 2, border: '1px solid #E2E8F0' }} alt="Dokumen Asli" />;
+                                            } else if (ext === 'pdf') {
+                                                return <ProtectedIframe fileUrl={fileUrl} title="PDF Viewer" />;
                                             } else {
-                                                const docs = [{ uri: fileUrl }];
                                                 return (
-                                                    <Box sx={{ border: '1px solid #E2E8F0', borderRadius: 2, overflow: 'hidden' }}>
-                                                        <DocViewer 
-                                                            pluginRenderers={DocViewerRenderers} 
-                                                            documents={docs}
-                                                            style={{ height: '800px' }}
-                                                            config={{
-                                                                header: { disableHeader: true },
-                                                            }}
-                                                        />
+                                                    <Box sx={{ textAlign: 'center', py: 8, bgcolor: '#F8FAFC', borderRadius: 2, border: '1px dashed #CBD5E1' }}>
+                                                        <KBIcon sx={{ fontSize: 48, color: '#94A3B8', mb: 2 }} />
+                                                        <Typography sx={{ fontSize: '14px', color: '#475569', mb: 2 }}>
+                                                            Pratinjau langsung tidak tersedia secara native untuk format <b>.{ext.toUpperCase()}</b>
+                                                        </Typography>
+                                                        <Button variant="contained" href={fileUrl} target="_blank" sx={{ textTransform: 'none', bgcolor: '#4F46E5', '&:hover': { bgcolor: '#4338CA' } }}>
+                                                            Buka / Unduh File Eksternal
+                                                        </Button>
                                                     </Box>
                                                 );
                                             }
