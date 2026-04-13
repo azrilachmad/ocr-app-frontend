@@ -431,6 +431,46 @@ const UploadPhase = ({
     const effectiveDocumentType = (isMultipleFiles || processMode === 'insight') ? 'auto' : documentType;
     const isTypeDisabled = selectedFiles.length === 0 || isMultipleFiles || processMode === 'insight';
 
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Only set false if we're leaving the drop zone (not entering a child)
+        if (e.currentTarget.contains(e.relatedTarget)) return;
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        const droppedFiles = Array.from(e.dataTransfer.files);
+        // Filter only allowed types
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+        const validFiles = droppedFiles.filter(f => allowedTypes.includes(f.type));
+
+        if (validFiles.length === 0) {
+            return; // silently ignore invalid files
+        }
+
+        // Simulate file input change
+        const fakeEvent = { target: { files: validFiles } };
+        handleFileChange(fakeEvent);
+    };
+
     return (
         <Fade in timeout={500}>
             <Box sx={{ mt: 12 }}>
@@ -444,8 +484,9 @@ const UploadPhase = ({
                             {[
                                 'Ensure the document is clear and all corners are visible',
                                 'Supported formats: JPG, PNG, PDF',
-                                'Maximum file size: 10 MB per file',
-                                'You can upload multiple files at once'
+                                'Maximum file size: 50 MB per file',
+                                'You can upload multiple files at once',
+                                'Drag & drop files directly into the upload area'
                             ].map((text, i) => (
                                 <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <CheckCircleIcon sx={{ fontSize: 16, color: '#10B981' }} />
@@ -454,12 +495,12 @@ const UploadPhase = ({
                             ))}
                         </Box>
 
-                        {/* Upload Area - Second */}
+                        {/* Upload Area with Drag & Drop */}
                         <Box
                             sx={{
-                                border: '2px dashed #E5E7EB',
+                                border: isDragging ? '2px dashed #6366F1' : '2px dashed #E5E7EB',
                                 borderRadius: 3,
-                                bgcolor: '#F9FAFB',
+                                bgcolor: isDragging ? '#EEF2FF' : '#F9FAFB',
                                 minHeight: 200,
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -467,12 +508,18 @@ const UploadPhase = ({
                                 justifyContent: 'center',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
+                                transform: isDragging ? 'scale(1.01)' : 'scale(1)',
+                                boxShadow: isDragging ? '0 0 0 4px rgba(99, 102, 241, 0.1)' : 'none',
                                 '&:hover': {
                                     borderColor: '#6366F1',
                                     bgcolor: '#EEF2FF'
                                 }
                             }}
                             onClick={() => fileInputRef.current.click()}
+                            onDragOver={handleDragOver}
+                            onDragEnter={handleDragEnter}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
                         >
                             <input
                                 type="file"
@@ -483,17 +530,19 @@ const UploadPhase = ({
                                 multiple
                             />
                             <Box sx={{
-                                width: 64, height: 64, borderRadius: '50%', bgcolor: '#6366F1',
+                                width: 64, height: 64, borderRadius: '50%',
+                                bgcolor: isDragging ? '#4F46E5' : '#6366F1',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2,
-                                boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)'
+                                boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)',
+                                transition: 'all 0.2s'
                             }}>
                                 <CloudUploadIcon sx={{ fontSize: 32, color: 'white' }} />
                             </Box>
-                            <Typography sx={{ fontSize: '16px', fontWeight: 600, color: '#374151', mb: 0.5 }}>
-                                Drop your documents here or click to browse
+                            <Typography sx={{ fontSize: '16px', fontWeight: 600, color: isDragging ? '#4F46E5' : '#374151', mb: 0.5 }}>
+                                {isDragging ? 'Release to upload files' : 'Drop your documents here or click to browse'}
                             </Typography>
                             <Typography sx={{ fontSize: '13px', color: '#9CA3AF' }}>
-                                JPG, PNG, PDF | up to 10 MB each | Multiple files supported
+                                JPG, PNG, PDF | up to 50 MB each | Multiple files supported
                             </Typography>
                         </Box>
                     </CardContent>
@@ -732,8 +781,9 @@ function DocumentUploadPage() {
     };
 
     const handleFileChange = (e) => {
-        if (e.target.files.length > 0) {
-            const newFiles = Array.from(e.target.files);
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            const newFiles = Array.from(files);
             setSelectedFiles(prev => [...prev, ...newFiles]);
             setFileResults([]);
         }
