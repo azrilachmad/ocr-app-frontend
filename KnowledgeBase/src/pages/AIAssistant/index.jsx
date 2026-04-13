@@ -4,7 +4,7 @@ import {
     Box, Typography, TextField, Button, Paper, IconButton,
     CircularProgress, Avatar, Drawer, List, ListItemButton,
     ListItemText, ListItemIcon, Divider, Tooltip,
-    Dialog, DialogTitle, DialogContent
+    Dialog, DialogTitle, DialogContent, Tabs, Tab
 } from '@mui/material';
 import {
     Send as SendIcon, ArrowBack, Add as AddIcon,
@@ -45,6 +45,7 @@ const AIAssistant = () => {
 
     const [targetDocContent, setTargetDocContent] = useState(null);
     const [targetDocLoading, setTargetDocLoading] = useState(false);
+    const [docViewTab, setDocViewTab] = useState(0);
 
     const [docModalOpen, setDocModalOpen] = useState(false);
     const [recentDocs, setRecentDocs] = useState([]);
@@ -525,6 +526,13 @@ const AIAssistant = () => {
                             </Box>
                         ) : targetDocContent ? (
                             <Box>
+                                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                                    <Tabs value={docViewTab} onChange={(e, val) => setDocViewTab(val)} aria-label="document view tabs" sx={{ minHeight: 40 }}>
+                                        <Tab label="Summary" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '13px', minHeight: 40, py: 1 }} />
+                                        <Tab label="Isi Raw File" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '13px', minHeight: 40, py: 1 }} />
+                                    </Tabs>
+                                </Box>
+
                                 <Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', mb: 1 }}>
                                     {targetDocContent.title}
                                 </Typography>
@@ -538,30 +546,46 @@ const AIAssistant = () => {
                                     </Typography>
                                 </Box>
 
-                                {targetDocContent.content?.Summary && (
-                                    <Box sx={{ mb: 4 }}>
-                                        <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#4F46E5', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                            Ringkasan Eksekutif
-                                        </Typography>
-                                        <Typography sx={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                                            {targetDocContent.content.Summary}
-                                        </Typography>
-                                    </Box>
+                                {docViewTab === 0 && (
+                                    <>
+                                        {targetDocContent.content?.Summary ? (
+                                            <Box sx={{ mb: 4 }}>
+                                                <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#4F46E5', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                                    Ringkasan Eksekutif
+                                                </Typography>
+                                                <Typography sx={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                                                    {targetDocContent.content.Summary}
+                                                </Typography>
+                                            </Box>
+                                        ) : (
+                                            <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
+                                                Summary dokumen tidak tersedia.
+                                            </Typography>
+                                        )}
+                                    </>
                                 )}
 
-                                {targetDocContent.content?.raw_text && (
-                                    <Box>
-                                        <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#4F46E5', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                            Teks Mentah (Raw Content)
-                                        </Typography>
-                                        <Paper elevation={0} sx={{ 
-                                            p: 2, bgcolor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 2
-                                        }}>
-                                            <Typography sx={{ fontSize: '12px', color: '#475569', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                                                {targetDocContent.content.raw_text}
+                                {docViewTab === 1 && (
+                                    <>
+                                        {targetDocContent.content?.raw_text ? (
+                                            <Box>
+                                                <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#4F46E5', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                                    Teks Mentah (Raw Content)
+                                                </Typography>
+                                                <Paper elevation={0} sx={{ 
+                                                    p: 2, bgcolor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 2
+                                                }}>
+                                                    <Typography sx={{ fontSize: '12px', color: '#475569', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                                                        {targetDocContent.content.raw_text}
+                                                    </Typography>
+                                                </Paper>
+                                            </Box>
+                                        ) : (
+                                            <Typography sx={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
+                                                File mentah (raw text) belum diekstrak untuk dokumen ini.
                                             </Typography>
-                                        </Paper>
-                                    </Box>
+                                        )}
+                                    </>
                                 )}
                                 
                                 {!targetDocContent.content?.Summary && !targetDocContent.content?.raw_text && (
