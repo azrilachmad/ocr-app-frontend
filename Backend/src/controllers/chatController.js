@@ -163,7 +163,12 @@ const sendMessage = async (req, res) => {
                 documentContext += `Uploaded By: ${targetDoc.user?.name || 'System'}\n`;
                 documentContext += `Date Scanned: ${new Date(targetDoc.scannedAt).toLocaleDateString('id-ID')}\n\n`;
                 
-                documentContext += `INSTRUCTION: You are in Deep Analysis Mode for this specific document. The user is asking questions strictly about this document. Below is the FULL EXTRACTED TEXT and data.\n\n`;
+                documentContext += `CRITICAL INSTRUCTION FOR DEEP ANALYSIS MODE:
+1. You are specifically focusing on analyzing the ONE document provided below.
+2. If the user asks a question whose answer is NOT found anywhere within this document's text or data, you MUST politely state that the information is not available in the current document.
+3. DO NOT answer using outside knowledge if the question violates the scope of this document.
+
+Below is the FULL EXTRACTED TEXT and data of the document:\n\n`;
 
                 if (targetDoc.content) {
                     let parsedContent = targetDoc.content;
