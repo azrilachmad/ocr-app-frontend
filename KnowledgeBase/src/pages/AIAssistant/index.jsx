@@ -449,7 +449,7 @@ const AIAssistant = () => {
                                 color: '#6366F1', bgcolor: '#EEF2FF', width: 36, height: 36,
                                 '&:hover': { bgcolor: '#E0E7FF' }
                             }}>
-                                <FindInPageIcon sx={{ fontSize: 20 }} />
+                                <AddIcon sx={{ fontSize: 20 }} />
                             </IconButton>
                         </Tooltip>
                         <TextField
@@ -476,7 +476,7 @@ const AIAssistant = () => {
             {/* Find In Page / Select Doc Modal */}
             <Dialog open={docModalOpen} onClose={() => setDocModalOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '16px', fontWeight: 600 }}>
-                    <FindInPageIcon sx={{ color: '#6366F1' }} />
+                    <AddIcon sx={{ color: '#6366F1' }} />
                     Pilih Dokumen untuk Deep Analysis
                 </DialogTitle>
                 <DialogContent dividers>
