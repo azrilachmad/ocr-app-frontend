@@ -20,6 +20,8 @@ import {
     sendChatMessage, deleteChatSession, getPopularArticles, getArticle
 } from '../../services/api';
 import { useAuth } from '../../App';
+import DocViewer, { DocViewerRenderers } from "@cyntler/react-doc-viewer";
+import "@cyntler/react-doc-viewer/dist/index.css";
 
 const DRAWER_WIDTH = 280;
 
@@ -608,18 +610,18 @@ const AIAssistant = () => {
 
                                             if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
                                                 return <Box component="img" src={fileUrl} sx={{ width: '100%', borderRadius: 2, border: '1px solid #E2E8F0' }} alt="Dokumen Asli" />;
-                                            } else if (ext === 'pdf') {
-                                                return <iframe src={fileUrl} width="100%" height="800px" style={{ border: 'none', borderRadius: '8px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }} title="PDF Viewer" />;
                                             } else {
+                                                const docs = [{ uri: fileUrl }];
                                                 return (
-                                                    <Box sx={{ textAlign: 'center', py: 8, bgcolor: '#F8FAFC', borderRadius: 2, border: '1px dashed #CBD5E1' }}>
-                                                        <KBIcon sx={{ fontSize: 48, color: '#94A3B8', mb: 2 }} />
-                                                        <Typography sx={{ fontSize: '14px', color: '#475569', mb: 2 }}>
-                                                            Pratinjau langsung tidak tersedia secara native untuk format <b>.{ext.toUpperCase()}</b>
-                                                        </Typography>
-                                                        <Button variant="contained" href={fileUrl} target="_blank" sx={{ textTransform: 'none', bgcolor: '#4F46E5', '&:hover': { bgcolor: '#4338CA' } }}>
-                                                            Buka / Unduh File Eksternal
-                                                        </Button>
+                                                    <Box sx={{ border: '1px solid #E2E8F0', borderRadius: 2, overflow: 'hidden' }}>
+                                                        <DocViewer 
+                                                            pluginRenderers={DocViewerRenderers} 
+                                                            documents={docs}
+                                                            style={{ height: '800px' }}
+                                                            config={{
+                                                                header: { disableHeader: true },
+                                                            }}
+                                                        />
                                                     </Box>
                                                 );
                                             }
