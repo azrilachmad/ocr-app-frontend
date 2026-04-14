@@ -8,7 +8,7 @@ const ImpersonationBanner = ({ user }) => {
 
     useEffect(() => {
         if (!user || (!user.isImpersonating)) return;
-        
+
         const style = document.createElement('style');
         style.innerHTML = `
             body .MuiAppBar-root { top: 48px !important; }
@@ -21,32 +21,32 @@ const ImpersonationBanner = ({ user }) => {
 
     if (!user || (!user.isImpersonating)) return null;
 
-    const impersonatedUser = user.name || 'User'; 
+    const impersonatedUser = user.name || 'User';
     const adminName = user.impersonator?.name || 'Super Admin';
 
     const handleConfirmStop = async () => {
         try {
             await api.post('/admin/stop-impersonate');
             await api.post('/auth/logout');
-            window.location.href = '/login';
+            window.location.href = '/';
         } catch (error) {
             console.error('Failed to stop impersonating', error);
-            window.location.href = '/login';
+            window.location.href = '/';
         }
     };
 
     return (
         <>
-            <Box 
-                sx={{ 
+            <Box
+                sx={{
                     position: 'fixed',
                     top: 0, left: 0, right: 0,
                     height: '48px',
-                    backgroundColor: '#FFB800', 
+                    backgroundColor: '#FFB800',
                     color: '#000',
-                    padding: '8px 24px', 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
+                    padding: '8px 24px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     zIndex: 100000,
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
@@ -58,14 +58,14 @@ const ImpersonationBanner = ({ user }) => {
                         Sedang impersonate sebagai <strong>{impersonatedUser}</strong> (admin: {adminName})
                     </Typography>
                 </Box>
-                
-                <Button 
-                    variant="contained" 
-                    size="small" 
+
+                <Button
+                    variant="contained"
+                    size="small"
                     onClick={() => setOpenDialog(true)}
-                    sx={{ 
-                        backgroundColor: '#FFF', 
-                        color: '#000', 
+                    sx={{
+                        backgroundColor: '#FFF',
+                        color: '#000',
                         fontWeight: 600,
                         textTransform: 'none',
                         boxShadow: 'none',

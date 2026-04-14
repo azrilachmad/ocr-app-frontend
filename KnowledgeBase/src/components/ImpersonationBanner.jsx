@@ -10,7 +10,7 @@ const ImpersonationBanner = () => {
 
     if (!user || (!user.isImpersonating)) return null;
 
-    const impersonatedUser = user.name || 'User'; 
+    const impersonatedUser = user.name || 'User';
     const adminName = user.impersonator?.name || 'Super Admin';
 
     const handleConfirmStop = async () => {
@@ -18,23 +18,23 @@ const ImpersonationBanner = () => {
             await api.post('/admin/stop-impersonate');
             await api.post('/auth/logout');
             // Assuming the Synchro Scan is running at the same base origin on port 3000
-            window.location.href = 'http://localhost:3000/login';
+            window.location.href = '/';
         } catch (error) {
             console.error('Failed to stop impersonating', error);
-            window.location.href = 'http://localhost:3000/login';
+            window.location.href = '/';
         }
     };
 
     return (
         <>
-            <Box 
-                sx={{ 
-                    backgroundColor: '#FFB800', 
+            <Box
+                sx={{
+                    backgroundColor: '#FFB800',
                     color: '#000',
-                    padding: '8px 24px', 
+                    padding: '8px 24px',
                     height: '48px',
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     zIndex: 100000,
                     flexShrink: 0,
@@ -47,14 +47,14 @@ const ImpersonationBanner = () => {
                         Sedang impersonate sebagai <strong>{impersonatedUser}</strong> (admin: {adminName})
                     </Typography>
                 </Box>
-                
-                <Button 
-                    variant="contained" 
-                    size="small" 
+
+                <Button
+                    variant="contained"
+                    size="small"
                     onClick={() => setOpenDialog(true)}
-                    sx={{ 
-                        backgroundColor: '#FFF', 
-                        color: '#000', 
+                    sx={{
+                        backgroundColor: '#FFF',
+                        color: '#000',
                         fontWeight: 600,
                         textTransform: 'none',
                         boxShadow: 'none',
