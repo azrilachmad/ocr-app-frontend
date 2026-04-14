@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, CssBaseline, Typography } from '@mui/material';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import ImpersonationBanner from './ImpersonationBanner';
 
 const drawerWidth = 256;
 
@@ -13,9 +14,11 @@ const Layout = ({ children, user }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#F9FAFB' }}>
-      <CssBaseline />
-      <Header handleDrawerToggle={handleDrawerToggle} drawerWidth={drawerWidth} />
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+      <ImpersonationBanner user={user} />
+      <Box sx={{ display: 'flex', flexGrow: 1 }}>
+        <CssBaseline />
+        <Header handleDrawerToggle={handleDrawerToggle} drawerWidth={drawerWidth} />
       <Sidebar
         drawerWidth={drawerWidth}
         mobileOpen={mobileOpen}
@@ -53,6 +56,7 @@ const Layout = ({ children, user }) => {
           <Typography sx={{ color: '#9CA3AF', fontSize: '13px' }}>
             © Copyright on Synchro 2017 - 2025 | All rights reserved.
           </Typography>
+        </Box>
         </Box>
       </Box>
     </Box>
