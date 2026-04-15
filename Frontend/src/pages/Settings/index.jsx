@@ -232,7 +232,7 @@ const SettingsPage = () => {
             await updateSettings({
                 aiModel,
                 apiKey,
-                confidenceThreshold: confidenceThreshold ? confidenceThreshold / 100 : 0.5,
+                confidenceThreshold: confidenceThreshold || 50,
                 languageDetection,
                 autoCorrect
             });
