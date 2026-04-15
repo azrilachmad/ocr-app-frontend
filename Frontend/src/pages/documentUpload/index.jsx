@@ -939,11 +939,17 @@ function DocumentUploadPage() {
             await submitProcessedData(submissionPayload);
 
             // Remove saved file from results
-            setFileResults(prev => prev.filter((_, i) => i !== index));
+            const remaining = fileResults.filter((_, i) => i !== index);
+            setFileResults(remaining);
+
+            // Clear selected files when all results are handled
+            if (remaining.length === 0) {
+                setSelectedFiles([]);
+            }
 
             // Adjust expanded index if needed
-            if (expandedIndex >= fileResults.length - 1) {
-                setExpandedIndex(Math.max(0, fileResults.length - 2));
+            if (expandedIndex >= remaining.length) {
+                setExpandedIndex(Math.max(0, remaining.length - 1));
             }
 
             setSnackbar({ open: true, message: `"${saveFileName}" saved successfully!`, severity: 'success' });
@@ -956,9 +962,16 @@ function DocumentUploadPage() {
     };
 
     const handleRemoveResult = (index) => {
-        setFileResults(prev => prev.filter((_, i) => i !== index));
-        if (expandedIndex >= fileResults.length - 1) {
-            setExpandedIndex(Math.max(0, fileResults.length - 2));
+        const remaining = fileResults.filter((_, i) => i !== index);
+        setFileResults(remaining);
+
+        // Clear selected files when all results are handled
+        if (remaining.length === 0) {
+            setSelectedFiles([]);
+        }
+
+        if (expandedIndex >= remaining.length) {
+            setExpandedIndex(Math.max(0, remaining.length - 1));
         }
     };
 
