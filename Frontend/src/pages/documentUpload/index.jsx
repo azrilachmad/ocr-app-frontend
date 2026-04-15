@@ -835,40 +835,52 @@ function DocumentUploadPage() {
         setFileResults(initialResults);
         setExpandedIndex(0);
 
-        // Process files
+        // Process files one by one for better progress tracking and to avoid timeouts
         try {
             const options = { documentType: documentType === 'auto' ? null : documentType, mode: processMode };
+            const allResults = [];
 
-            // Update first file to processing
-            setFileResults(prev => prev.map((f, i) => i === 0 ? { ...f, status: 'processing' } : f));
+            for (let i = 0; i < selectedFiles.length; i++) {
+                // Update current file to processing
+                setFileResults(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'processing' } : f));
+                setExpandedIndex(i);
 
-            const result = await processDocuments(selectedFiles, options);
+                try {
+                    // Send each file individually
+                    const result = await processDocuments([selectedFiles[i]], options);
+                    const apiResult = Array.isArray(result) ? result[0] : result;
 
-            // Handle response - could be single object or array
-            const results = Array.isArray(result) ? result : [result];
+                    // Update this file's result
+                    setFileResults(prev => prev.map((f, idx) => {
+                        if (idx === i && apiResult) {
+                            return {
+                                ...f,
+                                id: apiResult.id,
+                                status: apiResult.status === 'failed' ? 'failed' : 'completed',
+                                result: {
+                                    id: apiResult.id,
+                                    documentType: apiResult.documentType,
+                                    content: typeof apiResult.content === 'string' ? JSON.parse(apiResult.content) : apiResult.content,
+                                    confidenceScore: apiResult.confidenceScore,
+                                    processingTime: apiResult.processingTime
+                                },
+                                error: apiResult.error || null
+                            };
+                        }
+                        return f;
+                    }));
 
-            // Update file results with API response
-            setFileResults(prev => prev.map((fileResult, index) => {
-                const apiResult = results[index];
-                if (apiResult) {
-                    return {
-                        ...fileResult,
-                        id: apiResult.id,
-                        status: apiResult.status === 'failed' ? 'failed' : 'completed',
-                        result: {
-                            id: apiResult.id,
-                            documentType: apiResult.documentType,
-                            content: typeof apiResult.content === 'string' ? JSON.parse(apiResult.content) : apiResult.content,
-                            confidenceScore: apiResult.confidenceScore,
-                            processingTime: apiResult.processingTime
-                        },
-                        error: apiResult.error || null
-                    };
+                    allResults.push({ status: apiResult?.status || 'completed' });
+                } catch (fileError) {
+                    console.error(`Processing error for file ${selectedFiles[i].name}:`, fileError);
+                    setFileResults(prev => prev.map((f, idx) =>
+                        idx === i ? { ...f, status: 'failed', error: fileError.message } : f
+                    ));
+                    allResults.push({ status: 'failed' });
                 }
-                return { ...fileResult, status: 'failed', error: 'No response from server' };
-            }));
+            }
 
-            const successCount = results.filter(r => r.status !== 'failed').length;
+            const successCount = allResults.filter(r => r.status !== 'failed').length;
             setSnackbar({
                 open: true,
                 message: `Processed ${successCount}/${selectedFiles.length} files successfully!`,
@@ -877,7 +889,7 @@ function DocumentUploadPage() {
 
         } catch (error) {
             console.error('Processing error:', error);
-            setFileResults(prev => prev.map(f => ({ ...f, status: 'failed', error: error.message })));
+            setFileResults(prev => prev.map(f => f.status === 'pending' ? { ...f, status: 'failed', error: error.message } : f));
             setSnackbar({ open: true, message: 'Processing failed: ' + error.message, severity: 'error' });
         } finally {
             setIsProcessing(false);
