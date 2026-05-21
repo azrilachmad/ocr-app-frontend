@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth');
-const { Document, DocumentType, User } = require('../models');
+const { authenticate, requireFeature } = require('../middleware/auth');
+const { Document, DocumentType, User, sequelize } = require('../models');
 const userInclude = { model: User, as: 'user', attributes: ['id', 'name'] };
 const { Op } = require('sequelize');
+
+// All KB routes require authentication + knowledgeBase feature enabled
+router.use(authenticate, requireFeature('knowledgeBase'));
 const path = require('path');
 const fs = require('fs');
 
@@ -17,17 +20,17 @@ const fs = require('fs');
  */
 router.get('/stats', authenticate, async (req, res, next) => {
     try {
-        const totalDocuments = await Document.count({ where: { saved: true } });
+        const totalDocuments = await Document.count({ where: { status: 'verified' } });
         const documentTypes = await Document.count({
-            where: { saved: true },
+            where: { status: 'verified' },
             distinct: true,
             col: 'documentType'
         });
         const totalFiles = await Document.count({
-            where: { saved: true, filePath: { [Op.ne]: null } }
+            where: { status: 'verified', filePath: { [Op.ne]: null } }
         });
         const lastDocument = await Document.findOne({
-            where: { saved: true },
+            where: { status: 'verified' },
             order: [['scannedAt', 'DESC']],
             attributes: ['scannedAt']
         });
@@ -53,7 +56,7 @@ router.get('/stats', authenticate, async (req, res, next) => {
 router.get('/popular', authenticate, async (req, res, next) => {
     try {
         const documents = await Document.findAll({
-            where: { saved: true, status: 'completed' },
+            where: { status: 'verified' },
             attributes: ['id', 'fileName', 'documentType', 'fileSize', 'confidenceScore', 'scannedAt'],
             include: [userInclude],
             order: [['scannedAt', 'DESC']],
@@ -78,7 +81,7 @@ router.get('/categories', authenticate, async (req, res, next) => {
     try {
         // Get distinct document types with counts from actual documents
         const results = await Document.findAll({
-            where: { saved: true },
+            where: { status: 'verified' },
             attributes: [
                 'documentType',
                 [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'documentCount']
@@ -134,7 +137,7 @@ router.get('/categories/:slug/articles', authenticate, async (req, res, next) =>
 
         const documents = await Document.findAll({
             where: {
-                saved: true,
+                status: 'verified',
                 documentType: { [Op.like]: `%${documentType}%` }
             },
             order: [['scannedAt', 'DESC']]
@@ -178,13 +181,13 @@ router.get('/articles/:slug', authenticate, async (req, res, next) => {
         if (slug.startsWith('doc-')) {
             const docId = slug.replace('doc-', '');
             document = await Document.findOne({
-                where: { id: docId, saved: true },
+                where: { id: docId, status: 'verified' },
                 include: [userInclude]
             });
         } else {
             // Fallback: try to find by fileName similarity
             document = await Document.findOne({
-                where: { saved: true, fileName: { [Op.like]: `%${slug.replace(/-/g, ' ')}%` } },
+                where: { status: 'verified', fileName: { [Op.like]: `%${slug.replace(/-/g, ' ')}%` } },
                 include: [userInclude]
             });
         }
@@ -241,7 +244,7 @@ router.get('/articles/:slug', authenticate, async (req, res, next) => {
 router.get('/files', authenticate, async (req, res, next) => {
     try {
         const { documentType, search } = req.query;
-        const where = { saved: true };
+        const where = { status: 'verified' };
 
         if (documentType) {
             where.documentType = documentType;
@@ -289,7 +292,7 @@ router.get('/files', authenticate, async (req, res, next) => {
 router.get('/files/:id/download', authenticate, async (req, res, next) => {
     try {
         const document = await Document.findOne({
-            where: { id: req.params.id, saved: true }
+            where: { id: req.params.id, status: 'verified' }
         });
 
         if (!document) {
@@ -338,35 +341,77 @@ router.get('/files/:id/download', authenticate, async (req, res, next) => {
  * GET /api/kb/search?q=query
  * Search across saved documents
  */
+/**
+ * GET /api/kb/search?q=query&tags=tag1,tag2
+ * Search across saved/verified documents (full-text including content)
+ */
 router.get('/search', authenticate, async (req, res, next) => {
     try {
-        const { q } = req.query;
+        const { q, tags: tagFilter } = req.query;
         if (!q || q.trim() === '') {
             return res.json({ success: true, data: { articles: [], files: [], documents: [] } });
         }
 
         const searchTerm = `%${q.trim()}%`;
+        const safeQuery = q.trim().replace(/'/g, "''");
 
-        // Search saved documents
+        // Build where clause
+        const whereClause = {
+            // Only verified documents appear in KB
+            status: 'verified',
+            // Full-text search: filename, type, AND content (Fitur #1)
+            [Op.and]: [
+                {
+                    [Op.or]: [
+                        { fileName: { [Op.like]: searchTerm } },
+                        { documentType: { [Op.like]: searchTerm } },
+                        sequelize.literal(`CAST(content AS CHAR) LIKE '%${safeQuery}%'`)
+                    ]
+                }
+            ]
+        };
+
+        // Fitur #4: Tag filtering in KB search
+        if (tagFilter) {
+            const tagList = tagFilter.split(',').map(t => t.trim().toLowerCase());
+            const tagConditions = tagList.map(tag =>
+                sequelize.literal(`JSON_CONTAINS(tags, '"${tag.replace(/'/g, "''")}"')`)
+            );
+            whereClause[Op.and].push({ [Op.or]: tagConditions });
+        }
+
         const documents = await Document.findAll({
-            where: {
-                saved: true,
-                [Op.or]: [
-                    { fileName: { [Op.like]: searchTerm } },
-                    { documentType: { [Op.like]: searchTerm } }
-                ]
-            },
+            where: whereClause,
             include: [userInclude],
             order: [['scannedAt', 'DESC']],
             limit: 20
         });
 
-        // Split into articles (with content) and files (with filePath)
+        /**
+         * Generate a snippet showing where the search term was found in content.
+         */
+        const getMatchSnippet = (content, query) => {
+            if (!content || !query) return null;
+            let text = typeof content === 'string' ? content : JSON.stringify(content);
+            const lowerText = text.toLowerCase();
+            const lowerQuery = query.toLowerCase();
+            const idx = lowerText.indexOf(lowerQuery);
+            if (idx === -1) return null;
+
+            const start = Math.max(0, idx - 50);
+            const end = Math.min(text.length, idx + query.length + 50);
+            let snippet = (start > 0 ? '...' : '') + text.substring(start, end) + (end < text.length ? '...' : '');
+            return snippet;
+        };
+
         const articles = documents.map(doc => ({
             id: doc.id,
             title: doc.fileName,
             slug: `doc-${doc.id}`,
             summary: `${doc.documentType} • ${doc.fileSize || 'N/A'} • Confidence: ${doc.confidenceScore || 'N/A'}%`,
+            matchSnippet: getMatchSnippet(doc.content, q.trim()),
+            tags: doc.tags || [],
+            status: doc.status,
             category: {
                 name: doc.documentType,
                 slug: doc.documentType?.toLowerCase().replace(/\s+/g, '-'),
@@ -378,6 +423,7 @@ router.get('/search', authenticate, async (req, res, next) => {
             id: doc.id,
             fileName: doc.fileName,
             fileSize: doc.fileSize || 'N/A',
+            tags: doc.tags || [],
             category: {
                 name: doc.documentType,
                 slug: doc.documentType?.toLowerCase().replace(/\s+/g, '-')

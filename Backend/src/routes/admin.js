@@ -21,20 +21,22 @@ router.get('/stats', adminController.getDashboardStats);
 
 // User management
 router.get('/users', adminController.getUsers);
-router.get('/users/:id', adminController.getUserById);
 router.post('/users', adminController.createUser);
-router.put('/users/:id', adminController.updateUser);
+
+// User sub-resource routes (must be before generic /users/:id)
+router.get('/users/:id/api-key', adminController.getUserApiKey);
+router.put('/users/:id/api-key', adminController.updateUserApiKey);
 router.put('/users/:id/reset-password', adminController.resetUserPassword);
-router.delete('/users/:id', adminController.deleteUser);
-
-// Feature toggles
 router.put('/users/:id/features', adminController.updateUserFeatures);
-
-// User Document Types Management
 router.get('/users/:id/document-types', adminController.getUserDocumentTypes);
 router.post('/users/:id/document-types', adminController.createUserDocumentType);
 router.put('/users/:id/document-types/:typeId', adminController.updateUserDocumentType);
 router.delete('/users/:id/document-types/:typeId', adminController.deleteUserDocumentType);
+
+// Generic user CRUD (after sub-routes)
+router.get('/users/:id', adminController.getUserById);
+router.put('/users/:id', adminController.updateUser);
+router.delete('/users/:id', adminController.deleteUser);
 
 // Activity log
 router.get('/activity', adminController.getActivityLog);

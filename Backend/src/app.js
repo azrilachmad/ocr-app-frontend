@@ -19,7 +19,13 @@ const kbRoutes = require('./routes/kb');
 // Import middleware
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
+// Import queue service (Fitur #6: Async Queue)
+const { initQueue } = require('./services/queueService');
+
 const app = express();
+
+// Initialize async OCR queue (non-blocking — degrades gracefully if Redis unavailable)
+initQueue().catch(err => console.warn('Queue init skipped:', err.message));
 
 // Trust first proxy (Nginx) so req.ip reflects x-forwarded-for
 app.set('trust proxy', 1);

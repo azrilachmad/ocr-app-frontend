@@ -836,7 +836,8 @@ const getScanStatistics = async (req, res, next) => {
             attributes: [
                 [literal("DATE(scanned_at + INTERVAL 7 HOUR)"), 'date'],
                 [fn('COUNT', col('id')), 'total'],
-                [literal("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END)"), 'completed'],
+                [literal("SUM(CASE WHEN status = 'saved' THEN 1 ELSE 0 END)"), 'saved'],
+                [literal("SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END)"), 'verified'],
                 [literal("SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)"), 'failed']
             ],
             group: [literal("DATE(scanned_at + INTERVAL 7 HOUR)")],
@@ -1072,6 +1073,70 @@ const stopImpersonate = async (req, res, next) => {
     }
 };
 
+/**
+ * PUT /api/admin/users/:id/api-key
+ * Set or update AI settings for a user (stored in Settings table)
+ */
+const updateUserApiKey = async (req, res, next) => {
+    try {
+        const userId = req.params.id;
+        const { apiKey, aiModel, confidenceThreshold, languageDetection, autoCorrect } = req.body;
+
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        // Find or create settings for this user
+        let settings = await Settings.findOne({ where: { userId } });
+        if (!settings) {
+            settings = await Settings.create({ userId });
+        }
+
+        const updateData = {};
+        if (apiKey !== undefined) updateData.apiKey = apiKey || null;
+        if (aiModel !== undefined) updateData.aiModel = aiModel;
+        if (confidenceThreshold !== undefined) updateData.confidenceThreshold = confidenceThreshold / 100;
+        if (languageDetection !== undefined) updateData.languageDetection = languageDetection;
+        if (autoCorrect !== undefined) updateData.autoCorrect = autoCorrect;
+
+        await settings.update(updateData);
+
+        res.json({
+            success: true,
+            message: 'User AI settings updated successfully.',
+            data: { hasApiKey: !!settings.apiKey }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * GET /api/admin/users/:id/api-key
+ * Get all AI settings for a user
+ */
+const getUserApiKey = async (req, res, next) => {
+    try {
+        const userId = req.params.id;
+        const settings = await Settings.findOne({ where: { userId } });
+        
+        res.json({
+            success: true,
+            data: {
+                hasApiKey: !!(settings && settings.apiKey),
+                apiKey: settings?.apiKey || '',
+                aiModel: settings?.aiModel || 'gemini-2.5-flash',
+                confidenceThreshold: settings?.confidenceThreshold !== undefined ? Math.round(Number(settings.confidenceThreshold) * 100) : 85,
+                languageDetection: settings?.languageDetection || 'ID',
+                autoCorrect: settings?.autoCorrect !== false
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getUsers,
@@ -1092,5 +1157,8 @@ module.exports = {
     updateUserDocumentType,
     deleteUserDocumentType,
     impersonateUser,
-    stopImpersonate
+    stopImpersonate,
+    updateUserApiKey,
+    getUserApiKey
 };
+

@@ -1,11 +1,12 @@
 const { Document, User } = require('../models');
-const { Op } = require('sequelize');
+const { Op, fn, col, literal } = require('sequelize');
+const { sequelize } = require('../config/database');
 const path = require('path');
 const fs = require('fs');
 
 /**
  * GET /api/documents
- * Get all documents with filters and pagination
+ * Get all documents with filters, tag filtering, full-text search, and pagination
  */
 const getAllDocuments = async (req, res, next) => {
     try {
@@ -13,45 +14,94 @@ const getAllDocuments = async (req, res, next) => {
             page = 1,
             limit = 10,
             documentType,
+            documentTypes, // comma-separated list for mode filtering
             status,
             saved,
             search,
+            tags,
             startDate,
             endDate
         } = req.query;
 
         const offset = (page - 1) * limit;
 
-        // Build where clause
-        const where = { userId: req.userId };
+        // Build where clause — verificator+ sees all docs, user sees own only
+        const isPrivileged = ['verificator', 'admin', 'superadmin'].includes(req.user?.role);
+        const where = {};
+        if (!isPrivileged) {
+            where.userId = req.userId;
+        }
 
         if (documentType && documentType !== 'all') {
             where.documentType = documentType;
+        } else if (documentTypes) {
+            // Support comma-separated document types (for mode filtering)
+            const typeList = documentTypes.split(',').map(t => t.trim()).filter(Boolean);
+            if (typeList.length > 0) {
+                where.documentType = { [Op.in]: typeList };
+            }
         }
 
         if (status && status !== 'all') {
-            where.status = status;
+            // Support comma-separated status filter
+            const statuses = status.split(',').map(s => s.trim());
+            where.status = statuses.length === 1 ? statuses[0] : { [Op.in]: statuses };
         }
 
         if (saved !== undefined) {
             where.saved = saved === 'true';
         } else {
-            // Default to showing only saved documents
-            where.saved = true;
+            // Default: show saved + verified documents (backward compat)
+            where[Op.or] = [
+                { saved: true },
+                { status: { [Op.in]: ['saved', 'verified'] } }
+            ];
         }
 
+        // Fitur #1: Full-text search in filename, type, AND content
         if (search) {
-            where.fileName = { [Op.like]: `%${search}%` };
+            where[Op.and] = where[Op.and] || [];
+            where[Op.and].push({
+                [Op.or]: [
+                    { fileName: { [Op.like]: `%${search}%` } },
+                    { documentType: { [Op.like]: `%${search}%` } },
+                    // Full-text search inside JSON content
+                    literal(`CAST(content AS CHAR) LIKE '%${search.replace(/'/g, "''")}%'`)
+                ]
+            });
         }
 
-        if (startDate && endDate) {
-            where.scannedAt = {
-                [Op.between]: [new Date(startDate), new Date(endDate)]
-            };
+        // Fitur #4: Tag filtering
+        if (tags) {
+            const tagList = tags.split(',').map(t => t.trim().toLowerCase());
+            where[Op.and] = where[Op.and] || [];
+            // Match any of the provided tags (OR logic)
+            const tagConditions = tagList.map(tag =>
+                literal(`JSON_CONTAINS(tags, '"${tag.replace(/'/g, "''")}"')`)
+            );
+            where[Op.and].push({ [Op.or]: tagConditions });
         }
+
+        if (startDate || endDate) {
+            where.scannedAt = {};
+            if (startDate) where.scannedAt[Op.gte] = new Date(startDate);
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                where.scannedAt[Op.lte] = end;
+            }
+        }
+
+        // Include uploader info for privileged roles
+        const includeOptions = isPrivileged ? [{
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email', 'role']
+        }] : [];
 
         const { count, rows } = await Document.findAndCountAll({
             where,
+            include: includeOptions,
             limit: parseInt(limit),
             offset: parseInt(offset),
             order: [['scannedAt', 'DESC']]
@@ -78,11 +128,21 @@ const getAllDocuments = async (req, res, next) => {
  */
 const getDocumentById = async (req, res, next) => {
     try {
+        // Verificator+ can view any document, regular user only own
+        const isPrivileged = ['verificator', 'admin', 'superadmin'].includes(req.user?.role);
+        const whereClause = { id: req.params.id };
+        if (!isPrivileged) whereClause.userId = req.userId;
+
+        // Include uploader info for privileged roles
+        const includeOptions = isPrivileged ? [{
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email', 'role']
+        }] : [];
+
         const document = await Document.findOne({
-            where: {
-                id: req.params.id,
-                userId: req.userId
-            }
+            where: whereClause,
+            include: includeOptions
         });
 
         if (!document) {
@@ -103,16 +163,15 @@ const getDocumentById = async (req, res, next) => {
 
 /**
  * PUT /api/documents/:id
- * Update document (edit content)
+ * Update document (edit content, tags)
  */
 const updateDocument = async (req, res, next) => {
     try {
-        const document = await Document.findOne({
-            where: {
-                id: req.params.id,
-                userId: req.userId
-            }
-        });
+        const isPrivileged = ['verificator', 'admin', 'superadmin'].includes(req.user?.role);
+        const whereClause = { id: req.params.id };
+        if (!isPrivileged) whereClause.userId = req.userId;
+
+        const document = await Document.findOne({ where: whereClause });
 
         if (!document) {
             return res.status(404).json({
@@ -121,21 +180,31 @@ const updateDocument = async (req, res, next) => {
             });
         }
 
-        // Only saved documents can be edited
-        if (!document.saved) {
+        // Only saved/verified documents can be edited
+        if (!['saved', 'verified'].includes(document.status) && !document.saved) {
             return res.status(400).json({
                 success: false,
-                message: 'Only saved documents can be edited.'
+                message: 'Only saved or verified documents can be edited.'
             });
         }
 
-        const { content, fileName } = req.body;
+        const { content, fileName, tags } = req.body;
 
         if (content !== undefined) {
-            // Ensure content is stored as JSON string
             document.content = typeof content === 'string' ? content : JSON.stringify(content);
         }
         if (fileName) document.fileName = fileName;
+
+        // Fitur #4: Tag update via document edit
+        if (tags !== undefined) {
+            if (!Array.isArray(tags)) {
+                return res.status(400).json({ success: false, message: 'Tags must be an array of strings.' });
+            }
+            if (tags.length > 20) {
+                return res.status(400).json({ success: false, message: 'Maximum 20 tags per document.' });
+            }
+            document.tags = [...new Set(tags.map(t => String(t).trim().toLowerCase()).filter(Boolean))];
+        }
 
         await document.save();
 
@@ -155,12 +224,11 @@ const updateDocument = async (req, res, next) => {
  */
 const deleteDocument = async (req, res, next) => {
     try {
-        const document = await Document.findOne({
-            where: {
-                id: req.params.id,
-                userId: req.userId
-            }
-        });
+        const isPrivileged = ['verificator', 'admin', 'superadmin'].includes(req.user?.role);
+        const whereClause = { id: req.params.id };
+        if (!isPrivileged) whereClause.userId = req.userId;
+
+        const document = await Document.findOne({ where: whereClause });
 
         if (!document) {
             return res.status(404).json({
@@ -187,7 +255,7 @@ const deleteDocument = async (req, res, next) => {
 
 /**
  * POST /api/documents/:id/save
- * Mark document as saved
+ * Mark document as saved (lifecycle transition: completed → saved)
  */
 const saveDocument = async (req, res, next) => {
     try {
@@ -214,7 +282,10 @@ const saveDocument = async (req, res, next) => {
             document.fileName = fileName;
         }
 
+        // Verificator+ documents are auto-verified; regular user → saved (needs review)
+        const isPrivileged = ['verificator', 'admin', 'superadmin'].includes(req.user?.role);
         document.saved = true;
+        document.status = isPrivileged ? 'verified' : 'saved';
         await document.save();
 
         res.json({
@@ -226,19 +297,20 @@ const saveDocument = async (req, res, next) => {
         next(error);
     }
 };
+
 /**
  * GET /api/documents/recent-scans
- * Get last 10 unsaved scans
+ * Get unsaved/completed scans (pending user review)
  */
 const getRecentScans = async (req, res, next) => {
     try {
         const scans = await Document.findAll({
             where: {
                 userId: req.userId,
-                saved: false
+                status: { [Op.in]: ['completed', 'queued', 'processing', 'failed'] }
             },
             order: [['scannedAt', 'DESC']],
-            limit: 10
+            limit: 50
         });
 
         res.json({
@@ -255,11 +327,12 @@ const getRecentScans = async (req, res, next) => {
  */
 const cleanupOldScans = async (userId) => {
     try {
-        // Get all unsaved documents for this user, ordered by date
         const allUnsaved = await Document.findAll({
             where: {
                 userId: userId,
-                saved: false
+                saved: false,
+                status: { [Op.in]: ['completed', 'failed'] },
+                batchId: null // Don't clean batch items
             },
             order: [['scannedAt', 'DESC']]
         });
@@ -268,7 +341,6 @@ const cleanupOldScans = async (userId) => {
         if (allUnsaved.length > 10) {
             const toDelete = allUnsaved.slice(10);
             for (const doc of toDelete) {
-                // Delete file from storage if exists
                 if (doc.filePath && fs.existsSync(doc.filePath)) {
                     fs.unlinkSync(doc.filePath);
                 }
