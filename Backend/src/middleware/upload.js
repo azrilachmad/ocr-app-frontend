@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
     }
 });
 
-// File filter - only allow images
+// File filter - only allow images and PDFs
 const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
@@ -33,7 +33,7 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Create multer instance
+// Standard upload (max 10 files)
 const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
@@ -43,9 +43,20 @@ const upload = multer({
     }
 });
 
+// Batch upload (max 100 files for async queue processing)
+const batchUpload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: parseInt(process.env.MAX_FILE_SIZE) || 50 * 1024 * 1024,
+        files: 100 // Max 100 files for batch processing
+    }
+});
+
 // Export different upload configurations
 module.exports = {
     single: upload.single('documentFile'),
     multiple: upload.array('documentFiles', 10),
+    batch: batchUpload.array('documentFiles', 100),
     upload
 };

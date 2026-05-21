@@ -10,6 +10,7 @@ const KBCategory = require('./KBCategory');
 const KBArticle = require('./KBArticle');
 const KBFile = require('./KBFile');
 const ActivityLog = require('./ActivityLog');
+const OcrBatch = require('./OcrBatch');
 
 // Define associations
 User.hasMany(Document, { foreignKey: 'userId', as: 'documents' });
@@ -43,6 +44,13 @@ KBArticle.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
 // Activity Log associations
 User.hasMany(ActivityLog, { foreignKey: 'userId', as: 'activityLogs' });
 ActivityLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// OcrBatch associations
+User.hasMany(OcrBatch, { foreignKey: 'userId', as: 'ocrBatches' });
+OcrBatch.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+OcrBatch.hasMany(Document, { foreignKey: 'batchId', as: 'documents' });
+Document.belongsTo(OcrBatch, { foreignKey: 'batchId', as: 'batch' });
 
 // Sync all models
 // mode: 'safe' (default) = create tables only if not exist
@@ -102,6 +110,6 @@ module.exports = {
     KBArticle,
     KBFile,
     ActivityLog,
+    OcrBatch,
     syncModels
 };
-

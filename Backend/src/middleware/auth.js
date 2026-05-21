@@ -146,5 +146,45 @@ const optionalAuth = async (req, res, next) => {
     }
 };
 
-module.exports = { authenticate, isAdmin, isSuperAdmin, isActiveUser, optionalAuth };
+/**
+ * Middleware to check if user is verificator, admin, or superadmin
+ */
+const isVerificator = (req, res, next) => {
+    if (req.user && ['verificator', 'admin', 'superadmin'].includes(req.user.role)) {
+        next();
+    } else {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. Verificator privileges required.'
+        });
+    }
+};
+/**
+ * Middleware factory to check if a feature is enabled for the user.
+ * Admin/Superadmin always have access. Regular users are checked against features JSON.
+ * Usage: requireFeature('knowledgeBase')
+ */
+const requireFeature = (featureName) => (req, res, next) => {
+    // Admin/Superadmin bypass feature checks
+    if (req.user && ['admin', 'superadmin'].includes(req.user.role)) {
+        return next();
+    }
+
+    // Parse features (may be string in some DB dialects)
+    let features = req.user?.features;
+    if (typeof features === 'string') {
+        try { features = JSON.parse(features); } catch { features = {}; }
+    }
+
+    if (features && features[featureName] === true) {
+        return next();
+    }
+
+    return res.status(403).json({
+        success: false,
+        message: `Access denied. The "${featureName}" feature is not enabled for your account. Please contact your administrator.`
+    });
+};
+
+module.exports = { authenticate, isAdmin, isSuperAdmin, isActiveUser, optionalAuth, isVerificator, requireFeature };
 
