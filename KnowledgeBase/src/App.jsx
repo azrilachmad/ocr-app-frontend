@@ -33,10 +33,30 @@ const theme = createTheme({
 export const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
+function FeatureDisabledPage() {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', textAlign: 'center', px: 3 }}>
+      <Box sx={{ width: 80, height: 80, borderRadius: '50%', bgcolor: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
+        <span style={{ fontSize: 36 }}>🔒</span>
+      </Box>
+      <Box sx={{ fontSize: 24, fontWeight: 700, color: '#111827', mb: 1 }}>Knowledge Base Tidak Tersedia</Box>
+      <Box sx={{ fontSize: 15, color: '#6B7280', maxWidth: 420, mb: 3, lineHeight: 1.6 }}>
+        Fitur Knowledge Base belum diaktifkan untuk akun Anda. Silakan hubungi administrator untuk mengaktifkan akses.
+      </Box>
+    </Box>
+  );
+}
+
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/" replace />;
+
+  // Check if Knowledge Base feature is enabled (admin/superadmin bypass)
+  const isPrivileged = ['admin', 'superadmin'].includes(user.role);
+  const kbEnabled = user.features?.knowledgeBase === true;
+  if (!isPrivileged && !kbEnabled) return <FeatureDisabledPage />;
+
   return children;
 }
 

@@ -436,7 +436,7 @@ const Home = () => {
                                 sx={{
                                     p: 2.5, borderRadius: 2, border: '1px solid #E2E8F0', cursor: 'pointer',
                                     display: 'flex', alignItems: 'center', gap: 2,
-                                    transition: 'all 0.2s',
+                                    transition: 'all 0.2s', overflow: 'hidden',
                                     '&:hover': { borderColor: '#6366F1', transform: 'translateX(4px)', boxShadow: '0 4px 12px rgba(99,102,241,0.08)' }
                                 }}>
                                 <Box sx={{
@@ -446,15 +446,21 @@ const Home = () => {
                                 }}>
                                     <DocIcon sx={{ fontSize: 20 }} />
                                 </Box>
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }} noWrap>
+                                <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                                    <Typography sx={{
+                                        fontSize: '14px', fontWeight: 600, color: '#0F172A',
+                                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                                    }}>
                                         {doc.fileName}
                                     </Typography>
-                                    <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>
+                                    <Typography sx={{
+                                        fontSize: '12px', color: '#94A3B8',
+                                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                                    }}>
                                         {doc.documentType} • {doc.fileSize || 'N/A'} • {new Date(doc.scannedAt).toLocaleDateString('id-ID')}{doc.user?.name ? ` • oleh ${doc.user.name}` : ''}
                                     </Typography>
                                 </Box>
-                                <Button size="small" sx={{ fontSize: '12px', color: '#6366F1', flexShrink: 0, minWidth: 'auto' }}>
+                                <Button size="small" sx={{ fontSize: '12px', color: '#6366F1', flexShrink: 0, minWidth: 'auto', whiteSpace: 'nowrap' }}>
                                     Lihat <ArrowIcon sx={{ fontSize: 14, ml: 0.3 }} />
                                 </Button>
                             </Paper>
