@@ -73,10 +73,12 @@ const DocumentManagement = () => {
     const getStatusChip = (status) => {
         const config = {
             completed: { bgcolor: '#D1FAE5', color: '#059669', label: 'Completed' },
+            saved: { bgcolor: '#DBEAFE', color: '#2563EB', label: 'Saved' },
+            verified: { bgcolor: '#D1FAE5', color: '#059669', label: 'Verified' },
             processing: { bgcolor: '#FEF3C7', color: '#D97706', label: 'Processing' },
             failed: { bgcolor: '#FEE2E2', color: '#DC2626', label: 'Failed' }
         };
-        const c = config[status] || config.processing;
+        const c = config[status] || { bgcolor: '#F3F4F6', color: '#6B7280', label: status || 'Unknown' };
         return (
             <Chip label={c.label} size="small"
                 sx={{ bgcolor: c.bgcolor, color: c.color, fontWeight: 500, fontSize: '12px', height: 24 }} />
@@ -111,8 +113,9 @@ const DocumentManagement = () => {
                         sx={{ borderRadius: 1.5 }}
                     >
                         <MenuItem value="all">All Status</MenuItem>
+                        <MenuItem value="saved">Saved</MenuItem>
+                        <MenuItem value="verified">Verified</MenuItem>
                         <MenuItem value="completed">Completed</MenuItem>
-                        <MenuItem value="processing">Processing</MenuItem>
                         <MenuItem value="failed">Failed</MenuItem>
                     </Select>
                 </FormControl>

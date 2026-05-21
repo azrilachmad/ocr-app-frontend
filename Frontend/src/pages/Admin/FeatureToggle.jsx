@@ -128,8 +128,8 @@ const FeatureToggle = () => {
                                         </TableCell>
                                         <TableCell>
                                             <Chip label={user.role} size="small" sx={{
-                                                bgcolor: user.role === 'admin' ? '#EDE9FE' : '#F3F4F6',
-                                                color: user.role === 'admin' ? '#7C3AED' : '#374151',
+                                                bgcolor: user.role === 'admin' ? '#EDE9FE' : user.role === 'verificator' ? '#DBEAFE' : '#F3F4F6',
+                                                color: user.role === 'admin' ? '#7C3AED' : user.role === 'verificator' ? '#2563EB' : '#374151',
                                                 fontWeight: 500, fontSize: '12px', height: 24,
                                             }} />
                                         </TableCell>

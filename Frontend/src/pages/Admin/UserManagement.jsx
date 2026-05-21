@@ -4,7 +4,8 @@ import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Chip, Avatar, Dialog, DialogTitle, DialogContent, DialogActions,
     FormControl, InputLabel, Select, MenuItem, Switch, Pagination,
-    InputAdornment, Tooltip, Snackbar, Alert, CircularProgress
+    InputAdornment, Tooltip, Snackbar, Alert, CircularProgress,
+    Slider, ToggleButton, ToggleButtonGroup, Divider
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -13,11 +14,14 @@ import {
     Delete as DeleteIcon,
     LockReset as ResetIcon,
     Visibility as ViewIcon,
-    FileCopy as FileCopyIcon
+    VisibilityOff as VisibilityOffIcon,
+    FileCopy as FileCopyIcon,
+    VpnKey as ApiKeyIcon
 } from '@mui/icons-material';
 import {
     getUsers, createUser, updateUser, deleteUser, resetUserPassword,
-    getUserDocumentTypes, createUserDocumentType, updateUserDocumentType, deleteUserDocumentType
+    getUserDocumentTypes, createUserDocumentType, updateUserDocumentType, deleteUserDocumentType,
+    getUserApiKey, updateUserApiKey
 } from '../../services/adminService';
 
 const UserManagement = () => {
@@ -49,6 +53,15 @@ const UserManagement = () => {
 
     // Snackbar
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+    // AI Settings dialog state
+    const [apiKeyDialog, setApiKeyDialog] = useState(false);
+    const [apiKeyLoading, setApiKeyLoading] = useState(false);
+    const [showApiKey, setShowApiKey] = useState(false);
+    const [userAiSettings, setUserAiSettings] = useState({
+        apiKey: '', aiModel: 'gemini-2.5-flash',
+        confidenceThreshold: 85, languageDetection: 'ID', autoCorrect: true
+    });
 
     const fetchUsers = useCallback(async (page = 1) => {
         try {
@@ -148,6 +161,41 @@ const UserManagement = () => {
         setSelectedUser(user);
         setFormData({ name: user.name || '', email: user.email, role: user.role });
         setEditDialog(true);
+    };
+
+    const openApiKeyDialog = async (user) => {
+        setSelectedUser(user);
+        setApiKeyDialog(true);
+        setApiKeyLoading(true);
+        setShowApiKey(false);
+        try {
+            const response = await getUserApiKey(user.id);
+            setUserAiSettings({
+                apiKey: response.data.apiKey || '',
+                aiModel: response.data.aiModel || 'gemini-2.5-flash',
+                confidenceThreshold: response.data.confidenceThreshold ?? 85,
+                languageDetection: response.data.languageDetection || 'ID',
+                autoCorrect: response.data.autoCorrect !== false
+            });
+        } catch (err) {
+            showSnackbar('Failed to load AI settings.', 'error');
+            setUserAiSettings({ apiKey: '', aiModel: 'gemini-2.5-flash', confidenceThreshold: 85, languageDetection: 'ID', autoCorrect: true });
+        } finally {
+            setApiKeyLoading(false);
+        }
+    };
+
+    const handleSaveApiKey = async () => {
+        try {
+            setApiKeyLoading(true);
+            await updateUserApiKey(selectedUser.id, userAiSettings);
+            showSnackbar('AI settings updated successfully.');
+            setApiKeyDialog(false);
+        } catch (err) {
+            showSnackbar(err.response?.data?.message || 'Failed to update AI settings.', 'error');
+        } finally {
+            setApiKeyLoading(false);
+        }
     };
 
     const openTemplatesDialog = async (user) => {
@@ -285,6 +333,7 @@ const UserManagement = () => {
                     <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} label="Role" sx={{ borderRadius: 2 }}>
                         <MenuItem value="all">All Roles</MenuItem>
                         <MenuItem value="admin">Admin</MenuItem>
+                        <MenuItem value="verificator">Verificator</MenuItem>
                         <MenuItem value="user">User</MenuItem>
                     </Select>
                 </FormControl>
@@ -341,8 +390,8 @@ const UserManagement = () => {
                                         </TableCell>
                                         <TableCell>
                                             <Chip label={user.role} size="small" sx={{
-                                                bgcolor: user.role === 'admin' ? '#EDE9FE' : '#F3F4F6',
-                                                color: user.role === 'admin' ? '#7C3AED' : '#374151',
+                                                bgcolor: user.role === 'admin' ? '#EDE9FE' : user.role === 'verificator' ? '#DBEAFE' : '#F3F4F6',
+                                                color: user.role === 'admin' ? '#7C3AED' : user.role === 'verificator' ? '#2563EB' : '#374151',
                                                 fontWeight: 500, fontSize: '12px', height: 24,
                                             }} />
                                         </TableCell>
@@ -361,6 +410,7 @@ const UserManagement = () => {
                                             <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>{formatDate(user.createdAt)}</Typography>
                                         </TableCell>
                                         <TableCell align="right">
+                                            <Tooltip title="API Key"><IconButton size="small" onClick={() => openApiKeyDialog(user)}><ApiKeyIcon sx={{ fontSize: 18, color: '#7C3AED' }} /></IconButton></Tooltip>
                                             <Tooltip title="Manage Templates"><IconButton size="small" onClick={() => openTemplatesDialog(user)}><FileCopyIcon sx={{ fontSize: 18, color: '#10B981' }} /></IconButton></Tooltip>
                                             <Tooltip title="Edit"><IconButton size="small" onClick={() => openEditDialog(user)}><EditIcon sx={{ fontSize: 18, color: '#6B7280' }} /></IconButton></Tooltip>
                                             <Tooltip title="Reset Password"><IconButton size="small" onClick={() => { setSelectedUser(user); setResetDialog(true); }}><ResetIcon sx={{ fontSize: 18, color: '#F59E0B' }} /></IconButton></Tooltip>
@@ -396,6 +446,7 @@ const UserManagement = () => {
                         <InputLabel>Role</InputLabel>
                         <Select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} label="Role">
                             <MenuItem value="user">User</MenuItem>
+                            <MenuItem value="verificator">Verificator</MenuItem>
                             <MenuItem value="admin">Admin</MenuItem>
                         </Select>
                     </FormControl>
@@ -419,6 +470,7 @@ const UserManagement = () => {
                         <InputLabel>Role</InputLabel>
                         <Select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} label="Role">
                             <MenuItem value="user">User</MenuItem>
+                            <MenuItem value="verificator">Verificator</MenuItem>
                             <MenuItem value="admin">Admin</MenuItem>
                         </Select>
                     </FormControl>
@@ -566,6 +618,128 @@ const UserManagement = () => {
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
                     <Button onClick={() => setTemplatesDialog(false)} variant="outlined" sx={{ textTransform: 'none' }}>Close</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* AI Settings Dialog */}
+            <Dialog open={apiKeyDialog} onClose={() => setApiKeyDialog(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+                <DialogTitle sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ApiKeyIcon sx={{ color: '#7C3AED' }} /> AI Configuration
+                </DialogTitle>
+                <DialogContent sx={{ pt: '16px !important' }}>
+                    <Typography sx={{ fontSize: '13px', color: '#6B7280', mb: 2 }}>
+                        Konfigurasi AI untuk <strong>{selectedUser?.name || selectedUser?.email}</strong>
+                    </Typography>
+                    {apiKeyLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={28} /></Box>
+                    ) : (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                            {/* API Key */}
+                            <Box>
+                                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151', mb: 0.5 }}>Gemini API Key</Typography>
+                                <TextField
+                                    fullWidth size="small"
+                                    type={showApiKey ? 'text' : 'password'}
+                                    value={userAiSettings.apiKey}
+                                    onChange={(e) => setUserAiSettings(s => ({ ...s, apiKey: e.target.value }))}
+                                    placeholder="Enter Gemini API key"
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton size="small" onClick={() => setShowApiKey(!showApiKey)} edge="end">
+                                                    {showApiKey ? <VisibilityOffIcon fontSize="small" /> : <ViewIcon fontSize="small" />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        )
+                                    }}
+                                />
+                            </Box>
+
+                            <Divider />
+
+                            {/* AI Model */}
+                            <Box>
+                                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151', mb: 0.5 }}>AI Model</Typography>
+                                <FormControl fullWidth size="small">
+                                    <Select
+                                        value={userAiSettings.aiModel}
+                                        onChange={(e) => setUserAiSettings(s => ({ ...s, aiModel: e.target.value }))}
+                                    >
+                                        <MenuItem value="gemini-2.5-flash">gemini-2.5-flash</MenuItem>
+                                        <MenuItem value="gemini-2.5-pro">gemini-2.5-pro</MenuItem>
+                                        <MenuItem value="gemini-2.0-flash">gemini-2.0-flash</MenuItem>
+                                        <MenuItem value="gemini-1.5-pro">gemini-1.5-pro</MenuItem>
+                                        <MenuItem value="gemini-1.5-flash">gemini-1.5-flash</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Box>
+
+                            {/* Confidence Threshold */}
+                            <Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                    <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>Confidence Threshold</Typography>
+                                    <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#6366F1' }}>{userAiSettings.confidenceThreshold}%</Typography>
+                                </Box>
+                                <Slider
+                                    value={userAiSettings.confidenceThreshold}
+                                    onChange={(e, val) => setUserAiSettings(s => ({ ...s, confidenceThreshold: val }))}
+                                    min={0} step={5} max={100}
+                                    sx={{
+                                        color: '#6366F1',
+                                        '& .MuiSlider-thumb': { width: 18, height: 18, bgcolor: 'white', border: '3px solid #6366F1' },
+                                        '& .MuiSlider-track': { height: 6 },
+                                        '& .MuiSlider-rail': { height: 6, bgcolor: '#E5E7EB' }
+                                    }}
+                                />
+                            </Box>
+
+                            {/* Language Detection */}
+                            <Box>
+                                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151', mb: 0.5 }}>Language Detection</Typography>
+                                <ToggleButtonGroup
+                                    value={userAiSettings.languageDetection}
+                                    exclusive
+                                    onChange={(e, val) => val && setUserAiSettings(s => ({ ...s, languageDetection: val }))}
+                                    size="small"
+                                    sx={{ gap: 0.5 }}
+                                >
+                                    {['ID', 'EN', 'AUTO'].map(lang => (
+                                        <ToggleButton key={lang} value={lang} sx={{
+                                            textTransform: 'none', px: 2.5, py: 0.5,
+                                            border: '1px solid #E5E7EB', borderRadius: '6px !important', fontSize: '13px',
+                                            '&.Mui-selected': { bgcolor: '#6366F1', color: 'white', '&:hover': { bgcolor: '#5558E3' } }
+                                        }}>
+                                            {lang === 'AUTO' ? 'Auto' : lang === 'ID' ? 'Indonesian' : 'English'}
+                                        </ToggleButton>
+                                    ))}
+                                </ToggleButtonGroup>
+                            </Box>
+
+                            {/* Auto-correct */}
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, bgcolor: '#F9FAFB', borderRadius: 2, border: '1px solid #E5E7EB' }}>
+                                <Box>
+                                    <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>Auto-correct OCR</Typography>
+                                    <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Koreksi otomatis error OCR</Typography>
+                                </Box>
+                                <Switch
+                                    checked={userAiSettings.autoCorrect}
+                                    onChange={(e) => setUserAiSettings(s => ({ ...s, autoCorrect: e.target.checked }))}
+                                    sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#6366F1' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#6366F1' } }}
+                                />
+                            </Box>
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button onClick={() => setApiKeyDialog(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
+                    <Button
+                        onClick={handleSaveApiKey}
+                        variant="contained"
+                        disabled={apiKeyLoading}
+                        sx={{ bgcolor: '#7C3AED', textTransform: 'none', '&:hover': { bgcolor: '#6D28D9' } }}
+                    >
+                        {apiKeyLoading ? <CircularProgress size={20} /> : 'Save Settings'}
+                    </Button>
                 </DialogActions>
             </Dialog>
 

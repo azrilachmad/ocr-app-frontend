@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Box, Typography, Paper, Skeleton, TextField, Avatar,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -11,6 +11,183 @@ import {
     BarChart as ChartIcon
 } from '@mui/icons-material';
 import { getScanStatistics } from '../../services/adminService';
+
+// --- Extracted Chart Component ---
+const DailyScanChart = ({ dailyScans, daysInRange, formatDate }) => {
+    const containerRef = useRef(null);
+    const [chartWidth, setChartWidth] = useState(0);
+    const [hovered, setHovered] = useState(null); // index
+
+    // Measure container width
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(entries => {
+            for (const e of entries) setChartWidth(e.contentRect.width);
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+
+    // Fill missing days
+    const rawScans = dailyScans || [];
+    const scanMap = {};
+    rawScans.forEach(d => { scanMap[d.date] = d; });
+
+    const range = daysInRange || 30;
+    const endD = new Date();
+    const allDays = [];
+    for (let i = range - 1; i >= 0; i--) {
+        const d = new Date(endD);
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        const entry = scanMap[key] || { date: key, total: '0', saved: '0', verified: '0', failed: '0' };
+        allDays.push({
+            date: key,
+            total: parseInt(entry.total),
+            saved: parseInt(entry.saved || 0),
+            verified: parseInt(entry.verified || 0),
+            failed: parseInt(entry.failed || 0)
+        });
+    }
+
+    const maxVal = Math.max(1, ...allDays.map(d => d.total));
+    const chartH = 240;
+    const padL = 40;
+    const padR = 16;
+    const padT = 20;
+    const padB = 36;
+    const plotW = Math.max(1, chartWidth - padL - padR);
+    const plotH = chartH - padT - padB;
+    const stepX = allDays.length > 1 ? plotW / (allDays.length - 1) : plotW;
+
+    const getX = (i) => padL + i * stepX;
+    const getY = (val) => padT + plotH - (val / maxVal) * plotH;
+
+    // SVG paths
+    const linePts = allDays.map((d, i) => `${getX(i)},${getY(d.total)}`).join(' ');
+    const areaPath = allDays.length > 0
+        ? `M${getX(0)},${padT + plotH} L${allDays.map((d, i) => `${getX(i)},${getY(d.total)}`).join(' L')} L${getX(allDays.length - 1)},${padT + plotH} Z`
+        : '';
+
+    const yTicks = [0, Math.round(maxVal / 2), maxVal];
+    const labelEvery = Math.max(1, Math.floor(allDays.length / 10));
+
+    if (allDays.length === 0) {
+        return <Typography sx={{ color: '#9CA3AF', textAlign: 'center', py: 4 }}>No scan data for this period</Typography>;
+    }
+
+    return (
+        <Box ref={containerRef} sx={{ width: '100%', position: 'relative' }}>
+            {chartWidth > 0 && (
+                <svg width={chartWidth} height={chartH} style={{ display: 'block' }}>
+                    <defs>
+                        <linearGradient id="scanAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#6366F1" stopOpacity="0.2" />
+                            <stop offset="100%" stopColor="#6366F1" stopOpacity="0.01" />
+                        </linearGradient>
+                    </defs>
+
+                    {/* Grid lines */}
+                    {yTicks.map(v => (
+                        <g key={v}>
+                            <line x1={padL} y1={getY(v)} x2={chartWidth - padR} y2={getY(v)} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 3" />
+                            <text x={padL - 8} y={getY(v) + 4} textAnchor="end" fontSize="11" fill="#9CA3AF" fontFamily="sans-serif">{v}</text>
+                        </g>
+                    ))}
+
+                    {/* Area fill */}
+                    <path d={areaPath} fill="url(#scanAreaGrad)" />
+
+                    {/* Line */}
+                    <polyline points={linePts} fill="none" stroke="#6366F1" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+
+                    {/* Hover vertical line */}
+                    {hovered !== null && (
+                        <line x1={getX(hovered)} y1={padT} x2={getX(hovered)} y2={padT + plotH} stroke="#6366F1" strokeWidth="1" strokeDasharray="3 2" opacity="0.5" />
+                    )}
+
+                    {/* Data points + hover zones */}
+                    {allDays.map((d, i) => {
+                        const x = getX(i);
+                        const y = getY(d.total);
+                        const isHovered = hovered === i;
+                        return (
+                            <g key={i}>
+                                {/* Invisible hover zone */}
+                                <rect
+                                    x={x - stepX / 2} y={padT} width={stepX} height={plotH}
+                                    fill="transparent" style={{ cursor: 'pointer' }}
+                                    onMouseEnter={() => setHovered(i)}
+                                    onMouseLeave={() => setHovered(null)}
+                                />
+                                {/* Dot */}
+                                <circle cx={x} cy={y} r={isHovered ? 6 : d.total > 0 ? 4 : 2}
+                                    fill={isHovered ? '#6366F1' : 'white'}
+                                    stroke="#6366F1" strokeWidth="2"
+                                    style={{ transition: 'r 0.15s, fill 0.15s' }}
+                                />
+                                {/* Value label on hover or when has data */}
+                                {(isHovered || d.total > 0) && (
+                                    <text x={x} y={y - 10} textAnchor="middle" fontSize="11" fontWeight="600" fill="#4F46E5" fontFamily="sans-serif">
+                                        {d.total}
+                                    </text>
+                                )}
+                                {/* X-axis labels */}
+                                {i % labelEvery === 0 && (
+                                    <text x={x} y={chartH - 8} textAnchor="middle" fontSize="10" fill="#9CA3AF" fontFamily="sans-serif">
+                                        {formatDate(d.date)}
+                                    </text>
+                                )}
+                            </g>
+                        );
+                    })}
+
+                    {/* Stacked mini bars */}
+                    {allDays.map((d, i) => {
+                        if (d.total === 0) return null;
+                        const bw = Math.max(4, Math.min(16, stepX * 0.5));
+                        const bx = getX(i) - bw / 2;
+                        const baseY = padT + plotH;
+                        const unitH = plotH / maxVal;
+                        return (
+                            <g key={`bar-${i}`} opacity={hovered === i ? 0.9 : 0.5}>
+                                {d.verified > 0 && <rect x={bx} y={baseY - d.verified * unitH} width={bw} height={d.verified * unitH} fill="#10B981" rx="2" />}
+                                {d.saved > 0 && <rect x={bx} y={baseY - (d.verified + d.saved) * unitH} width={bw} height={d.saved * unitH} fill="#3B82F6" rx="2" />}
+                                {d.failed > 0 && <rect x={bx} y={baseY - (d.verified + d.saved + d.failed) * unitH} width={bw} height={d.failed * unitH} fill="#EF4444" rx="2" />}
+                            </g>
+                        );
+                    })}
+                </svg>
+            )}
+
+            {/* Hover tooltip */}
+            {hovered !== null && allDays[hovered] && (
+                <Box sx={{
+                    position: 'absolute',
+                    top: 8,
+                    left: Math.min(getX(hovered) - 60, chartWidth - 150),
+                    bgcolor: 'white',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 2,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    px: 1.5, py: 1,
+                    zIndex: 10,
+                    pointerEvents: 'none',
+                    minWidth: 120
+                }}>
+                    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#374151', mb: 0.5 }}>
+                        {formatDate(allDays[hovered].date)}
+                    </Typography>
+                    <Typography sx={{ fontSize: '11px', color: '#6366F1' }}>Total: <b>{allDays[hovered].total}</b></Typography>
+                    {allDays[hovered].saved > 0 && <Typography sx={{ fontSize: '11px', color: '#3B82F6' }}>Saved: <b>{allDays[hovered].saved}</b></Typography>}
+                    {allDays[hovered].verified > 0 && <Typography sx={{ fontSize: '11px', color: '#10B981' }}>Verified: <b>{allDays[hovered].verified}</b></Typography>}
+                    {allDays[hovered].failed > 0 && <Typography sx={{ fontSize: '11px', color: '#EF4444' }}>Failed: <b>{allDays[hovered].failed}</b></Typography>}
+                </Box>
+            )}
+        </Box>
+    );
+};
 
 const ScanStatistics = () => {
     const [data, setData] = useState(null);
@@ -46,9 +223,6 @@ const ScanStatistics = () => {
         return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
     };
 
-    const maxDailyScans = data?.dailyScans?.length > 0
-        ? Math.max(...data.dailyScans.map(d => parseInt(d.total)))
-        : 1;
 
     const typeColors = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#EF4444', '#3B82F6'];
 
@@ -118,53 +292,27 @@ const ScanStatistics = () => {
                 )}
             </Box>
 
-            {/* Daily Scan Trend (Bar Chart) */}
+
+            {/* Daily Scan Trend (Area Chart) */}
             <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid #E5E7EB', mb: 3 }}>
                 <Typography sx={{ fontSize: '16px', fontWeight: 600, color: '#1F2937', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <ChartIcon sx={{ color: '#7C3AED' }} /> Daily Scan Trend
                 </Typography>
                 {loading ? (
-                    <Skeleton variant="rounded" height={200} />
-                ) : data?.dailyScans?.length > 0 ? (
-                    <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, height: 200, overflowX: 'auto', pb: 3, position: 'relative' }}>
-                        {data.dailyScans.map((day, idx) => {
-                            const total = parseInt(day.total);
-                            const completed = parseInt(day.completed || 0);
-                            const failed = parseInt(day.failed || 0);
-                            const barHeight = (total / maxDailyScans) * 160;
-                            const completedH = total > 0 ? (completed / total) * barHeight : 0;
-                            const failedH = total > 0 ? (failed / total) * barHeight : 0;
-
-                            return (
-                                <Box key={idx} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 28 }}>
-                                    <Typography sx={{ fontSize: '10px', color: '#6B7280', mb: 0.5 }}>{total}</Typography>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column-reverse', height: 160 }}>
-                                        <Box sx={{ width: 20, height: completedH, bgcolor: '#10B981', borderRadius: '2px 2px 0 0', minHeight: total > 0 ? 2 : 0 }} />
-                                        {failedH > 0 && (
-                                            <Box sx={{ width: 20, height: failedH, bgcolor: '#EF4444', borderRadius: '2px 2px 0 0' }} />
-                                        )}
-                                        {barHeight - completedH - failedH > 0 && (
-                                            <Box sx={{ width: 20, height: Math.max(0, barHeight - completedH - failedH), bgcolor: '#F59E0B', borderRadius: '2px 2px 0 0' }} />
-                                        )}
-                                    </Box>
-                                    <Typography sx={{ fontSize: '9px', color: '#9CA3AF', mt: 0.5, transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}>
-                                        {formatDate(day.date)}
-                                    </Typography>
-                                </Box>
-                            );
-                        })}
-                    </Box>
-                ) : (
-                    <Typography sx={{ color: '#9CA3AF', textAlign: 'center', py: 4 }}>No scan data for this period</Typography>
-                )}
+                    <Skeleton variant="rounded" height={220} />
+                ) : <DailyScanChart dailyScans={data?.dailyScans} daysInRange={data?.summary?.daysInRange} formatDate={formatDate} />}
                 <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', mt: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Box sx={{ width: 10, height: 10, borderRadius: 0.5, bgcolor: '#10B981' }} />
-                        <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Completed</Typography>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#6366F1' }} />
+                        <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Total</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Box sx={{ width: 10, height: 10, borderRadius: 0.5, bgcolor: '#F59E0B' }} />
-                        <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Processing</Typography>
+                        <Box sx={{ width: 10, height: 10, borderRadius: 0.5, bgcolor: '#10B981' }} />
+                        <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Verified</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: 0.5, bgcolor: '#3B82F6' }} />
+                        <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Saved</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Box sx={{ width: 10, height: 10, borderRadius: 0.5, bgcolor: '#EF4444' }} />
