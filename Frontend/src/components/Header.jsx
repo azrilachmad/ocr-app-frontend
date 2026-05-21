@@ -157,7 +157,8 @@ const Header = ({ handleDrawerToggle, drawerWidth }) => {
 
   const displayName = (user?.name || (user?.email && typeof user.email === 'string' ? user.email.split('@')[0] : null)) || 'User';
   const displayEmail = user?.email || '';
-  const displayRole = user?.role === 'admin' ? 'Administrator' : 'User';
+  const roleLabels = { superadmin: 'Super Admin', admin: 'Administrator', verificator: 'Verificator', user: 'User' };
+  const displayRole = roleLabels[user?.role] || 'User';
   const initials = getInitials(user?.name || '', user?.email || '');
 
   return (

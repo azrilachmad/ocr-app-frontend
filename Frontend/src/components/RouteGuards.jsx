@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { getProfile } from '../services/authService';
 import { Box, CircularProgress } from '@mui/material';
+import { UserProvider } from '../contexts/UserContext';
 
 /**
  * ProtectedRoute - Requires authentication
@@ -61,8 +62,12 @@ export const ProtectedRoute = ({ children }) => {
         }
     }
 
-    // Pass user data to children
-    return React.cloneElement(children, { user });
+    // Pass user data to children via both cloneElement (for Layout) and Context (for pages)
+    return (
+        <UserProvider user={user}>
+            {React.cloneElement(children, { user })}
+        </UserProvider>
+    );
 };
 
 /**

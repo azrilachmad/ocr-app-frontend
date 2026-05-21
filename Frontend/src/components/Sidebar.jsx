@@ -57,6 +57,7 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle, user }) => {
   );
 
   const isSuperAdmin = user?.role === 'superadmin';
+  const isVerificator = user?.role === 'verificator' || user?.role === 'admin';
   const navItems = isSuperAdmin ? adminNavItems : userNavItems;
 
   const drawerContent = (
@@ -104,6 +105,22 @@ const Sidebar = ({ drawerWidth, mobileOpen, handleDrawerToggle, user }) => {
             sx={{
               bgcolor: '#F3E8FF',
               color: '#7C3AED',
+              fontWeight: 600,
+              fontSize: '11px',
+              height: 24,
+            }}
+          />
+        </Box>
+      )}
+      {isVerificator && !isSuperAdmin && (
+        <Box sx={{ px: 3, py: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ShieldIcon sx={{ color: '#2563EB', fontSize: 18 }} />
+          <Chip
+            label={user?.role === 'admin' ? 'Admin' : 'Verificator'}
+            size="small"
+            sx={{
+              bgcolor: '#DBEAFE',
+              color: '#2563EB',
               fontWeight: 600,
               fontSize: '11px',
               height: 24,
