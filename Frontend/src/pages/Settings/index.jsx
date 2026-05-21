@@ -6,17 +6,8 @@ import {
     Card,
     CardContent,
     TextField,
-    Select,
-    MenuItem,
-    FormControl,
     Button,
-    Switch,
-    Slider,
-    Toolbar,
     IconButton,
-    InputAdornment,
-    ToggleButton,
-    ToggleButtonGroup,
     Snackbar,
     Alert,
     Dialog,
@@ -26,35 +17,23 @@ import {
     Collapse,
     Checkbox,
     Chip,
-    Divider,
     CircularProgress,
-    LinearProgress
+    Divider
 } from '@mui/material';
 import {
     Psychology as AiIcon,
-    Refresh as RefreshIcon,
-    Save as SaveIcon,
-    Visibility,
-    VisibilityOff,
-    AutoFixHigh as AutoCorrectIcon,
     Description as DocumentIcon,
     Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
     ExpandMore as ExpandMoreIcon,
-    ExpandLess as ExpandLessIcon,
-    PlayArrow as TestIcon,
-    CheckCircle as SuccessIcon,
-    Error as ErrorIcon
+    ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import {
-    getSettings,
-    updateSettings,
     getDocumentTypes,
     createDocumentType,
     updateDocumentType as updateDocTypeApi,
-    deleteDocumentType as deleteDocTypeApi,
-    testAiConnection
+    deleteDocumentType as deleteDocTypeApi
 } from '../../services/apiService';
 
 // Default document types (fallback if API fails)
@@ -111,20 +90,8 @@ const defaultDocumentTypes = [
 const SettingsPage = () => {
     // Loading states
     const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
     const [isSavingDocType, setIsSavingDocType] = useState(false);
     const [isDeletingDocType, setIsDeletingDocType] = useState(false);
-    const [isTesting, setIsTesting] = useState(false);
-    const [testResult, setTestResult] = useState(null); // { success, message, data }
-
-    // AI Configuration State
-    const [aiModel, setAiModel] = useState('gemini-2.5-flash');
-    const [apiKey, setApiKey] = useState('');
-    const [showApiKey, setShowApiKey] = useState(false);
-    const [confidenceThreshold, setConfidenceThreshold] = useState(85);
-    const [languageDetection, setLanguageDetection] = useState('ID');
-    const [autoCorrect, setAutoCorrect] = useState(true);
-    const [allowedAiModels, setAllowedAiModels] = useState(['gemini-2.5-flash']);
 
     // Document Types State
     const [documentTypes, setDocumentTypes] = useState([]);
@@ -140,34 +107,11 @@ const SettingsPage = () => {
     // Snackbar state
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-    // Fetch settings and document types on mount
+    // Fetch document types on mount
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                // Fetch user settings
-                const settingsData = await getSettings();
-                if (settingsData) {
-                    const fallbackModels = ['gemini-2.5-flash'];
-                    const modelsList = settingsData.allowedAiModels || fallbackModels;
-                    setAllowedAiModels(modelsList);
-                    setAiModel(settingsData.aiModel || modelsList[0]);
-                    setApiKey(settingsData.apiKey || '');
-                    setConfidenceThreshold(settingsData.confidenceThreshold !== undefined ? Math.round(Number(settingsData.confidenceThreshold) * 100) : 85);
-                    let initialLang = settingsData.languageDetection;
-                    if (initialLang === 'indonesian' || initialLang === true) initialLang = 'ID';
-                    if (initialLang === 'english') initialLang = 'EN';
-                    if (initialLang === 'auto') initialLang = 'AUTO';
-                    setLanguageDetection(initialLang || 'ID');
-                    setAutoCorrect(settingsData.autoCorrect !== false);
-                }
-            } catch (error) {
-                console.error('Failed to fetch settings:', error);
-                // Use defaults on error
-            }
-
-            try {
-                // Fetch document types
                 const docTypesData = await getDocumentTypes();
                 if (docTypesData && docTypesData.length > 0) {
                     setDocumentTypes(docTypesData.map(dt => ({
@@ -181,67 +125,13 @@ const SettingsPage = () => {
                 console.error('Failed to fetch document types:', error);
                 setDocumentTypes(defaultDocumentTypes);
             }
-
             setIsLoading(false);
         };
-
         fetchData();
     }, []);
 
     const handleCloseSnackbar = () => {
         setSnackbar({ ...snackbar, open: false });
-    };
-
-    const handleLanguageChange = (event, newLanguage) => {
-        if (newLanguage !== null) {
-            setLanguageDetection(newLanguage);
-        }
-    };
-
-    const handleResetToDefault = async () => {
-        setAiModel('gemini-2.5-flash');
-        setConfidenceThreshold(85);
-        setLanguageDetection('ID');
-        setAutoCorrect(true);
-
-        try {
-            setIsSaving(true);
-            await updateSettings({
-                aiModel: 'gemini-2.5-flash',
-                confidenceThreshold: 85,
-                languageDetection: 'ID',
-                autoCorrect: true
-            });
-            setSnackbar({ open: true, message: 'Settings reset to default values', severity: 'info' });
-        } catch (error) {
-            setSnackbar({ open: true, message: error.message, severity: 'error' });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleSaveChanges = async () => {
-        // Validate API key is not empty
-        if (!apiKey || !apiKey.trim()) {
-            setSnackbar({ open: true, message: 'API key is required. Please enter your Gemini API key.', severity: 'error' });
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            await updateSettings({
-                aiModel,
-                apiKey,
-                confidenceThreshold: confidenceThreshold || 50,
-                languageDetection,
-                autoCorrect
-            });
-            setSnackbar({ open: true, message: 'Settings saved successfully!', severity: 'success' });
-        } catch (error) {
-            setSnackbar({ open: true, message: error.message, severity: 'error' });
-        } finally {
-            setIsSaving(false);
-        }
     };
 
     // Document Type handlers
@@ -371,291 +261,31 @@ const SettingsPage = () => {
     return (
         <>
             <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB', pt: 3, mt: 8 }}>
-                {isSaving && <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }} />}
 
                 <Container maxWidth="lg" sx={{ py: 4 }}>
-                    {/* Header Actions */}
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 4, gap: 2 }}>
-                        <Button
-                            variant="outlined"
-                            startIcon={<RefreshIcon />}
-                            onClick={handleResetToDefault}
-                            disabled={isSaving}
-                            sx={{
-                                borderColor: '#D1D5DB',
-                                color: '#374151',
-                                textTransform: 'none',
-                                px: 2.5,
-                                py: 1,
-                                '&:hover': { borderColor: '#9CA3AF', bgcolor: '#F9FAFB' }
-                            }}
-                        >
-                            Reset to Default
-                        </Button>
-                        <Button
-                            variant="contained"
-                            startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
-                            onClick={handleSaveChanges}
-                            disabled={isSaving}
-                            sx={{
-                                bgcolor: '#6366F1',
-                                textTransform: 'none',
-                                px: 2.5,
-                                py: 1,
-                                '&:hover': { bgcolor: '#5558E3' }
-                            }}
-                        >
-                            {isSaving ? 'Saving...' : 'Save Changes'}
-                        </Button>
+
+
+                    {/* Info Banner */}
+                    <Box sx={{
+                        p: 2.5, mb: 3, borderRadius: 3,
+                        bgcolor: '#EEF2FF', border: '1px solid #C7D2FE',
+                        display: 'flex', alignItems: 'center', gap: 2
+                    }}>
+                        <Box sx={{
+                            width: 40, height: 40, borderRadius: 1,
+                            bgcolor: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <AiIcon sx={{ color: 'white' }} />
+                        </Box>
+                        <Box>
+                            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
+                                AI Configuration are managed by Super Admin
+                            </Typography>
+                            <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>
+                                AI Configuration, API Key, Confidence Threshold, and Language Detection are managed by Super Admin.
+                            </Typography>
+                        </Box>
                     </Box>
-
-
-                    {/* AI Configuration Section */}
-                    <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, mb: 3 }}>
-                        <CardContent sx={{ p: 4 }}>
-                            {/* Section Header */}
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Box
-                                        sx={{
-                                            width: 40,
-                                            height: 40,
-                                            borderRadius: 1,
-                                            bgcolor: '#EEF2FF',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}
-                                    >
-                                        <AiIcon sx={{ color: '#6366F1' }} />
-                                    </Box>
-                                    <Box>
-                                        <Typography sx={{ fontSize: '18px', fontWeight: 600, color: '#111827' }}>
-                                            AI Configuration
-                                        </Typography>
-                                        <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>
-                                            Configure Gemini AI settings for OCR processing
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Box>
-
-                            {/* Form Fields - Row 1 */}
-                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
-                                <Box>
-                                    <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#374151', mb: 1 }}>
-                                        AI Model
-                                    </Typography>
-                                    <FormControl fullWidth size="small">
-                                        <Select
-                                            value={aiModel}
-                                            onChange={(e) => setAiModel(e.target.value)}
-                                            sx={{ bgcolor: 'white' }}
-                                        >
-                                            {allowedAiModels.map(model => (
-                                                <MenuItem key={model} value={model}>{model}</MenuItem>
-                                            ))}
-                                        </Select>
-                                    </FormControl>
-                                </Box>
-                                <Box>
-                                    <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#374151', mb: 1 }}>
-                                        API Key
-                                    </Typography>
-                                    <TextField
-                                        fullWidth
-                                        size="small"
-                                        type={showApiKey ? 'text' : 'password'}
-                                        value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
-                                        placeholder="Enter your Gemini API key"
-                                        sx={{ bgcolor: 'white' }}
-                                        InputProps={{
-                                            endAdornment: (
-                                                <InputAdornment position="end">
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => setShowApiKey(!showApiKey)}
-                                                        edge="end"
-                                                    >
-                                                        {showApiKey ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            )
-                                        }}
-                                    />
-                                </Box>
-                            </Box>
-
-                            {/* Test AI Connection Button */}
-                            <Box sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Button
-                                        variant="outlined"
-                                        startIcon={isTesting ? <CircularProgress size={16} color="inherit" /> : <TestIcon />}
-                                        onClick={async () => {
-                                            // Validate API key first
-                                            if (!apiKey || !apiKey.trim()) {
-                                                setTestResult({ success: false, message: 'API key is required' });
-                                                setSnackbar({ open: true, message: 'Please enter your API key first', severity: 'error' });
-                                                return;
-                                            }
-
-                                            setIsTesting(true);
-                                            setTestResult(null);
-                                            try {
-                                                const result = await testAiConnection({ aiModel, apiKey });
-                                                setTestResult({ success: true, message: result.message, data: result.data });
-                                                setSnackbar({ open: true, message: result.message, severity: 'success' });
-                                            } catch (error) {
-                                                setTestResult({ success: false, message: error.message });
-                                                setSnackbar({ open: true, message: error.message, severity: 'error' });
-                                            } finally {
-                                                setIsTesting(false);
-                                            }
-                                        }}
-                                        disabled={isTesting}
-                                        sx={{
-                                            borderColor: '#6366F1',
-                                            color: '#6366F1',
-                                            textTransform: 'none',
-                                            px: 3,
-                                            py: 1,
-                                            '&:hover': { borderColor: '#5558E3', bgcolor: '#EEF2FF' }
-                                        }}
-                                    >
-                                        {isTesting ? 'Testing...' : 'Test AI Connection'}
-                                    </Button>
-                                    {testResult && (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            {testResult.success ? (
-                                                <SuccessIcon sx={{ color: '#16A34A', fontSize: 20 }} />
-                                            ) : (
-                                                <ErrorIcon sx={{ color: '#DC2626', fontSize: 20 }} />
-                                            )}
-                                            <Box>
-                                                <Typography sx={{ fontSize: '13px', fontWeight: 500, color: testResult.success ? '#16A34A' : '#DC2626' }}>
-                                                    {testResult.message}
-                                                </Typography>
-                                                {testResult.data && (
-                                                    <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>
-                                                        Model: {testResult.data.model} | Response time: {testResult.data.responseTime}
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                        </Box>
-                                    )}
-                                </Box>
-                            </Box>
-
-                            {/* Confidence Threshold */}
-                            <Box sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>
-                                        Confidence Threshold
-                                    </Typography>
-                                    <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#6366F1' }}>
-                                        {confidenceThreshold}%
-                                    </Typography>
-                                </Box>
-                                <Slider
-                                    value={confidenceThreshold}
-                                    onChange={(e, newValue) => setConfidenceThreshold(newValue)}
-                                    min={0}
-                                    step={10}
-                                    max={100}
-                                    sx={{
-                                        color: '#6366F1',
-                                        '& .MuiSlider-thumb': {
-                                            width: 20,
-                                            height: 20,
-                                            bgcolor: 'white',
-                                            border: '3px solid #6366F1'
-                                        },
-                                        '& .MuiSlider-track': { height: 8 },
-                                        '& .MuiSlider-rail': { height: 8, bgcolor: '#E5E7EB' }
-                                    }}
-                                />
-                            </Box>
-
-                            {/* Language Detection */}
-                            <Box sx={{ mb: 3 }}>
-                                <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#374151', mb: 1.5 }}>
-                                    Language Detection
-                                </Typography>
-                                <ToggleButtonGroup
-                                    value={languageDetection}
-                                    exclusive
-                                    onChange={handleLanguageChange}
-                                    sx={{ gap: 1 }}
-                                >
-                                    {['ID', 'EN', 'AUTO'].map((lang) => (
-                                        <ToggleButton
-                                            key={lang}
-                                            value={lang}
-                                            sx={{
-                                                textTransform: 'none',
-                                                px: 3,
-                                                py: 1,
-                                                border: '1px solid #E5E7EB',
-                                                borderRadius: '8px !important',
-                                                '&.Mui-selected': {
-                                                    bgcolor: '#6366F1',
-                                                    color: 'white',
-                                                    '&:hover': { bgcolor: '#5558E3' }
-                                                }
-                                            }}
-                                        >
-                                            {lang === 'AUTO' ? 'Auto Detect' : lang === 'ID' ? 'Indonesian' : 'English'}
-                                        </ToggleButton>
-                                    ))}
-                                </ToggleButtonGroup>
-                            </Box>
-
-                            {/* Auto-correct OCR Results */}
-                            <Box sx={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                p: 2,
-                                bgcolor: '#F9FAFB',
-                                borderRadius: 2,
-                                border: '1px solid #E5E7EB'
-                            }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Box
-                                        sx={{
-                                            width: 36,
-                                            height: 36,
-                                            borderRadius: 1,
-                                            bgcolor: '#DCFCE7',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}
-                                    >
-                                        <AutoCorrectIcon sx={{ color: '#16A34A', fontSize: 20 }} />
-                                    </Box>
-                                    <Box>
-                                        <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
-                                            Auto-correct OCR Results
-                                        </Typography>
-                                        <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>
-                                            Use AI to automatically correct common OCR errors
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                                <Switch
-                                    checked={autoCorrect}
-                                    onChange={(e) => setAutoCorrect(e.target.checked)}
-                                    sx={{
-                                        '& .MuiSwitch-switchBase.Mui-checked': { color: '#6366F1' },
-                                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#6366F1' }
-                                    }}
-                                />
-                            </Box>
-                        </CardContent>
-                    </Card>
 
                     {/* Document Type Configuration Section */}
                     <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3 }}>

@@ -35,9 +35,14 @@ import {
   CreditCard as CardIcon,
   Visibility as ViewIcon,
   Upload as UploadIcon,
-  Error as ErrorIcon
+  Error as ErrorIcon,
+  Speed as SpeedIcon,
+  Timer as TimerIcon,
+  TrendingUp as TrendingUpIcon,
+  VerifiedUser as VerifiedIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
-import { getStatsOverview, getStatsChart, getStatsByType, getStatsRecent } from '../../services/apiService';
+import { getStatsOverview, getStatsChart, getStatsByType, getStatsRecent, getConfidenceAverage, getProcessingTimeAvg } from '../../services/apiService';
 
 // Indonesian timezone helpers (WIB/UTC+7)
 const getWIBDate = (date = new Date()) => {
@@ -107,6 +112,8 @@ const Dashboard = () => {
   const [overview, setOverview] = useState(null);
   const [chartData, setChartData] = useState([]);
   const [typeData, setTypeData] = useState([]);
+  const [confidenceData, setConfidenceData] = useState([]);
+  const [processingTimeData, setProcessingTimeData] = useState([]);
   const [recentScans, setRecentScans] = useState([]);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
@@ -123,15 +130,19 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      const [overviewData, typeStats, recent] = await Promise.all([
+      const [overviewData, typeStats, recent, confData, procTimeData] = await Promise.all([
         getStatsOverview(),
         getStatsByType(),
-        getStatsRecent(5)
+        getStatsRecent(5),
+        getConfidenceAverage().catch(() => []),
+        getProcessingTimeAvg().catch(() => [])
       ]);
 
       setOverview(overviewData || {});
       setTypeData(Array.isArray(typeStats) ? typeStats : []);
       setRecentScans(Array.isArray(recent) ? recent : []);
+      setConfidenceData(Array.isArray(confData) ? confData : []);
+      setProcessingTimeData(Array.isArray(procTimeData) ? procTimeData : []);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
       setSnackbar({ open: true, message: 'Failed to load dashboard data', severity: 'error' });
@@ -555,6 +566,164 @@ const Dashboard = () => {
             </Card>
           </Grid>
 
+          {/* Confidence Score Chart */}
+          <Grid item xs={12} md={6}>
+            <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, height: '100%' }}>
+              <CardContent sx={{ p: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+                  <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <SpeedIcon sx={{ color: '#6366F1', fontSize: 22 }} />
+                  </Box>
+                  <Box>
+                    <Typography sx={{ color: '#111827', fontSize: '18px', fontWeight: 700 }}>AI Confidence</Typography>
+                    <Typography sx={{ color: '#6B7280', fontSize: '13px' }}>Average accuracy per document type</Typography>
+                  </Box>
+                </Box>
+
+                {confidenceData.length === 0 ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, flexDirection: 'column', gap: 1 }}>
+                    <SpeedIcon sx={{ fontSize: 40, color: '#D1D5DB' }} />
+                    <Typography sx={{ color: '#9CA3AF', fontSize: '14px' }}>No data available</Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                    {confidenceData.slice(0, 5).map((item, index) => {
+                      const barColors = ['#6366F1', '#22C55E', '#3B82F6', '#F59E0B', '#EF4444'];
+                      const color = barColors[index % barColors.length];
+                      const pct = item.avgConfidence || 0;
+                      return (
+                        <Box key={item.name}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                            <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>{item.name}</Typography>
+                            <Typography sx={{ fontSize: '13px', fontWeight: 700, color }}>{pct}%</Typography>
+                          </Box>
+                          <Box sx={{ position: 'relative', height: 10, bgcolor: '#F3F4F6', borderRadius: 5, overflow: 'hidden' }}>
+                            <Box sx={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${pct}%`, bgcolor: color, borderRadius: 5, transition: 'width 0.8s ease' }} />
+                          </Box>
+                          <Typography sx={{ fontSize: '11px', color: '#9CA3AF', mt: 0.5 }}>{item.count} document{item.count !== 1 ? 's' : ''}</Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Processing Time Chart */}
+          <Grid item xs={12} md={6}>
+            <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3, height: '100%' }}>
+              <CardContent sx={{ p: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+                  <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <TimerIcon sx={{ color: '#D97706', fontSize: 22 }} />
+                  </Box>
+                  <Box>
+                    <Typography sx={{ color: '#111827', fontSize: '18px', fontWeight: 700 }}>Processing Speed</Typography>
+                    <Typography sx={{ color: '#6B7280', fontSize: '13px' }}>Average time per document type</Typography>
+                  </Box>
+                </Box>
+
+                {processingTimeData.length === 0 ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, flexDirection: 'column', gap: 1 }}>
+                    <TimerIcon sx={{ fontSize: 40, color: '#D1D5DB' }} />
+                    <Typography sx={{ color: '#9CA3AF', fontSize: '14px' }}>No data available</Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                    {(() => {
+                      const maxTime = Math.max(...processingTimeData.map(d => d.avgTime), 1);
+                      return processingTimeData.slice(0, 5).map((item, index) => {
+                        const barColors = ['#F59E0B', '#3B82F6', '#22C55E', '#8B5CF6', '#EF4444'];
+                        const color = barColors[index % barColors.length];
+                        const pct = (item.avgTime / maxTime) * 100;
+                        return (
+                          <Box key={item.name}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                              <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>{item.name}</Typography>
+                              <Typography sx={{ fontSize: '13px', fontWeight: 700, color }}>{item.avgTime}s</Typography>
+                            </Box>
+                            <Box sx={{ position: 'relative', height: 10, bgcolor: '#F3F4F6', borderRadius: 5, overflow: 'hidden' }}>
+                              <Box sx={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${pct}%`, bgcolor: color, borderRadius: 5, transition: 'width 0.8s ease' }} />
+                            </Box>
+                            <Typography sx={{ fontSize: '11px', color: '#9CA3AF', mt: 0.5 }}>{item.count} document{item.count !== 1 ? 's' : ''}</Typography>
+                          </Box>
+                        );
+                      });
+                    })()}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Status Pipeline */}
+          <Grid item xs={12}>
+            <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3 }}>
+              <CardContent sx={{ p: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+                  <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <TrendingUpIcon sx={{ color: '#16A34A', fontSize: 22 }} />
+                  </Box>
+                  <Box>
+                    <Typography sx={{ color: '#111827', fontSize: '18px', fontWeight: 700 }}>Document Pipeline</Typography>
+                    <Typography sx={{ color: '#6B7280', fontSize: '13px' }}>Status breakdown of all your documents</Typography>
+                  </Box>
+                </Box>
+                {overview && overview.totalScans > 0 ? (
+                  <>
+                    {/* Pipeline bar */}
+                    <Box sx={{ display: 'flex', height: 16, borderRadius: 8, overflow: 'hidden', mb: 3 }}>
+                      {[
+                        { key: 'successful', label: 'Completed', count: overview.successful || 0, color: '#22C55E' },
+                        { key: 'savedCount', label: 'Saved', count: overview.savedCount || 0, color: '#3B82F6' },
+                        { key: 'processing', label: 'Processing', count: overview.processing || 0, color: '#F59E0B' },
+                        { key: 'failed', label: 'Failed', count: overview.failed || 0, color: '#EF4444' }
+                      ].filter(s => s.count > 0).map((seg) => (
+                        <Box
+                          key={seg.key}
+                          sx={{
+                            width: `${(seg.count / overview.totalScans) * 100}%`,
+                            bgcolor: seg.color,
+                            minWidth: seg.count > 0 ? '4px' : 0,
+                            transition: 'width 0.6s ease'
+                          }}
+                        />
+                      ))}
+                    </Box>
+                    {/* Legend */}
+                    <Grid container spacing={2}>
+                      {[
+                        { label: 'Completed', count: overview.successful || 0, color: '#22C55E', icon: <CheckCircleIcon sx={{ fontSize: 18 }} /> },
+                        { label: 'Saved', count: overview.savedCount || 0, color: '#3B82F6', icon: <SaveIcon sx={{ fontSize: 18 }} /> },
+                        { label: 'Processing', count: overview.processing || 0, color: '#F59E0B', icon: <ScheduleIcon sx={{ fontSize: 18 }} /> },
+                        { label: 'Failed', count: overview.failed || 0, color: '#EF4444', icon: <ErrorIcon sx={{ fontSize: 18 }} /> }
+                      ].map((item) => (
+                        <Grid item xs={6} sm={3} key={item.label}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 2, borderRadius: 2, bgcolor: `${item.color}08`, border: `1px solid ${item.color}20` }}>
+                            <Box sx={{ color: item.color }}>{item.icon}</Box>
+                            <Box>
+                              <Typography sx={{ fontSize: '20px', fontWeight: 700, color: item.color, lineHeight: 1.2 }}>{item.count}</Typography>
+                              <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>{item.label}</Typography>
+                            </Box>
+                            <Typography sx={{ fontSize: '12px', color: '#9CA3AF', ml: 'auto', fontWeight: 600 }}>
+                              {overview.totalScans > 0 ? ((item.count / overview.totalScans) * 100).toFixed(0) : 0}%
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </>
+                ) : (
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 100, flexDirection: 'column', gap: 1 }}>
+                    <TrendingUpIcon sx={{ fontSize: 40, color: '#D1D5DB' }} />
+                    <Typography sx={{ color: '#9CA3AF', fontSize: '14px' }}>No documents yet</Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
           {/* Recent Scans Table */}
           <Grid item xs={12}>
             <Card elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 3 }}>
@@ -606,8 +775,11 @@ const Dashboard = () => {
                       {recentScans.map((scan) => {
                         const typeConfig = getTypeConfig(scan.documentType);
                         const statusColors = {
+                          queued: { bg: '#F3F4F6', color: '#6B7280' },
                           completed: { bg: '#DCFCE7', color: '#16A34A' },
                           processing: { bg: '#FEF3C7', color: '#D97706' },
+                          saved: { bg: '#DBEAFE', color: '#2563EB' },
+                          verified: { bg: '#EDE9FE', color: '#7C3AED' },
                           failed: { bg: '#FEE2E2', color: '#DC2626' }
                         };
                         const statusStyle = statusColors[scan.status] || statusColors.processing;

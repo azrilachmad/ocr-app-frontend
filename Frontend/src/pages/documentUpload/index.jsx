@@ -6,7 +6,8 @@ import {
     Grid, TextField, CircularProgress, Chip, LinearProgress,
     Fade, Paper, Snackbar, Alert, Toolbar,
     Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-    Collapse, Divider, RadioGroup, Radio, FormControlLabel, FormLabel
+    Collapse, Divider, RadioGroup, Radio, FormControlLabel, FormLabel,
+    Table, TableBody, TableCell, TableHead, TableRow
 } from '@mui/material';
 import {
     CloudUpload as CloudUploadIcon,
@@ -32,6 +33,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { processDocuments, submitProcessedData, getSettings, rescanDocument, getDocumentById, getDocumentFileUrl, getDocumentTypes } from '../../services/apiService';
+import { useUser } from '../../contexts/UserContext';
 
 // --- Helper Components ---
 
@@ -81,7 +83,8 @@ const FileResultCard = ({
     isSaving,
     isExpanded,
     onToggleExpand,
-    expectedType
+    expectedType,
+    isVerificator
 }) => {
     const [previewUrl, setPreviewUrl] = useState(null);
     const [isImage, setIsImage] = useState(false);
@@ -294,6 +297,28 @@ const FileResultCard = ({
                                             </Box>
                                         </Box>
                                     )}
+                                {/* Validation Warnings (Fitur #2) */}
+                                {fileResult.result?.validationWarnings && fileResult.result.validationWarnings.length > 0 && (
+                                    <Box sx={{ mt: 2, p: 2, bgcolor: '#FEF3C7', borderRadius: 2, border: '1px solid #FCD34D' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                            <WarningIcon sx={{ fontSize: 18, color: '#D97706' }} />
+                                            <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#92400E' }}>
+                                                Validation Warnings ({fileResult.result.validationWarnings.length})
+                                            </Typography>
+                                        </Box>
+                                        {fileResult.result.validationWarnings.map((w, wi) => (
+                                            <Box key={wi} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mt: 0.5 }}>
+                                                <Box sx={{
+                                                    width: 6, height: 6, borderRadius: '50%', mt: 0.7, flexShrink: 0,
+                                                    bgcolor: w.severity === 'error' ? '#EF4444' : '#F59E0B'
+                                                }} />
+                                                <Typography sx={{ fontSize: '11px', color: '#78350F' }}>
+                                                    <strong>{(w.field || '').split('_').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')}:</strong> {w.message}
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
                             </Grid>
 
                             {/* Form Fields Column */}
@@ -365,7 +390,7 @@ const FileResultCard = ({
                                             '&:hover': { bgcolor: '#4F46E5' }
                                         }}
                                     >
-                                        {isSaving ? 'Saving...' : 'Save This'}
+                                        {isSaving ? 'Saving...' : (isVerificator ? 'Save This' : 'Submit for Review')}
                                     </Button>
                                 </Box>
                             </Grid>
@@ -704,7 +729,10 @@ const UploadPhase = ({
 
 
 // --- Main Page Component ---
-function DocumentUploadPage() {
+function DocumentUploadPage({ user: userProp }) {
+    const contextUser = useUser();
+    const user = userProp || contextUser;
+    const isVerificator = ['verificator', 'admin', 'superadmin'].includes(user?.role);
     const [searchParams, setSearchParams] = useSearchParams();
     const rescanId = searchParams.get('rescan');
     const navigate = useNavigate();
@@ -726,6 +754,9 @@ function DocumentUploadPage() {
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [saveDialogIndex, setSaveDialogIndex] = useState(-1);
     const [saveFileName, setSaveFileName] = useState('');
+
+    // Duplicate detection dialog
+    const [duplicateDialog, setDuplicateDialog] = useState({ open: false, duplicates: [], pendingOptions: null });
 
     const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
 
@@ -798,7 +829,9 @@ function DocumentUploadPage() {
         setFileResults([]);
     };
 
-    const handleProcess = async () => {
+    const handleProcess = async (skipDuplicate) => {
+        // Ensure skipDuplicate is a boolean (prevents React event objects from onClick)
+        skipDuplicate = skipDuplicate === true;
         if (selectedFiles.length === 0) {
             setSnackbar({ open: true, message: 'Please select files first.', severity: 'warning' });
             return;
@@ -810,7 +843,7 @@ function DocumentUploadPage() {
             if (!settings?.apiKey) {
                 setSnackbar({
                     open: true,
-                    message: 'API key not configured. Please set up your Gemini API key in Settings.',
+                    message: 'AI model not configured. Please contact administrator to setup your AI model.',
                     severity: 'error'
                 });
                 return;
@@ -837,7 +870,7 @@ function DocumentUploadPage() {
 
         // Process files one by one for better progress tracking and to avoid timeouts
         try {
-            const options = { documentType: documentType === 'auto' ? null : documentType, mode: processMode };
+            const options = { documentType: documentType === 'auto' ? null : documentType, mode: processMode, skipDuplicateCheck: skipDuplicate };
             const allResults = [];
 
             for (let i = 0; i < selectedFiles.length; i++) {
@@ -862,7 +895,8 @@ function DocumentUploadPage() {
                                     documentType: apiResult.documentType,
                                     content: typeof apiResult.content === 'string' ? JSON.parse(apiResult.content) : apiResult.content,
                                     confidenceScore: apiResult.confidenceScore,
-                                    processingTime: apiResult.processingTime
+                                    processingTime: apiResult.processingTime,
+                                    validationWarnings: apiResult.validationWarnings || []
                                 },
                                 error: apiResult.error || null
                             };
@@ -872,6 +906,10 @@ function DocumentUploadPage() {
 
                     allResults.push({ status: apiResult?.status || 'completed' });
                 } catch (fileError) {
+                    // Re-throw duplicate detection errors to be handled by the outer catch
+                    if (fileError.code === 'DUPLICATE_DETECTED') {
+                        throw fileError;
+                    }
                     console.error(`Processing error for file ${selectedFiles[i].name}:`, fileError);
                     setFileResults(prev => prev.map((f, idx) =>
                         idx === i ? { ...f, status: 'failed', error: fileError.message } : f
@@ -888,12 +926,29 @@ function DocumentUploadPage() {
             });
 
         } catch (error) {
+            // Handle duplicate detection
+            if (error.code === 'DUPLICATE_DETECTED') {
+                setFileResults([]);
+                setDuplicateDialog({
+                    open: true,
+                    duplicates: error.duplicates || [],
+                    pendingOptions: { documentType: documentType === 'auto' ? null : documentType, mode: processMode }
+                });
+                setIsProcessing(false);
+                return;
+            }
             console.error('Processing error:', error);
             setFileResults(prev => prev.map(f => f.status === 'pending' ? { ...f, status: 'failed', error: error.message } : f));
             setSnackbar({ open: true, message: 'Processing failed: ' + error.message, severity: 'error' });
         } finally {
             setIsProcessing(false);
         }
+    };
+
+    // Handle user choosing to proceed despite duplicates
+    const handleProceedDuplicate = () => {
+        setDuplicateDialog({ open: false, duplicates: [], pendingOptions: null });
+        handleProcess(true);
     };
 
     const handleContentChange = (fileIndex, key, value) => {
@@ -1013,6 +1068,11 @@ function DocumentUploadPage() {
             message: `Saved ${savedCount} files successfully!`,
             severity: savedCount > 0 ? 'success' : 'error'
         });
+
+        // Redirect to Scan History after successful save
+        if (savedCount > 0) {
+            setTimeout(() => navigate('/history'), 1500);
+        }
     };
 
     const handleScanAgain = () => {
@@ -1046,7 +1106,7 @@ function DocumentUploadPage() {
                 {/* Results Section */}
                 {fileResults.length > 0 && (
                     <Fade in timeout={500}>
-                        <Box>
+                        <Box sx={{ mt: 12 }}>
                             {/* Header */}
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                                 <Box>
@@ -1066,7 +1126,7 @@ function DocumentUploadPage() {
                                     >
                                         New Scan
                                     </Button>
-                                    {completedCount > 1 && (
+                                    {completedCount >= 1 && (
                                         <Button
                                             variant="contained"
                                             startIcon={isSavingAll ? <CircularProgress size={16} color="inherit" /> : <SaveAllIcon />}
@@ -1078,7 +1138,7 @@ function DocumentUploadPage() {
                                                 '&:hover': { bgcolor: '#059669' }
                                             }}
                                         >
-                                            {isSavingAll ? 'Saving All...' : `Save All (${completedCount})`}
+                                            {isSavingAll ? 'Saving All...' : (isVerificator ? `Save All (${completedCount})` : `Submit All for Review (${completedCount})`)}
                                         </Button>
                                     )}
                                 </Box>
@@ -1121,6 +1181,7 @@ function DocumentUploadPage() {
                                     isExpanded={expandedIndex === index}
                                     onToggleExpand={() => setExpandedIndex(expandedIndex === index ? -1 : index)}
                                     expectedType={documentType}
+                                    isVerificator={isVerificator}
                                 />
                             ))}
                         </Box>
@@ -1180,6 +1241,75 @@ function DocumentUploadPage() {
                         }}
                     >
                         Save
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Duplicate Detection Dialog */}
+            <Dialog
+                open={duplicateDialog.open}
+                onClose={() => setDuplicateDialog({ open: false, duplicates: [], pendingOptions: null })}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1, color: '#D97706' }}>
+                    <WarningIcon sx={{ color: '#F59E0B' }} />
+                    Duplicate File Detected
+                </DialogTitle>
+                <DialogContent>
+                    <Typography sx={{ fontSize: '14px', color: '#4B5563', mb: 2 }}>
+                        The following file(s) have already been uploaded previously. Would you like to continue processing anyway?
+                    </Typography>
+                    <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow sx={{ bgcolor: '#FEF3C7' }}>
+                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#92400E' }}>Uploaded File</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#92400E' }}>Existing Document</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#92400E' }}>Type</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#92400E' }}>Upload Date</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#92400E' }}>Uploaded By</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {duplicateDialog.duplicates.map((dup, i) => (
+                                    <TableRow key={i} sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                                        <TableCell sx={{ fontSize: '13px', maxWidth: 180 }}>
+                                            <Typography noWrap sx={{ fontSize: '13px', fontWeight: 500 }}>{dup.uploadedFileName}</Typography>
+                                        </TableCell>
+                                        <TableCell sx={{ fontSize: '13px', maxWidth: 180 }}>
+                                            <Typography noWrap sx={{ fontSize: '13px', color: '#6366F1', fontWeight: 500 }}>{dup.existingFileName}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip label={dup.existingDocumentType} size="small" sx={{ fontSize: '11px', height: 22 }} />
+                                        </TableCell>
+                                        <TableCell sx={{ fontSize: '12px', color: '#6B7280' }}>
+                                            {dup.existingScannedAt ? new Date(dup.existingScannedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}
+                                        </TableCell>
+                                        <TableCell sx={{ fontSize: '12px', color: '#6B7280' }}>{dup.uploadedBy}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Paper>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+                    <Button
+                        onClick={() => setDuplicateDialog({ open: false, duplicates: [], pendingOptions: null })}
+                        sx={{ textTransform: 'none', color: '#6B7280' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleProceedDuplicate}
+                        variant="contained"
+                        sx={{
+                            bgcolor: '#F59E0B', textTransform: 'none', fontWeight: 600,
+                            '&:hover': { bgcolor: '#D97706' }
+                        }}
+                    >
+                        Continue Anyway
                     </Button>
                 </DialogActions>
             </Dialog>

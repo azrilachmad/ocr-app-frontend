@@ -44,6 +44,7 @@ import {
     PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
 import { getDocumentById, updateDocument, deleteDocument, saveDocument } from '../../services/apiService';
+import { useUser } from '../../contexts/UserContext';
 
 // Document type icons
 // Helper function to construct image URL from filePath
@@ -109,11 +110,14 @@ const isPdfFile = (fileName) => {
     return ext === 'pdf';
 };
 
-const ScanDetailEditPage = () => {
+const ScanDetailEditPage = ({ user: userProp }) => {
+    const contextUser = useUser();
+    const user = userProp || contextUser;
+    const canVerify = ['verificator', 'admin', 'superadmin'].includes(user?.role);
     const { id } = useParams();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const initialMode = searchParams.get('mode') === 'edit';
+    const initialMode = searchParams.get('mode') === 'edit' && canVerify;
 
     const [isEditing, setIsEditing] = useState(initialMode);
     const [isLoading, setIsLoading] = useState(true);
@@ -354,28 +358,30 @@ const ScanDetailEditPage = () => {
                                 </>
                             ) : (
                                 <>
-                                    {document.saved ? (
-                                        <Button
-                                            variant="outlined"
-                                            startIcon={<EditIcon />}
-                                            onClick={toggleEdit}
-                                            sx={{ textTransform: 'none', color: '#6B7280', borderColor: '#E5E7EB' }}
-                                        >
-                                            Edit
-                                        </Button>
-                                    ) : (
-                                        <Button
-                                            variant="contained"
-                                            startIcon={<EditIcon />}
-                                            onClick={toggleEdit}
-                                            sx={{
-                                                textTransform: 'none',
-                                                bgcolor: '#10B981',
-                                                '&:hover': { bgcolor: '#059669' }
-                                            }}
-                                        >
-                                            Edit & Save
-                                        </Button>
+                                    {canVerify && (
+                                        document.saved ? (
+                                            <Button
+                                                variant="outlined"
+                                                startIcon={<EditIcon />}
+                                                onClick={toggleEdit}
+                                                sx={{ textTransform: 'none', color: '#6B7280', borderColor: '#E5E7EB' }}
+                                            >
+                                                Edit
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                variant="contained"
+                                                startIcon={<EditIcon />}
+                                                onClick={toggleEdit}
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    bgcolor: '#10B981',
+                                                    '&:hover': { bgcolor: '#059669' }
+                                                }}
+                                            >
+                                                Edit & Save
+                                            </Button>
+                                        )
                                     )}
                                 </>
                             )}
@@ -525,6 +531,7 @@ const ScanDetailEditPage = () => {
                                         { label: 'Processing Time:', value: document.processingTime || '-' },
                                         { label: 'Status:', value: document.status || '-' },
                                         { label: 'Saved:', value: document.saved ? 'Yes' : 'No' },
+                                        ...(canVerify && document.user ? [{ label: 'Uploaded By:', value: `${document.user.name} (${document.user.role})` }] : []),
                                         { label: 'Created:', value: formatDate(document.createdAt) }
                                     ].map((item, idx) => (
                                         <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -618,40 +625,46 @@ const ScanDetailEditPage = () => {
                             </CardContent>
                         </Card>
 
-                        {/* Actions */}
+                        {/* Actions — hide entire card if no actions available */}
+                        {(document.status !== 'verified' || canVerify) && (
                         <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid #E5E7EB' }}>
                             <CardContent sx={{ p: 2 }}>
                                 <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#111827', mb: 2 }}>Actions</Typography>
                                 <Box sx={{ display: 'flex', gap: 2 }}>
-                                    <Button
-                                        fullWidth
-                                        variant="outlined"
-                                        startIcon={<RefreshIcon />}
-                                        onClick={() => navigate(`/upload?rescan=${id}`)}
-                                        sx={{ textTransform: 'none', py: 1.5, color: '#4B5563', borderColor: '#E5E7EB', bgcolor: 'white' }}
-                                    >
-                                        Re-scan
-                                    </Button>
-                                    <Button
-                                        fullWidth
-                                        variant="outlined"
-                                        startIcon={isDeleting ? <CircularProgress size={16} /> : <DeleteIcon />}
-                                        onClick={() => setDeleteDialogOpen(true)}
-                                        disabled={isDeleting}
-                                        sx={{
-                                            textTransform: 'none',
-                                            py: 1.5,
-                                            color: '#EF4444',
-                                            borderColor: '#FCA5A5',
-                                            bgcolor: '#FEF2F2',
-                                            '&:hover': { bgcolor: '#FEE2E2' }
-                                        }}
-                                    >
-                                        Delete
-                                    </Button>
+                                    {document.status !== 'verified' && (
+                                        <Button
+                                            fullWidth
+                                            variant="outlined"
+                                            startIcon={<RefreshIcon />}
+                                            onClick={() => navigate(`/upload?rescan=${id}`)}
+                                            sx={{ textTransform: 'none', py: 1.5, color: '#4B5563', borderColor: '#E5E7EB', bgcolor: 'white' }}
+                                        >
+                                            Re-scan
+                                        </Button>
+                                    )}
+                                    {canVerify && (
+                                        <Button
+                                            fullWidth
+                                            variant="outlined"
+                                            startIcon={isDeleting ? <CircularProgress size={16} /> : <DeleteIcon />}
+                                            onClick={() => setDeleteDialogOpen(true)}
+                                            disabled={isDeleting}
+                                            sx={{
+                                                textTransform: 'none',
+                                                py: 1.5,
+                                                color: '#EF4444',
+                                                borderColor: '#FCA5A5',
+                                                bgcolor: '#FEF2F2',
+                                                '&:hover': { bgcolor: '#FEE2E2' }
+                                            }}
+                                        >
+                                            Delete
+                                        </Button>
+                                    )}
                                 </Box>
                             </CardContent>
                         </Card>
+                        )}
                     </Grid>
                 </Grid>
             </Container>

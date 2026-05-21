@@ -47,7 +47,8 @@ import {
   Replay as RescanIcon
 } from '@mui/icons-material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { getDocuments, getRecentScans, deleteDocument, rescanDocument } from '../../services/apiService';
+import { getDocuments, getRecentScans, deleteDocument, rescanDocument, exportDocument, verifyDocument } from '../../services/apiService';
+import { useUser } from '../../contexts/UserContext';
 
 // Document type icons and colors
 const getDocumentTypeConfig = (type) => {
@@ -66,17 +67,35 @@ const getDocumentTypeConfig = (type) => {
 // Status chip component
 const StatusChip = ({ status }) => {
   const statusConfig = {
-    completed: {
-      label: 'Completed',
-      color: '#15803D',
-      bgColor: '#F0FDF4',
-      icon: <CheckCircleIcon sx={{ fontSize: 12 }} />
+    queued: {
+      label: 'Queued',
+      color: '#6B7280',
+      bgColor: '#F3F4F6',
+      icon: <ScheduleIcon sx={{ fontSize: 12 }} />
     },
     processing: {
       label: 'Processing',
       color: '#A16207',
       bgColor: '#FEFCE8',
       icon: <ScheduleIcon sx={{ fontSize: 12 }} />
+    },
+    completed: {
+      label: 'Completed',
+      color: '#15803D',
+      bgColor: '#F0FDF4',
+      icon: <CheckCircleIcon sx={{ fontSize: 12 }} />
+    },
+    saved: {
+      label: 'Saved',
+      color: '#2563EB',
+      bgColor: '#EFF6FF',
+      icon: <SaveIcon sx={{ fontSize: 12 }} />
+    },
+    verified: {
+      label: 'Verified',
+      color: '#7C3AED',
+      bgColor: '#F5F3FF',
+      icon: <CheckCircleIcon sx={{ fontSize: 12 }} />
     },
     failed: {
       label: 'Failed',
@@ -105,8 +124,10 @@ const StatusChip = ({ status }) => {
   );
 };
 
-const ScanHistoryPage = () => {
-  const [documentType, setDocumentType] = useState('all');
+const ScanHistoryPage = ({ user: userProp }) => {
+  const contextUser = useUser();
+  const user = userProp || contextUser;
+  const canVerify = ['verificator', 'admin', 'superadmin'].includes(user?.role);
   const [status, setStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -117,6 +138,9 @@ const ScanHistoryPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
+  const [itemToVerify, setItemToVerify] = useState(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [rescannningId, setRescanningId] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [stats, setStats] = useState({
@@ -125,6 +149,8 @@ const ScanHistoryPage = () => {
     processing: 0,
     failed: 0
   });
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const navigate = useNavigate();
   const itemsPerPage = 10;
@@ -135,12 +161,13 @@ const ScanHistoryPage = () => {
       const params = {
         page: currentPage,
         limit: itemsPerPage,
-        saved: 'true' // Only saved documents
+        saved: 'true'
       };
 
-      if (documentType !== 'all') params.documentType = documentType;
       if (status !== 'all') params.status = status;
       if (searchQuery) params.search = searchQuery;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
 
       const response = await getDocuments(params);
       setSavedDocuments(response.data || []);
@@ -159,7 +186,7 @@ const ScanHistoryPage = () => {
       console.error('Failed to fetch saved documents:', error);
       setSnackbar({ open: true, message: 'Failed to load saved documents: ' + error.message, severity: 'error' });
     }
-  }, [currentPage, documentType, status, searchQuery]);
+  }, [currentPage, status, searchQuery, startDate, endDate]);
 
   // Fetch recent scans (unsaved, max 10)
   const fetchRecentScans = useCallback(async () => {
@@ -228,9 +255,10 @@ const ScanHistoryPage = () => {
   };
 
   const handleClearFilters = () => {
-    setDocumentType('all');
     setStatus('all');
     setSearchQuery('');
+    setStartDate('');
+    setEndDate('');
     setCurrentPage(1);
   };
 
@@ -245,6 +273,11 @@ const ScanHistoryPage = () => {
     { label: 'Failed', value: stats.failed, icon: <ErrorIcon sx={{ fontSize: 20 }} />, color: '#DC2626', bgColor: '#FEF2F2' },
   ];
 
+  // Grid template — single source of truth for header + rows
+  const gridCols = canVerify
+    ? { xs: '1fr 120px', md: '2.5fr 1fr 0.8fr 1fr 1fr 0.8fr 0.6fr 140px' }
+    : { xs: '1fr 120px', md: '2.5fr 1fr 1fr 1fr 1fr 0.8fr 140px' };
+
   // Table Row Component for Saved Documents
   const SavedDocumentRow = ({ row, index, isLast }) => {
     const typeConfig = getDocumentTypeConfig(row.documentType);
@@ -254,19 +287,19 @@ const ScanHistoryPage = () => {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr 120px', md: '2fr 1fr 1.2fr 1fr 1fr 120px' },
+          gridTemplateColumns: gridCols,
           borderBottom: !isLast ? '1px solid #E5E7EB' : 'none',
           py: 2, px: 2, gap: 2, alignItems: 'center',
           '&:hover': { bgcolor: '#F9FAFB' },
         }}
       >
         {/* Document Info */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: `${typeConfig.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: typeConfig.color }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+          <Box sx={{ width: 40, minWidth: 40, height: 40, borderRadius: 1, bgcolor: `${typeConfig.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: typeConfig.color }}>
             {typeConfig.icon}
           </Box>
-          <Box>
-            <Typography sx={{ color: '#111827', fontSize: '14px', fontWeight: 600, mb: 0.25 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ color: '#111827', fontSize: '13px', fontWeight: 600, mb: 0.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {row.fileName || 'Untitled Document'}
             </Typography>
             <Typography sx={{ color: '#6B7280', fontSize: '12px' }}>
@@ -289,6 +322,18 @@ const ScanHistoryPage = () => {
           <StatusChip status={row.status} />
         </Box>
 
+        {/* Uploaded By - verificator only */}
+        {canVerify && (
+          <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+            <Typography sx={{ color: '#111827', fontSize: '13px', fontWeight: 500 }}>
+              {row.user?.name || '-'}
+            </Typography>
+            <Typography sx={{ color: '#9CA3AF', fontSize: '11px' }}>
+              {row.user?.role || ''}
+            </Typography>
+          </Box>
+        )}
+
         {/* Date */}
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
           <Typography sx={{ color: '#111827', fontSize: '14px', mb: 0.25 }}>{date}</Typography>
@@ -302,8 +347,22 @@ const ScanHistoryPage = () => {
           </Typography>
         </Box>
 
+        {/* Tags */}
+        <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5, flexWrap: 'wrap' }}>
+          {Array.isArray(row.tags) && row.tags.length > 0 ? (
+            row.tags.slice(0, 3).map(tag => (
+              <Chip key={tag} label={tag} size="small" sx={{ fontSize: '10px', height: 20, bgcolor: '#F3F4F6', color: '#374151' }} />
+            ))
+          ) : (
+            <Typography sx={{ color: '#9CA3AF', fontSize: '12px' }}>—</Typography>
+          )}
+          {Array.isArray(row.tags) && row.tags.length > 3 && (
+            <Chip label={`+${row.tags.length - 3}`} size="small" sx={{ fontSize: '10px', height: 20, bgcolor: '#EEF2FF', color: '#6366F1' }} />
+          )}
+        </Box>
+
         {/* Actions */}
-        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-start' }}>
+        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
           <IconButton
             size="small"
             onClick={() => handleViewDetail(row.id)}
@@ -312,22 +371,40 @@ const ScanHistoryPage = () => {
           >
             <ViewIcon sx={{ fontSize: 18 }} />
           </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleEditDetail(row.id)}
-            sx={{ color: '#F59E0B', bgcolor: '#FEF3C7', '&:hover': { bgcolor: '#FDE68A' } }}
-            title="Edit"
-          >
-            <EditIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleDeleteClick(row)}
-            sx={{ color: '#EF4444', bgcolor: '#FEE2E2', '&:hover': { bgcolor: '#FECACA' } }}
-            title="Delete"
-          >
-            <DeleteIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+          {canVerify && (
+            <>
+              <IconButton
+                size="small"
+                onClick={() => handleEditDetail(row.id)}
+                sx={{ color: '#F59E0B', bgcolor: '#FEF3C7', '&:hover': { bgcolor: '#FDE68A' } }}
+                title="Edit"
+              >
+                <EditIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+              {row.status === 'saved' && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setItemToVerify(row);
+                    setVerifyDialogOpen(true);
+                  }}
+                  sx={{ color: '#7C3AED', bgcolor: '#F5F3FF', '&:hover': { bgcolor: '#EDE9FE' } }}
+                  title="Verify"
+                >
+                  <CheckCircleIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              )}
+              <IconButton
+                size="small"
+                onClick={() => handleDeleteClick(row)}
+                sx={{ color: '#EF4444', bgcolor: '#FEE2E2', '&:hover': { bgcolor: '#FECACA' } }}
+                title="Delete"
+              >
+                <DeleteIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </>
+          )}
         </Box>
       </Box>
     );
@@ -434,7 +511,7 @@ const ScanHistoryPage = () => {
   return (
     <Box sx={{ bgcolor: '#F9FAFB', minHeight: '100vh', pb: 4, pt: 3, mt: 8 }}>
       {/* Header Actions */}
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #E5E7EB', py: 2, mt: 2 }}>
+      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #E5E7EB', py: 2 }}>
         <Container maxWidth="xl">
           <Box sx={{
             display: 'flex',
@@ -471,63 +548,6 @@ const ScanHistoryPage = () => {
         </Container>
       </Box>
 
-      {/* Filter Section */}
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #E5E7EB', py: 2 }}>
-        <Container maxWidth="xl">
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, flexWrap: 'wrap' }}>
-            <TextField
-              size="small"
-              placeholder="Search saved documents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#9CA3AF' }} /></InputAdornment>,
-                sx: { fontSize: '14px', bgcolor: 'white' }
-              }}
-              sx={{ minWidth: 200 }}
-            />
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ color: '#374151', fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                Document Type:
-              </Typography>
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <Select value={documentType} onChange={(e) => setDocumentType(e.target.value)} sx={{ fontSize: '14px', bgcolor: 'white' }}>
-                  <MenuItem value="all">All Types</MenuItem>
-                  <MenuItem value="KTP">KTP</MenuItem>
-                  <MenuItem value="KK">KK</MenuItem>
-                  <MenuItem value="SIM">SIM</MenuItem>
-                  <MenuItem value="STNK">STNK</MenuItem>
-                  <MenuItem value="BPKB">BPKB</MenuItem>
-                  <MenuItem value="Invoice">Invoice</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ color: '#374151', fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                Status:
-              </Typography>
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <Select value={status} onChange={(e) => setStatus(e.target.value)} sx={{ fontSize: '14px', bgcolor: 'white' }}>
-                  <MenuItem value="all">All Status</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
-                  <MenuItem value="processing">Processing</MenuItem>
-                  <MenuItem value="failed">Failed</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Button
-              sx={{ color: '#4F46E5', textTransform: 'none', fontSize: '14px', '&:hover': { bgcolor: '#EEF2FF' } }}
-              onClick={handleClearFilters}
-            >
-              Clear Filters
-            </Button>
-          </Box>
-        </Container>
-      </Box>
-
       <Container maxWidth="xl" sx={{ mt: 3 }}>
         {/* Statistics Cards */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 3, mb: 3 }}>
@@ -548,6 +568,66 @@ const ScanHistoryPage = () => {
           ))}
         </Box>
 
+        {/* Filter Section — after cards */}
+        <Paper elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 1.5, p: 2, mb: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, flexWrap: 'wrap' }}>
+            <TextField
+              size="small"
+              placeholder="Search documents..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#9CA3AF' }} /></InputAdornment>,
+                sx: { fontSize: '14px', bgcolor: 'white' }
+              }}
+              sx={{ minWidth: 200, flex: 1, maxWidth: 300 }}
+            />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ color: '#374151', fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                Status:
+              </Typography>
+              <FormControl size="small" sx={{ minWidth: 130 }}>
+                <Select value={status} onChange={(e) => { setStatus(e.target.value); setCurrentPage(1); }} sx={{ fontSize: '14px', bgcolor: 'white' }}>
+                  <MenuItem value="all">All Status</MenuItem>
+                  <MenuItem value="saved">Saved</MenuItem>
+                  <MenuItem value="verified">Verified</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ color: '#374151', fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                Date:
+              </Typography>
+              <TextField
+                size="small"
+                type="date"
+                value={startDate}
+                onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                InputProps={{ sx: { fontSize: '13px', bgcolor: 'white' } }}
+                sx={{ width: 150 }}
+              />
+              <Typography sx={{ color: '#9CA3AF', fontSize: '13px' }}>—</Typography>
+              <TextField
+                size="small"
+                type="date"
+                value={endDate}
+                onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                InputProps={{ sx: { fontSize: '13px', bgcolor: 'white' } }}
+                sx={{ width: 150 }}
+              />
+            </Box>
+
+            <Button
+              sx={{ color: '#4F46E5', textTransform: 'none', fontSize: '14px', '&:hover': { bgcolor: '#EEF2FF' } }}
+              onClick={handleClearFilters}
+            >
+              Clear Filters
+            </Button>
+          </Box>
+        </Paper>
+
         {/* Loading State */}
         {isLoading && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
 
@@ -567,14 +647,18 @@ const ScanHistoryPage = () => {
           {/* Table Header */}
           <Box sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr 120px', md: '2fr 1fr 1.2fr 1fr 1fr 120px' },
+            gridTemplateColumns: gridCols,
             borderBottom: '1px solid #E5E7EB', bgcolor: 'white', py: 1.5, px: 2, gap: 2
           }}>
             <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px' }}>DOCUMENT</Typography>
             <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', display: { xs: 'none', md: 'block' } }}>TYPE</Typography>
             <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', display: { xs: 'none', md: 'block' } }}>STATUS</Typography>
+            {canVerify && (
+              <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', display: { xs: 'none', md: 'block' } }}>UPLOADED BY</Typography>
+            )}
             <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', display: { xs: 'none', md: 'block' } }}>SCANNED DATE</Typography>
             <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', display: { xs: 'none', md: 'block' } }}>PROCESSING TIME</Typography>
+            <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', display: { xs: 'none', md: 'block' } }}>TAGS</Typography>
             <Typography sx={{ color: '#4B5563', fontSize: '12px', fontWeight: 600, letterSpacing: '0.6px', textAlign: 'center' }}>ACTIONS</Typography>
           </Box>
 
@@ -708,6 +792,47 @@ const ScanHistoryPage = () => {
             sx={{ bgcolor: '#DC2626', '&:hover': { bgcolor: '#B91C1C' }, borderRadius: 2, textTransform: 'none' }}
           >
             {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Verify Confirmation Dialog */}
+      <Dialog open={verifyDialogOpen} onClose={() => !isVerifying && setVerifyDialogOpen(false)} PaperProps={{ sx: { borderRadius: 3, minWidth: 400 } }}>
+        <DialogTitle sx={{ fontWeight: 600, color: '#7C3AED' }}>Verify Document</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#374151' }}>
+            Are you sure you want to verify <strong>{itemToVerify?.fileName}</strong>?
+          </Typography>
+          <Typography sx={{ color: '#6B7280', fontSize: '14px', mt: 1 }}>
+            Verified documents are marked as finalized and cannot be re-scanned.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setVerifyDialogOpen(false)} sx={{ color: '#6B7280' }} disabled={isVerifying}>
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!itemToVerify) return;
+              setIsVerifying(true);
+              try {
+                await verifyDocument(itemToVerify.id);
+                setSnackbar({ open: true, message: 'Document verified successfully!', severity: 'success' });
+                setVerifyDialogOpen(false);
+                setItemToVerify(null);
+                fetchAllData();
+              } catch (err) {
+                setSnackbar({ open: true, message: 'Verify failed: ' + err.message, severity: 'error' });
+              } finally {
+                setIsVerifying(false);
+              }
+            }}
+            variant="contained"
+            disabled={isVerifying}
+            startIcon={isVerifying ? <CircularProgress size={16} color="inherit" /> : <CheckCircleIcon />}
+            sx={{ bgcolor: '#7C3AED', '&:hover': { bgcolor: '#6D28D9' }, borderRadius: 2, textTransform: 'none' }}
+          >
+            {isVerifying ? 'Verifying...' : 'Verify'}
           </Button>
         </DialogActions>
       </Dialog>
