@@ -146,3 +146,21 @@ export const deleteUserDocumentType = async (userId, typeId) => {
     const response = await api.delete(`/admin/users/${userId}/document-types/${typeId}`);
     return response.data;
 };
+
+// --- User API Key Management ---
+
+/**
+ * Get API key info for a specific user
+ */
+export const getUserApiKey = async (userId) => {
+    const response = await api.get(`/admin/users/${userId}/api-key`);
+    return response.data;
+};
+
+/**
+ * Update AI settings for a specific user (API key, model, threshold, etc.)
+ */
+export const updateUserApiKey = async (userId, settingsData) => {
+    const response = await api.put(`/admin/users/${userId}/api-key`, settingsData);
+    return response.data;
+};

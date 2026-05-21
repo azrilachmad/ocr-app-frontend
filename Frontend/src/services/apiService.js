@@ -51,7 +51,14 @@ export const processDocuments = async (files, options = {}) => {
         });
         return response.data.data;
     } catch (err) {
-        throw new Error(err.response?.data?.message || err.message || 'Failed to process document.');
+        const resData = err.response?.data;
+        if (resData?.code === 'DUPLICATE_DETECTED') {
+            const dupError = new Error(resData.message || 'Duplicate detected');
+            dupError.code = 'DUPLICATE_DETECTED';
+            dupError.duplicates = resData.data?.duplicates || [];
+            throw dupError;
+        }
+        throw new Error(resData?.message || err.message || 'Failed to process document.');
     }
 };
 
@@ -397,4 +404,221 @@ export const getStatsRecent = async (limit = 5) => {
     }
 };
 
+// ==============================================
+// Fitur #3: Analytics API
+// ==============================================
+
+export const getAnalyticsTrends = async (period = 'month') => {
+    try {
+        const response = await api.get('/stats/trends', { params: { period } });
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to fetch trend data.');
+    }
+};
+
+export const getTypeDistribution = async () => {
+    try {
+        const response = await api.get('/stats/type-distribution');
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to fetch type distribution.');
+    }
+};
+
+export const getConfidenceAverage = async () => {
+    try {
+        const response = await api.get('/stats/confidence-avg');
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to fetch confidence data.');
+    }
+};
+
+export const getProcessingTimeAvg = async () => {
+    try {
+        const response = await api.get('/stats/processing-time');
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to fetch processing time data.');
+    }
+};
+
+// ==============================================
+// Fitur #4: Tags API
+// ==============================================
+
+export const getDocumentTags = async () => {
+    try {
+        const response = await api.get('/documents/tags');
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to fetch tags.');
+    }
+};
+
+export const updateDocumentTags = async (id, tags) => {
+    try {
+        const response = await api.put(`/documents/${id}/tags`, { tags });
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to update tags.');
+    }
+};
+
+// ==============================================
+// Fitur #5: Export API
+// ==============================================
+
+export const exportDocument = async (id, format = 'excel') => {
+    try {
+        const response = await api.get(`/documents/${id}/export`, {
+            params: { format },
+            responseType: 'blob'
+        });
+
+        const ext = format === 'excel' ? 'xlsx' : format;
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = `document_${id}.${ext}`;
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="?(.+?)"?$/);
+            if (match) filename = match[1];
+        }
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (err) {
+        throw new Error('Failed to export document.');
+    }
+};
+
+export const exportBatchDocuments = async (ids, format = 'excel') => {
+    try {
+        const response = await api.post('/documents/export-batch', { ids, format }, {
+            responseType: 'blob'
+        });
+
+        const ext = format === 'excel' ? 'xlsx' : format;
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `synchro-export-${timestamp}.${ext}`;
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (err) {
+        throw new Error('Failed to export documents.');
+    }
+};
+
+// ==============================================
+// Fitur #6: Async Batch Processing API
+// ==============================================
+
+export const processBatchDocuments = async (files, options = {}) => {
+    if (!files || files.length === 0) {
+        throw new Error('No files selected for batch processing.');
+    }
+
+    const formData = new FormData();
+    files.forEach(file => formData.append('documentFiles', file));
+    if (options) formData.append('options', JSON.stringify(options));
+
+    try {
+        const response = await api.post('/ocr/process-batch', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to start batch processing.');
+    }
+};
+
+export const getBatchStatus = async (batchId) => {
+    try {
+        const response = await api.get(`/ocr/batch/${batchId}/status`);
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to fetch batch status.');
+    }
+};
+
+export const getBatchResults = async (batchId) => {
+    try {
+        const response = await api.get(`/ocr/batch/${batchId}/results`);
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to fetch batch results.');
+    }
+};
+
+export const retryBatchFailed = async (batchId) => {
+    try {
+        const response = await api.post(`/ocr/batch/${batchId}/retry-failed`);
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to retry failed documents.');
+    }
+};
+
+export const retrySingleOcr = async (documentId) => {
+    try {
+        const response = await api.post(`/ocr/retry/${documentId}`);
+        return response.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to retry document.');
+    }
+};
+
+export const getQueueStatus = async () => {
+    try {
+        const response = await api.get('/ocr/queue-status');
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to fetch queue status.');
+    }
+};
+
+export const getBatches = async () => {
+    try {
+        const response = await api.get('/ocr/batches');
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to fetch batches.');
+    }
+};
+
+export const verifyDocument = async (id) => {
+    try {
+        const response = await api.post(`/documents/${id}/verify`);
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to verify document.');
+    }
+};
+
+/**
+ * Get distinct document types from saved/verified documents
+ * @returns {Promise<string[]>} - Array of document type strings
+ */
+export const getDistinctDocumentTypes = async () => {
+    try {
+        const response = await api.get('/documents/types');
+        return response.data.data;
+    } catch (err) {
+        throw new Error(err.response?.data?.message || 'Failed to fetch document types.');
+    }
+};
+
 export default api;
+
