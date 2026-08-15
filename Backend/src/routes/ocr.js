@@ -8,6 +8,7 @@ const { processDocument } = require('../services/ocrService');
 const { validateOcrResult } = require('../services/validationService');
 const { enqueueOcrJob, enqueueBatch, retryFailedInBatch, retrySingleDocument, getQueueStatus, isQueueReady } = require('../services/queueService');
 const { cleanupOldScans } = require('../controllers/documentController');
+const { downloadDriveFile } = require('../services/googleDriveService');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -255,6 +256,237 @@ router.post('/process', authenticate, uploadMiddleware.multiple, async (req, res
             success: true,
             message: 'Documents processed successfully.',
             data: results.length === 1 ? results[0] : results
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+// ==================================================
+// Cloud Import: Google Drive
+// ==================================================
+
+/**
+ * POST /api/ocr/process-cloud
+ * Process document(s) imported from Google Drive.
+ * Frontend sends file metadata + OAuth access token.
+ * Backend downloads files from Drive, then processes with OCR.
+ */
+router.post('/process-cloud', authenticate, async (req, res, next) => {
+    try {
+        const { files: cloudFiles, accessToken, options: rawOptions } = req.body;
+
+        // Validate input
+        if (!cloudFiles || !Array.isArray(cloudFiles) || cloudFiles.length === 0) {
+            return res.status(400).json({ success: false, message: 'No files specified.' });
+        }
+        if (!accessToken) {
+            return res.status(400).json({ success: false, message: 'Google Drive access token is required.' });
+        }
+        if (cloudFiles.length > 10) {
+            return res.status(400).json({ success: false, message: 'Maximum 10 files can be processed at once.' });
+        }
+
+        const options = typeof rawOptions === 'string' ? JSON.parse(rawOptions) : (rawOptions || {});
+        const documentType = options.documentType || 'auto';
+        const requestedMode = options.mode || 'template';
+        const skipDuplicateCheck = options.skipDuplicateCheck === true;
+
+        // Build AI options
+        let aiOptions;
+        try {
+            aiOptions = await buildAiOptions(req.userId, requestedMode);
+        } catch (err) {
+            return res.status(err.status || 400).json({ success: false, message: err.message });
+        }
+
+        // Check scan limit
+        try {
+            await checkScanLimit(req.userId, cloudFiles.length);
+        } catch (err) {
+            return res.status(err.status || 403).json({ success: false, message: err.message });
+        }
+
+        // Download files from Google Drive
+        const uploadDir = process.env.UPLOAD_PATH || './uploads';
+        const downloadedFiles = [];
+
+        for (const cf of cloudFiles) {
+            if (!cf.fileId) {
+                downloadedFiles.push({ error: 'Missing fileId', fileName: cf.name || 'unknown' });
+                continue;
+            }
+
+            try {
+                const fileInfo = {
+                    name: cf.name || 'document',
+                    mimeType: cf.mimeType || 'application/octet-stream',
+                };
+                const downloaded = await downloadDriveFile(cf.fileId, accessToken, uploadDir, fileInfo);
+                downloadedFiles.push({
+                    ...downloaded,
+                    originalname: downloaded.fileName,
+                    path: downloaded.filePath,
+                    size: downloaded.fileSize,
+                    driveFileId: cf.fileId,
+                });
+            } catch (dlError) {
+                console.error(`Failed to download Drive file ${cf.fileId}:`, dlError.message);
+                downloadedFiles.push({
+                    error: dlError.message,
+                    fileName: cf.name || cf.fileId,
+                    driveFileId: cf.fileId,
+                });
+            }
+        }
+
+        // Separate successful downloads from failures
+        const successfulDownloads = downloadedFiles.filter(f => !f.error);
+        const failedDownloads = downloadedFiles.filter(f => f.error);
+
+        if (successfulDownloads.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'All files failed to download from Google Drive.',
+                data: failedDownloads.map(f => ({
+                    fileName: f.fileName,
+                    status: 'failed',
+                    error: f.error,
+                })),
+            });
+        }
+
+        // Compute file hashes and check duplicates
+        const fileHashes = [];
+        for (const file of successfulDownloads) {
+            try {
+                const hash = await computeFileHash(file.path);
+                fileHashes.push({ fileName: file.originalname, hash, file });
+            } catch (err) {
+                fileHashes.push({ fileName: file.originalname, hash: null, file });
+            }
+        }
+
+        if (!skipDuplicateCheck) {
+            const duplicates = await checkDuplicates(fileHashes.filter(fh => fh.hash), req.userId);
+            if (duplicates.length > 0) {
+                // Cleanup downloaded files on duplicate detection
+                for (const file of successfulDownloads) {
+                    fs.unlink(file.path, () => { });
+                }
+                return res.status(409).json({
+                    success: false,
+                    code: 'DUPLICATE_DETECTED',
+                    message: `${duplicates.length} file(s) have already been uploaded previously.`,
+                    data: { duplicates },
+                });
+            }
+        }
+
+        // Build hash lookup
+        const hashLookup = {};
+        fileHashes.forEach(fh => { if (fh.hash) hashLookup[fh.file.originalname] = fh.hash; });
+
+        // Process each file with OCR (same as /process route)
+        const results = [];
+
+        for (const file of successfulDownloads) {
+            const startTime = Date.now();
+            try {
+                const isPdf = path.extname(file.path).toLowerCase() === '.pdf';
+                const fileAiOptions = { ...aiOptions };
+                if (isPdf && requestedMode === 'template' && documentType === 'auto') {
+                    fileAiOptions.mode = 'insight';
+                }
+
+                const ocrResult = await processDocument(file.path, documentType, fileAiOptions);
+                const processingTime = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+
+                // Validate results
+                const validationWarnings = validateOcrResult(
+                    ocrResult.documentType || documentType,
+                    ocrResult.content
+                );
+
+                const document = await Document.create({
+                    userId: req.userId,
+                    fileName: file.originalname,
+                    filePath: file.path,
+                    fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                    fileHash: hashLookup[file.originalname] || null,
+                    documentType: ocrResult.documentType || documentType,
+                    status: 'completed',
+                    saved: false,
+                    content: ocrResult.content,
+                    confidenceScore: ocrResult.confidence || 95,
+                    processingTime,
+                    validationWarnings,
+                    sourceType: 'google_drive',
+                });
+
+                results.push({
+                    id: document.id,
+                    fileName: document.fileName,
+                    documentType: document.documentType,
+                    status: document.status,
+                    content: document.content,
+                    confidenceScore: document.confidenceScore,
+                    processingTime: document.processingTime,
+                    validationWarnings,
+                });
+            } catch (ocrError) {
+                console.error('OCR Error for cloud file:', file.originalname, ocrError);
+
+                const document = await Document.create({
+                    userId: req.userId,
+                    fileName: file.originalname,
+                    filePath: file.path,
+                    fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                    fileHash: hashLookup[file.originalname] || null,
+                    documentType: documentType,
+                    status: 'failed',
+                    saved: false,
+                    content: { error: ocrError.message },
+                    confidenceScore: 0,
+                    processingTime: '0s',
+                    errorMessage: ocrError.message,
+                    sourceType: 'google_drive',
+                });
+
+                results.push({
+                    id: document.id,
+                    fileName: document.fileName,
+                    documentType: document.documentType,
+                    status: 'failed',
+                    error: ocrError.message,
+                });
+            }
+        }
+
+        // Add download failures to results
+        for (const failed of failedDownloads) {
+            results.push({
+                fileName: failed.fileName,
+                status: 'failed',
+                error: `Download failed: ${failed.error}`,
+            });
+        }
+
+        const allFailed = results.every(r => r.status === 'failed');
+        if (allFailed) {
+            return res.status(500).json({
+                success: false,
+                message: 'All documents failed to process.',
+                data: results,
+            });
+        }
+
+        await cleanupOldScans(req.userId);
+
+        res.json({
+            success: true,
+            message: 'Cloud documents processed successfully.',
+            data: results.length === 1 ? results[0] : results,
         });
     } catch (error) {
         next(error);

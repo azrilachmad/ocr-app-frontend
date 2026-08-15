@@ -237,6 +237,14 @@ const deleteDocument = async (req, res, next) => {
             });
         }
 
+        // Non-privileged users can only delete their UNSAVED documents
+        if (!isPrivileged && document.saved) {
+             return res.status(403).json({
+                  success: false,
+                  message: 'Access denied. You cannot delete a saved document.'
+             });
+        }
+
         // Delete file from storage if exists
         if (document.filePath && fs.existsSync(document.filePath)) {
             fs.unlinkSync(document.filePath);
