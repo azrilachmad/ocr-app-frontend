@@ -89,12 +89,14 @@ const Home = () => {
         setUploadingFiles(true);
         setUploadProgress(0);
         let completed = 0;
+        let failed = 0;
+        let lastErrorMsg = '';
 
-        try {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                setUploadStatus(`Memproses ${file.name} (${i + 1}/${files.length})...`);
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            setUploadStatus(`Memproses ${file.name} (${i + 1}/${files.length})...`);
 
+            try {
                 const formData = new FormData();
                 formData.append('documentFiles', file);
                 formData.append('options', JSON.stringify({ documentType: 'auto', mode: 'insight' }));
@@ -106,23 +108,30 @@ const Home = () => {
                 if (docData && docData.id) {
                     await saveDocument(docData.id);
                 }
-
-                completed++;
-                setUploadProgress((completed / files.length) * 100);
+            } catch (err) {
+                console.error(`Failed uploading ${file.name}:`, err);
+                failed++;
+                lastErrorMsg = err.response?.data?.message || err.message;
             }
+
+            completed++;
+            setUploadProgress((completed / files.length) * 100);
+        }
+
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setUploadingFiles(false);
+
+        if (failed === 0) {
             setUploadStatus('Upload selesai!');
             setTimeout(() => {
                 setUploadModalOpen(false);
                 refreshStats();
                 navigate('/files');
             }, 1000);
-        } catch (err) {
-            console.error('Failed bulk upload:', err);
-            const backendMsg = err.response?.data?.message || err.message;
-            setUploadStatus(`Terjadi kesalahan saat upload: ${backendMsg}`);
-        } finally {
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            setUploadingFiles(false);
+        } else {
+            const successCount = files.length - failed;
+            setUploadStatus(`${successCount} berhasil, ${failed} gagal. ${lastErrorMsg ? `Error: ${lastErrorMsg}` : ''}`);
+            refreshStats(); // Refresh stats for the ones that did succeed
         }
     };
 
