@@ -91,30 +91,34 @@ const Home = () => {
         let failed = 0;
         let lastErrorMsg = '';
 
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            setUploadStatus(`Memproses ${file.name} (${i + 1}/${files.length})...`);
+        const CONCURRENCY = 3;
+        for (let i = 0; i < files.length; i += CONCURRENCY) {
+            const chunk = files.slice(i, i + CONCURRENCY);
+            setUploadStatus(`Memproses... (${completed}/${files.length})`);
 
-            try {
-                const formData = new FormData();
-                formData.append('documentFiles', file);
-                formData.append('options', JSON.stringify({ documentType: 'auto', mode: 'insight' }));
+            await Promise.all(chunk.map(async (file) => {
+                try {
+                    const formData = new FormData();
+                    formData.append('documentFiles', file);
+                    formData.append('options', JSON.stringify({ documentType: 'auto', mode: 'insight' }));
 
-                const uploadRes = await processOCR(formData);
-                const newDoc = uploadRes.data?.data;
-                const docData = Array.isArray(newDoc) ? newDoc[0] : newDoc;
+                    const uploadRes = await processOCR(formData);
+                    const newDoc = uploadRes.data?.data;
+                    const docData = Array.isArray(newDoc) ? newDoc[0] : newDoc;
 
-                if (docData && docData.id) {
-                    await saveDocument(docData.id);
+                    if (docData && docData.id) {
+                        await saveDocument(docData.id);
+                    }
+                } catch (err) {
+                    console.error(`Failed uploading ${file.name}:`, err);
+                    failed++;
+                    lastErrorMsg = err.response?.data?.message || err.message;
+                } finally {
+                    completed++;
+                    setUploadProgress((completed / files.length) * 100);
+                    setUploadStatus(`Memproses... (${completed}/${files.length})`);
                 }
-            } catch (err) {
-                console.error(`Failed uploading ${file.name}:`, err);
-                failed++;
-                lastErrorMsg = err.response?.data?.message || err.message;
-            }
-
-            completed++;
-            setUploadProgress((completed / files.length) * 100);
+            }));
         }
 
         if (fileInputRef.current) fileInputRef.current.value = '';
