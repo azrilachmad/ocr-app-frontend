@@ -64,3 +64,6 @@ test/
 
 # Compiled output
 *.js.map
+
+# AI Assistant Data
+.agents/
