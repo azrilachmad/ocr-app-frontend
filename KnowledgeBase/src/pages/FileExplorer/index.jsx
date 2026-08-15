@@ -45,9 +45,8 @@ const FileExplorer = () => {
             .finally(() => setLoading(false));
     }, [searchQuery, filterType, filterCategory]);
 
-    const handleDownload = (fileId, fileName) => {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-        window.open(`${baseUrl}/kb/files/${fileId}/download`, '_blank');
+    const handleViewDetail = (fileId) => {
+        navigate(`/articles/doc-${fileId}`);
     };
 
     const getFileIcon = (type) => FILE_ICONS[type] || FILE_ICONS.default;
@@ -128,7 +127,7 @@ const FileExplorer = () => {
                                 cursor: 'pointer', transition: 'all 0.2s', minWidth: 0, overflow: 'hidden',
                                 '&:hover': { borderColor: '#6366F1', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', transform: 'translateY(-2px)' }
                             }}
-                                onClick={() => handleDownload(file.id, file.fileName)}
+                                onClick={() => handleViewDetail(file.id)}
                             >
                                 <Box sx={{ mb: 2 }}>{getFileIcon(file.fileType)}</Box>
                                 <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#1F2937', mb: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -160,7 +159,7 @@ const FileExplorer = () => {
                                 cursor: 'pointer', transition: 'bgcolor 0.2s',
                                 '&:hover': { bgcolor: '#F8FAFC' }
                             }}
-                                onClick={() => handleDownload(file.id, file.fileName)}
+                                onClick={() => handleViewDetail(file.id)}
                             >
                                 {getFileIcon(file.fileType)}
                                 <Box sx={{ flex: 1, minWidth: 0 }}>

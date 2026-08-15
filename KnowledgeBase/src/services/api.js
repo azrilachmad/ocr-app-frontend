@@ -46,4 +46,8 @@ export const getChatMessages = (sessionId) => api.get(`/chat/sessions/${sessionI
 export const sendChatMessage = (sessionId, prompt) => api.post(`/chat/sessions/${sessionId}/message`, { prompt });
 export const deleteChatSession = (sessionId) => api.delete(`/chat/sessions/${sessionId}`);
 
+// OCR & Document Saving for Direct KB Uploads
+export const processOCR = (formData) => api.post('/ocr/process', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+export const saveDocument = (id) => api.post(`/documents/${id}/save`, {});
+
 export default api;
