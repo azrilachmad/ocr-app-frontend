@@ -270,7 +270,7 @@ router.get('/:id/file', documentValidation.getById, async (req, res, next) => {
 });
 
 router.put('/:id', isVerificator, documentValidation.update, documentController.updateDocument);
-router.delete('/:id', isVerificator, documentValidation.delete, documentController.deleteDocument);
+router.delete('/:id', documentValidation.delete, documentController.deleteDocument);
 router.post('/:id/save', documentValidation.save, documentController.saveDocument);
 
 // --- Fitur #6: Document status transitions ---

@@ -28,12 +28,16 @@ import {
     PictureAsPdf as PdfIcon,
     Description as DocIcon,
     TableChart as XlsIcon,
-    InsertDriveFile as GenericFileIcon
+    InsertDriveFile as GenericFileIcon,
+    CloudQueue as CloudQueueIcon
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { processDocuments, submitProcessedData, getSettings, rescanDocument, getDocumentById, getDocumentFileUrl, getDocumentTypes } from '../../services/apiService';
+import { processDocuments, processCloudDocuments, submitProcessedData, getSettings, rescanDocument, getDocumentById, getDocumentFileUrl, getDocumentTypes } from '../../services/apiService';
 import { useUser } from '../../contexts/UserContext';
+import useGoogleDrivePicker from '../../hooks/useGoogleDrivePicker';
+import { parseDriveUrl } from '../../hooks/useGoogleDrivePicker';
+import GoogleDriveBrowser from '../../components/GoogleDriveBrowser';
 
 // --- Helper Components ---
 
@@ -425,7 +429,8 @@ const FileResultCard = ({
 // Upload Phase Component
 const UploadPhase = ({
     documentType, setDocumentType, selectedFiles, handleFileChange,
-    handleRemoveFile, handleProcess, isProcessing
+    handleRemoveFile, handleProcess, isProcessing, onGoogleDriveFiles,
+    googleDrive
 }) => {
     const fileInputRef = useRef();
     const [availableTemplates, setAvailableTemplates] = useState([]);
@@ -455,6 +460,55 @@ const UploadPhase = ({
     const isMultipleFiles = selectedFiles.length > 1;
     const effectiveDocumentType = (isMultipleFiles || processMode === 'insight') ? 'auto' : documentType;
     const isTypeDisabled = selectedFiles.length === 0 || isMultipleFiles || processMode === 'insight';
+
+    // Google Drive states
+    const [driveTab, setDriveTab] = useState('browse'); // 'browse' or 'link'
+    const [driveLinkInput, setDriveLinkInput] = useState('');
+    const [driveLinkError, setDriveLinkError] = useState('');
+    const [driveLinkLoading, setDriveLinkLoading] = useState(false);
+
+    // Handle paste Google Drive link (Option A)
+    const handleAddDriveLink = async () => {
+        const url = driveLinkInput.trim();
+        if (!url) return;
+
+        const fileId = parseDriveUrl(url);
+        if (!fileId) {
+            setDriveLinkError('Invalid Google Drive URL. Please paste a valid Drive file link.');
+            return;
+        }
+
+        setDriveLinkLoading(true);
+        setDriveLinkError('');
+
+        try {
+            if (googleDrive.isSignedIn) {
+                // User is signed in — fetch metadata via Drive API
+                const fileMetadata = await googleDrive.getFileMetadata(fileId);
+                onGoogleDriveFiles([fileMetadata], googleDrive.getAccessToken());
+            } else {
+                // Not signed in — create a basic file entry (backend will try to access it)
+                const basicFile = {
+                    fileId,
+                    name: `Drive file (${fileId.substring(0, 8)}...)`,
+                    mimeType: 'application/octet-stream',
+                    size: 0,
+                    isCloudFile: true,
+                    source: 'google_drive',
+                };
+                onGoogleDriveFiles([basicFile], null);
+            }
+            setDriveLinkInput('');
+        } catch (err) {
+            setDriveLinkError(
+                err.message.includes('Sign in')
+                    ? err.message
+                    : `Cannot access this file. ${googleDrive.isSignedIn ? 'Make sure you have permission.' : 'Sign in with Google first for private files.'}`
+            );
+        } finally {
+            setDriveLinkLoading(false);
+        }
+    };
 
     const [isDragging, setIsDragging] = useState(false);
 
@@ -570,6 +624,110 @@ const UploadPhase = ({
                                 JPG, PNG, PDF | up to 50 MB each | Multiple files supported
                             </Typography>
                         </Box>
+
+                        {/* Google Drive Import — File Browser + URL Paste */}
+                        <Box sx={{ mt: 3 }}>
+                            <Divider sx={{ mb: 2.5 }}>
+                                <Typography sx={{ fontSize: '12px', color: '#9CA3AF', px: 2 }}>or import from Google Drive</Typography>
+                            </Divider>
+
+                            {!googleDrive?.isConfigured && (
+                                <Alert severity="warning" sx={{ mb: 2, fontSize: '12px' }}>
+                                    Google Drive integration is not fully configured. You can still paste public links, but to browse files, please configure the API keys in your environment variables.
+                                </Alert>
+                            )}
+
+                                {/* Tab selector: Browse / Paste Link */}
+                                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                                    <Button
+                                        size="small"
+                                        variant={driveTab === 'browse' ? 'contained' : 'outlined'}
+                                        onClick={() => setDriveTab('browse')}
+                                        sx={{
+                                            flex: 1, textTransform: 'none', fontSize: '13px', fontWeight: 600,
+                                            borderRadius: 1.5,
+                                            ...(driveTab === 'browse'
+                                                ? { bgcolor: '#4285F4', '&:hover': { bgcolor: '#3367D6' } }
+                                                : { borderColor: '#E5E7EB', color: '#6B7280' }),
+                                        }}
+                                    >
+                                        Browse Files
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        variant={driveTab === 'link' ? 'contained' : 'outlined'}
+                                        onClick={() => setDriveTab('link')}
+                                        sx={{
+                                            flex: 1, textTransform: 'none', fontSize: '13px', fontWeight: 600,
+                                            borderRadius: 1.5,
+                                            ...(driveTab === 'link'
+                                                ? { bgcolor: '#4285F4', '&:hover': { bgcolor: '#3367D6' } }
+                                                : { borderColor: '#E5E7EB', color: '#6B7280' }),
+                                        }}
+                                    >
+                                        Paste Link
+                                    </Button>
+                                </Box>
+
+                                {/* Tab: Browse Files (Option B) */}
+                                {driveTab === 'browse' && (
+                                    <GoogleDriveBrowser
+                                        drive={googleDrive}
+                                        onFilesSelected={onGoogleDriveFiles}
+                                        maxFiles={10}
+                                    />
+                                )}
+
+                                {/* Tab: Paste Link (Option A) */}
+                                {driveTab === 'link' && (
+                                    <Box sx={{
+                                        border: '1px solid #E5E7EB', borderRadius: 3,
+                                        bgcolor: '#FFFFFF', p: 3,
+                                    }}>
+                                        <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#374151', mb: 0.5 }}>
+                                            Paste Google Drive Link
+                                        </Typography>
+                                        <Typography sx={{ fontSize: '12px', color: '#9CA3AF', mb: 2 }}>
+                                            Paste a shared Google Drive file URL. Sign in first for private files.
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                placeholder="https://drive.google.com/file/d/.../view"
+                                                value={driveLinkInput}
+                                                onChange={(e) => setDriveLinkInput(e.target.value)}
+                                                InputProps={{
+                                                    sx: { borderRadius: 2, fontSize: '13px', bgcolor: '#F9FAFB' },
+                                                }}
+                                            />
+                                            <Button
+                                                variant="contained"
+                                                onClick={handleAddDriveLink}
+                                                disabled={!driveLinkInput.trim() || driveLinkLoading}
+                                                sx={{
+                                                    textTransform: 'none', fontSize: '13px', fontWeight: 600,
+                                                    bgcolor: '#4285F4', borderRadius: 2, minWidth: 90,
+                                                    '&:hover': { bgcolor: '#3367D6' },
+                                                }}
+                                            >
+                                                {driveLinkLoading ? <CircularProgress size={18} color="inherit" /> : 'Add'}
+                                            </Button>
+                                        </Box>
+                                        {driveLinkError && (
+                                            <Alert severity="error" sx={{ mt: 1.5, fontSize: '12px' }} onClose={() => setDriveLinkError('')}>
+                                                {driveLinkError}
+                                            </Alert>
+                                        )}
+                                        {!googleDrive.isSignedIn && (
+                                            <Alert severity="info" sx={{ mt: 1.5, fontSize: '12px' }} icon={false}>
+                                                <strong>Tip:</strong> Sign in with Google via "Browse Files" tab first to access private files.
+                                                Public/shared files can be added without signing in.
+                                            </Alert>
+                                        )}
+                                    </Box>
+                                )}
+                            </Box>
                     </CardContent>
                 </Card>
 
@@ -604,11 +762,31 @@ const UploadPhase = ({
                                                 {getFileIcon(file.name, { fontSize: 20 })}
                                             </Box>
                                             <Box>
-                                                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
-                                                    {file.name}
-                                                </Typography>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                                    <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
+                                                        {file.name}
+                                                    </Typography>
+                                                    {file.isCloudFile && (
+                                                        <Chip
+                                                            size="small"
+                                                            icon={<CloudQueueIcon sx={{ fontSize: '12px !important' }} />}
+                                                            label="Google Drive"
+                                                            sx={{
+                                                                height: 20,
+                                                                fontSize: '10px',
+                                                                fontWeight: 600,
+                                                                bgcolor: '#E8F0FE',
+                                                                color: '#1967D2',
+                                                                '& .MuiChip-icon': { color: '#4285F4' },
+                                                            }}
+                                                        />
+                                                    )}
+                                                </Box>
                                                 <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>
-                                                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                                                    {file.isCloudFile
+                                                        ? (file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Cloud file')
+                                                        : `${(file.size / 1024 / 1024).toFixed(2)} MB`
+                                                    }
                                                 </Typography>
                                             </Box>
                                         </Box>
@@ -758,6 +936,10 @@ function DocumentUploadPage({ user: userProp }) {
     // Duplicate detection dialog
     const [duplicateDialog, setDuplicateDialog] = useState({ open: false, duplicates: [], pendingOptions: null });
 
+    // Google Drive integration
+    const googleDrive = useGoogleDrivePicker();
+    const [cloudAccessToken, setCloudAccessToken] = useState(null);
+
     const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
 
     // Handle rescan on page load
@@ -820,6 +1002,20 @@ function DocumentUploadPage({ user: userProp }) {
         }
     };
 
+    // Handle files selected from Google Drive Picker
+    const handleGoogleDriveFiles = (driveFiles, accessToken) => {
+        if (driveFiles && driveFiles.length > 0) {
+            setCloudAccessToken(accessToken);
+            setSelectedFiles(prev => [...prev, ...driveFiles]);
+            setFileResults([]);
+            setSnackbar({
+                open: true,
+                message: `${driveFiles.length} file(s) imported from Google Drive`,
+                severity: 'success'
+            });
+        }
+    };
+
     const handleRemoveFile = (index) => {
         if (index === -1) {
             setSelectedFiles([]);
@@ -859,11 +1055,14 @@ function DocumentUploadPage({ user: userProp }) {
         const initialResults = selectedFiles.map((file, index) => ({
             id: null,
             fileName: file.name,
-            fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-            file: file,
+            fileSize: file.isCloudFile
+                ? (file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Cloud file')
+                : `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+            file: file.isCloudFile ? null : file,
             status: 'pending',
             result: null,
-            error: null
+            error: null,
+            isCloudFile: !!file.isCloudFile,
         }));
         setFileResults(initialResults);
         setExpandedIndex(0);
@@ -873,14 +1072,87 @@ function DocumentUploadPage({ user: userProp }) {
             const options = { documentType: documentType === 'auto' ? null : documentType, mode: processMode, skipDuplicateCheck: skipDuplicate };
             const allResults = [];
 
-            for (let i = 0; i < selectedFiles.length; i++) {
+            // Separate local files and cloud files
+            const localFiles = selectedFiles.filter(f => !f.isCloudFile);
+            const cloudFiles = selectedFiles.filter(f => f.isCloudFile);
+
+            // Build index map to update the correct position in fileResults
+            const fileIndexMap = selectedFiles.map((f, i) => ({ index: i, isCloud: !!f.isCloudFile, file: f }));
+
+            // Process cloud files in one batch call (backend downloads them)
+            if (cloudFiles.length > 0 && cloudAccessToken) {
+                const cloudIndices = fileIndexMap.filter(f => f.isCloud).map(f => f.index);
+
+                // Mark all cloud files as processing
+                setFileResults(prev => prev.map((f, idx) =>
+                    cloudIndices.includes(idx) ? { ...f, status: 'processing' } : f
+                ));
+
+                try {
+                    const cloudResult = await processCloudDocuments(cloudFiles, cloudAccessToken, options);
+                    const cloudResultArray = Array.isArray(cloudResult) ? cloudResult : [cloudResult];
+
+                    // Update cloud file results
+                    setFileResults(prev => prev.map((f, idx) => {
+                        const cloudIdx = cloudIndices.indexOf(idx);
+                        if (cloudIdx !== -1 && cloudResultArray[cloudIdx]) {
+                            const apiResult = cloudResultArray[cloudIdx];
+                            return {
+                                ...f,
+                                id: apiResult.id,
+                                status: apiResult.status === 'failed' ? 'failed' : 'completed',
+                                result: apiResult.status === 'failed' ? null : {
+                                    id: apiResult.id,
+                                    documentType: apiResult.documentType,
+                                    content: typeof apiResult.content === 'string' ? JSON.parse(apiResult.content) : apiResult.content,
+                                    confidenceScore: apiResult.confidenceScore,
+                                    processingTime: apiResult.processingTime,
+                                    validationWarnings: apiResult.validationWarnings || []
+                                },
+                                error: apiResult.error || null
+                            };
+                        }
+                        return f;
+                    }));
+
+                    cloudResultArray.forEach(r => allResults.push({ status: r?.status || 'completed' }));
+                } catch (cloudError) {
+                    if (cloudError.code === 'DUPLICATE_DETECTED') throw cloudError;
+                    console.error('Cloud processing error:', cloudError);
+                    
+                    setFileResults(prev => prev.map((f, idx) => {
+                        if (!cloudIndices.includes(idx)) return f;
+                        
+                        let errorMessage = cloudError.message;
+                        if (cloudError.fileErrors) {
+                            const specificError = cloudError.fileErrors.find(e => e.fileName === f.fileName || e.fileName === f.file?.name);
+                            if (specificError) errorMessage = specificError.error;
+                        }
+                        
+                        // Make error message more user friendly if it's the Drive size limit
+                        if (errorMessage && errorMessage.includes('too large to be exported')) {
+                            errorMessage = 'File too large. Google Docs/Sheets/Slides must be under 10 MB.';
+                        }
+                        
+                        return { ...f, status: 'failed', error: errorMessage };
+                    }));
+                    cloudIndices.forEach(() => allResults.push({ status: 'failed' }));
+                }
+            }
+
+            // Process local files one by one
+            const localIndices = fileIndexMap.filter(f => !f.isCloud).map(f => f.index);
+
+            for (let li = 0; li < localFiles.length; li++) {
+                const i = localIndices[li];
+
                 // Update current file to processing
                 setFileResults(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'processing' } : f));
                 setExpandedIndex(i);
 
                 try {
                     // Send each file individually
-                    const result = await processDocuments([selectedFiles[i]], options);
+                    const result = await processDocuments([localFiles[li]], options);
                     const apiResult = Array.isArray(result) ? result[0] : result;
 
                     // Update this file's result
@@ -1079,6 +1351,7 @@ function DocumentUploadPage({ user: userProp }) {
         setSelectedFiles([]);
         setFileResults([]);
         setExpandedIndex(0);
+        setCloudAccessToken(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -1099,6 +1372,8 @@ function DocumentUploadPage({ user: userProp }) {
                             handleRemoveFile={handleRemoveFile}
                             handleProcess={handleProcess}
                             isProcessing={isProcessing}
+                            onGoogleDriveFiles={handleGoogleDriveFiles}
+                            googleDrive={googleDrive}
                         />
                     </Box>
                 )}

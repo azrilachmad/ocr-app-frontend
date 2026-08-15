@@ -63,6 +63,54 @@ export const processDocuments = async (files, options = {}) => {
 };
 
 /**
+ * Process documents imported from Google Drive
+ * Sends cloud file metadata + OAuth access token to backend.
+ * Backend downloads files from Drive and processes with OCR.
+ *
+ * @param {Array<{fileId, name, mimeType, size}>} cloudFiles - Array of Drive file metadata
+ * @param {string} accessToken - Google OAuth access token
+ * @param {object} options - Processing options (documentType, mode, etc.)
+ * @returns {Promise<object>} - OCR result(s)
+ */
+export const processCloudDocuments = async (cloudFiles, accessToken, options = {}) => {
+    if (!cloudFiles || cloudFiles.length === 0) {
+        throw new Error('No files selected for processing.');
+    }
+    if (!accessToken) {
+        throw new Error('Google Drive access token is missing.');
+    }
+
+    try {
+        const response = await api.post('/ocr/process-cloud', {
+            files: cloudFiles.map(f => ({
+                fileId: f.fileId,
+                name: f.name,
+                mimeType: f.mimeType,
+                size: f.size,
+            })),
+            accessToken,
+            options,
+        });
+        return response.data.data;
+    } catch (err) {
+        const resData = err.response?.data;
+        if (resData?.code === 'DUPLICATE_DETECTED') {
+            const dupError = new Error(resData.message || 'Duplicate detected');
+            dupError.code = 'DUPLICATE_DETECTED';
+            dupError.duplicates = resData.data?.duplicates || [];
+            throw dupError;
+        }
+        if (resData?.data && Array.isArray(resData.data)) {
+            const detailError = new Error(resData.message || 'Failed to process cloud documents.');
+            detailError.fileErrors = resData.data;
+            throw detailError;
+        }
+
+        throw new Error(resData?.message || err.message || 'Failed to process cloud documents.');
+    }
+};
+
+/**
  * Rescan an existing document by ID
  * @param {string} documentId - Document ID to rescan
  * @returns {Promise<object>} - Updated OCR result

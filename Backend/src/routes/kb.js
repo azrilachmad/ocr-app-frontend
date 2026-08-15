@@ -20,17 +20,17 @@ const fs = require('fs');
  */
 router.get('/stats', authenticate, async (req, res, next) => {
     try {
-        const totalDocuments = await Document.count({ where: { status: 'verified' } });
+        const totalDocuments = await Document.count({ where: { status: { [Op.in]: ['saved', 'verified'] } } });
         const documentTypes = await Document.count({
-            where: { status: 'verified' },
+            where: { status: { [Op.in]: ['saved', 'verified'] } },
             distinct: true,
             col: 'documentType'
         });
         const totalFiles = await Document.count({
-            where: { status: 'verified', filePath: { [Op.ne]: null } }
+            where: { status: { [Op.in]: ['saved', 'verified'] }, filePath: { [Op.ne]: null } }
         });
         const lastDocument = await Document.findOne({
-            where: { status: 'verified' },
+            where: { status: { [Op.in]: ['saved', 'verified'] } },
             order: [['scannedAt', 'DESC']],
             attributes: ['scannedAt']
         });
@@ -56,7 +56,7 @@ router.get('/stats', authenticate, async (req, res, next) => {
 router.get('/popular', authenticate, async (req, res, next) => {
     try {
         const documents = await Document.findAll({
-            where: { status: 'verified' },
+            where: { status: { [Op.in]: ['saved', 'verified'] } },
             attributes: ['id', 'fileName', 'documentType', 'fileSize', 'confidenceScore', 'scannedAt'],
             include: [userInclude],
             order: [['scannedAt', 'DESC']],
@@ -81,7 +81,7 @@ router.get('/categories', authenticate, async (req, res, next) => {
     try {
         // Get distinct document types with counts from actual documents
         const results = await Document.findAll({
-            where: { status: 'verified' },
+            where: { status: { [Op.in]: ['saved', 'verified'] } },
             attributes: [
                 'documentType',
                 [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'documentCount']
@@ -137,7 +137,7 @@ router.get('/categories/:slug/articles', authenticate, async (req, res, next) =>
 
         const documents = await Document.findAll({
             where: {
-                status: 'verified',
+                status: { [Op.in]: ['saved', 'verified'] },
                 documentType: { [Op.like]: `%${documentType}%` }
             },
             order: [['scannedAt', 'DESC']]
@@ -181,13 +181,13 @@ router.get('/articles/:slug', authenticate, async (req, res, next) => {
         if (slug.startsWith('doc-')) {
             const docId = slug.replace('doc-', '');
             document = await Document.findOne({
-                where: { id: docId, status: 'verified' },
+                where: { id: docId, status: { [Op.in]: ['saved', 'verified'] } },
                 include: [userInclude]
             });
         } else {
             // Fallback: try to find by fileName similarity
             document = await Document.findOne({
-                where: { status: 'verified', fileName: { [Op.like]: `%${slug.replace(/-/g, ' ')}%` } },
+                where: { status: { [Op.in]: ['saved', 'verified'] }, fileName: { [Op.like]: `%${slug.replace(/-/g, ' ')}%` } },
                 include: [userInclude]
             });
         }
@@ -244,7 +244,7 @@ router.get('/articles/:slug', authenticate, async (req, res, next) => {
 router.get('/files', authenticate, async (req, res, next) => {
     try {
         const { documentType, search } = req.query;
-        const where = { status: 'verified' };
+        const where = { status: { [Op.in]: ['saved', 'verified'] } };
 
         if (documentType) {
             where.documentType = documentType;
@@ -292,7 +292,7 @@ router.get('/files', authenticate, async (req, res, next) => {
 router.get('/files/:id/download', authenticate, async (req, res, next) => {
     try {
         const document = await Document.findOne({
-            where: { id: req.params.id, status: 'verified' }
+            where: { id: req.params.id, status: { [Op.in]: ['saved', 'verified'] } }
         });
 
         if (!document) {
@@ -357,8 +357,8 @@ router.get('/search', authenticate, async (req, res, next) => {
 
         // Build where clause
         const whereClause = {
-            // Only verified documents appear in KB
-            status: 'verified',
+            // Saved and verified documents appear in KB
+            status: { [Op.in]: ['saved', 'verified'] },
             // Full-text search: filename, type, AND content (Fitur #1)
             [Op.and]: [
                 {

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box, Typography, TextField, Button, Paper, InputAdornment,
-    Avatar, IconButton, Menu, MenuItem, Chip, CircularProgress
+    Avatar, IconButton, Menu, MenuItem, Chip, CircularProgress,
+    Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress
 } from '@mui/material';
 import {
     Search as SearchIcon, SmartToy as AIIcon, AutoStories as ArticleIcon,
@@ -12,9 +13,9 @@ import {
     Assessment as ReportIcon, Lightbulb as InsightIcon,
     PictureAsPdf as PdfIcon, Close as CloseIcon,
     Category as CatIcon, Update as UpdateIcon,
-    ArrowForward as ArrowIcon
+    ArrowForward as ArrowIcon, CloudUpload as UploadIcon
 } from '@mui/icons-material';
-import { logout, getCategories, searchKB, getKBStats, getPopularArticles } from '../../services/api';
+import { logout, getCategories, searchKB, getKBStats, getPopularArticles, processOCR, saveDocument } from '../../services/api';
 import { useAuth } from '../../App';
 
 const ICON_MAP = {
@@ -36,6 +37,14 @@ const Home = () => {
     const [searching, setSearching] = useState(false);
     const [stats, setStats] = useState(null);
     const [popularDocs, setPopularDocs] = useState([]);
+
+    // Upload State
+    const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [uploadingFiles, setUploadingFiles] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadStatus, setUploadStatus] = useState('');
+    const fileInputRef = useRef(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     // Live search suggestions
     const [suggestions, setSuggestions] = useState([]);
@@ -66,6 +75,54 @@ const Home = () => {
     const handleLogout = async () => {
         try { await logout(); } catch (e) { /* ignore */ }
         setUser(null);
+    };
+
+    const refreshStats = () => {
+        getKBStats().then(res => setStats(res.data?.data || null)).catch(console.error);
+    };
+
+    const handleBulkUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+
+        setUploadingFiles(true);
+        setUploadProgress(0);
+        let completed = 0;
+
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                setUploadStatus(`Memproses ${file.name} (${i + 1}/${files.length})...`);
+
+                const formData = new FormData();
+                formData.append('documentFiles', file);
+                formData.append('options', JSON.stringify({ documentType: 'auto', mode: 'insight' }));
+
+                const uploadRes = await processOCR(formData);
+                const newDoc = uploadRes.data?.data;
+                const docData = Array.isArray(newDoc) ? newDoc[0] : newDoc;
+
+                if (docData && docData.id) {
+                    await saveDocument(docData.id);
+                }
+
+                completed++;
+                setUploadProgress((completed / files.length) * 100);
+            }
+            setUploadStatus('Upload selesai!');
+            setTimeout(() => {
+                setUploadModalOpen(false);
+                refreshStats();
+                navigate('/files');
+            }, 1000);
+        } catch (err) {
+            console.error('Failed bulk upload:', err);
+            const backendMsg = err.response?.data?.message || err.message;
+            setUploadStatus(`Terjadi kesalahan saat upload: ${backendMsg}`);
+        } finally {
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            setUploadingFiles(false);
+        }
     };
 
     // Debounced live search
@@ -138,6 +195,15 @@ const Home = () => {
                             onClick={() => navigate('/files')}
                             sx={{ mr: 0.5, fontSize: '13px', px: 2, borderColor: '#E2E8F0', color: '#64748B', '&:hover': { borderColor: '#6366F1', color: '#6366F1' } }}>
                             Files
+                        </Button>
+                        <Button variant="contained" startIcon={<UploadIcon />}
+                            onClick={() => { setUploadModalOpen(true); setUploadStatus(''); setUploadProgress(0); }}
+                            sx={{
+                                mr: 0.5, background: 'linear-gradient(135deg, #10B981, #059669)',
+                                fontSize: '13px', px: 2.5, py: 0.8,
+                                '&:hover': { boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }
+                            }}>
+                            Upload
                         </Button>
                         <Button variant="contained" startIcon={<AIIcon />}
                             onClick={() => navigate('/ai-assistant')}
@@ -505,6 +571,63 @@ const Home = () => {
                     © Synchro 2017 – 2026 | IHA Knowledge Base Platform
                 </Typography>
             </Box>
+
+            {/* Bulk Upload Modal */}
+            <Dialog open={uploadModalOpen} onClose={() => !uploadingFiles && setUploadModalOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Upload & Process</DialogTitle>
+                <DialogContent>
+                    <Typography sx={{ color: '#64748B', mb: 3, fontSize: '14px' }}>
+                        Pilih satu atau lebih dokumen (PDF, Gambar) untuk diekstrak dan disimpan langsung ke Knowledge Base.
+                    </Typography>
+
+                    <Box sx={{
+                        border: `2px dashed ${isDragging ? '#6366F1' : '#CBD5E1'}`, 
+                        borderRadius: 2, p: 4, textAlign: 'center',
+                        bgcolor: isDragging ? '#EEF2FF' : '#F8FAFC', 
+                        cursor: uploadingFiles ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': { borderColor: uploadingFiles ? '#CBD5E1' : '#6366F1', bgcolor: uploadingFiles ? '#F8FAFC' : '#EEF2FF' }
+                    }} 
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); !uploadingFiles && setIsDragging(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                    onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDragging(false);
+                        if (!uploadingFiles && e.dataTransfer.files?.length > 0) {
+                            handleBulkUpload({ target: { files: e.dataTransfer.files } });
+                        }
+                    }}
+                    onClick={() => !uploadingFiles && fileInputRef.current?.click()}>
+                        <UploadIcon sx={{ fontSize: 48, color: isDragging ? '#6366F1' : '#94A3B8', mb: 1 }} />
+                        <Typography sx={{ fontWeight: 600, color: '#475569' }}>Klik atau Drag & Drop file di sini</Typography>
+                        <Typography sx={{ fontSize: '12px', color: '#94A3B8' }}>Mendukung multiple file upload</Typography>
+                    </Box>
+                    <input
+                        type="file" multiple ref={fileInputRef} style={{ display: 'none' }}
+                        onChange={handleBulkUpload} accept="image/*,.pdf"
+                    />
+
+                    {uploadingFiles && (
+                        <Box sx={{ mt: 3 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>{uploadStatus}</Typography>
+                                <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>{Math.round(uploadProgress)}%</Typography>
+                            </Box>
+                            <LinearProgress variant="determinate" value={uploadProgress} sx={{ height: 8, borderRadius: 4 }} />
+                        </Box>
+                    )}
+
+                    {!uploadingFiles && uploadStatus && (
+                        <Typography sx={{ mt: 2, fontSize: '13px', color: uploadStatus.includes('kesalahan') ? '#EF4444' : '#10B981', textAlign: 'center', fontWeight: 600 }}>
+                            {uploadStatus}
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setUploadModalOpen(false)} disabled={uploadingFiles} sx={{ color: '#64748B' }}>Tutup</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };
