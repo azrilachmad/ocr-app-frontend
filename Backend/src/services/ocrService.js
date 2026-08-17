@@ -216,14 +216,11 @@ const processDocument = async (filePath, documentType = 'auto', options = {}) =>
             prompt = `Analyze this document image thoroughly. Read the entire document carefully.
 Extract the essence of it, regardless of how many pages or how dense the text is. 
 
-Return the data in STRICT JSON format with exactly FOUR fields:
-{
-    "Category": "A short topic/category label for this document (e.g. Museum & Galeri, Cagar Budaya, Keuangan, Laporan Tahunan, Infrastruktur, Kebudayaan, Pendidikan, Kesehatan, Pariwisata, SDM, Data & Informasi, etc.). Pick the most fitting label based on the document content.",
-    "Report Title": "The exact or inferred title of the document or report.",
-    "Summary": "An extensive, highly detailed multi-paragraph summary covering all key points, statistics, main themes, and conclusions present in the document.",
-    "raw_text": "The ENTIRE, UNEDITED, verbatim raw text extracted from the document from start to finish. Include EVERYTHING. Do not summarize, just transcribe everything you can read."
-}
-Only return the valid JSON object, no additional text. Do not wrap in markdown blocks. Do not add any other fields.`;
+Output your response EXACTLY in this format:
+**Category:** [A short topic/category label (e.g. Museum & Galeri, Cagar Budaya, Keuangan, Pariwisata, SDM, Data & Informasi, dll)]
+**Report Title:** [The exact or inferred title of the document]
+**Summary:** 
+[An extensive, highly detailed multi-paragraph summary covering all key points, statistics, main themes, and conclusions]`;
         } else {
             prompt = getPromptForDocumentType(documentType, availableTemplates);
         }
@@ -254,34 +251,36 @@ Only return the valid JSON object, no additional text. Do not wrap in markdown b
         const response = await result.response;
         const text = response.text();
 
-        // Parse the JSON response
-        let extractedData;
-        try {
-            // Try to extract JSON from the response
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                extractedData = JSON.parse(jsonMatch[0]);
-
-                // If insight mode, enforce the three requested fields
-                if (mode === 'insight') {
-                    extractedData = {
-                        "Category": extractedData["Category"] || "Lainnya",
-                        "Report Title": extractedData["Report Title"] || "Unknown Document",
-                        "Summary": extractedData["Summary"] || extractedData.Ringkasan_Dokumen || Object.values(extractedData).join('\n\n')
-                    };
-                }
-            } else {
-                throw new Error('No JSON found in response');
-            }
-        } catch (parseError) {
-            console.error('JSON parse error:', parseError);
-            // Return raw text if JSON parsing fails
-            if (mode === 'insight') {
+        let extractedData = {};
+        
+        if (mode === 'insight') {
+            try {
+                const catMatch = text.match(/\*\*Category:\*\*\s*(.*)/i);
+                const titleMatch = text.match(/\*\*Report Title:\*\*\s*(.*)/i);
+                const summaryMatch = text.match(/\*\*Summary:\*\*\s*([\s\S]*)/i);
+                
+                extractedData = {
+                    "Category": catMatch ? catMatch[1].trim() : "Lainnya",
+                    "Report Title": titleMatch ? titleMatch[1].trim() : "Unknown Document",
+                    "Summary": summaryMatch ? summaryMatch[1].trim() : text.trim()
+                };
+            } catch (err) {
                 extractedData = {
                     "Report Title": "Unknown Document",
                     "Summary": text.trim()
                 };
-            } else {
+            }
+        } else {
+            try {
+                // Try to extract JSON from the response
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    extractedData = JSON.parse(jsonMatch[0]);
+                } else {
+                    throw new Error('No JSON found in response');
+                }
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
                 extractedData = { raw_text: text };
             }
         }
