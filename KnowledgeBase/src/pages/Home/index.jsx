@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
     Box, Typography, TextField, Button, Paper, InputAdornment,
     Avatar, IconButton, Menu, MenuItem, Chip, CircularProgress,
-    Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress
+    Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress,
+    Checkbox, FormControlLabel
 } from '@mui/material';
 import {
     Search as SearchIcon, SmartToy as AIIcon, AutoStories as ArticleIcon,
@@ -54,6 +55,8 @@ const Home = () => {
     const debounceRef = useRef(null);
     const searchBoxRef = useRef(null);
 
+    const [allowDuplicate, setAllowDuplicate] = useState(false);
+
     useEffect(() => {
         Promise.all([
             getCategories().then(res => setCategories(res.data?.data || [])).catch(console.error),
@@ -101,7 +104,7 @@ const Home = () => {
                 try {
                     const formData = new FormData();
                     formData.append('documentFiles', file);
-                    formData.append('options', JSON.stringify({ documentType: 'auto', mode: 'insight' }));
+                    formData.append('options', JSON.stringify({ documentType: 'auto', mode: 'insight', skipDuplicateCheck: allowDuplicate }));
 
                     const uploadRes = await processOCR(formData);
                     const newDoc = uploadRes.data?.data;
@@ -614,9 +617,15 @@ const Home = () => {
             <Dialog open={uploadModalOpen} onClose={() => !uploadingFiles && setUploadModalOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Upload & Process</DialogTitle>
                 <DialogContent>
-                    <Typography sx={{ color: '#64748B', mb: 3, fontSize: '14px' }}>
+                    <Typography sx={{ color: '#64748B', mb: 2, fontSize: '14px' }}>
                         Pilih satu atau lebih dokumen (PDF, Gambar) untuk diekstrak dan disimpan langsung ke Knowledge Base.
                     </Typography>
+
+                    <FormControlLabel
+                        control={<Checkbox checked={allowDuplicate} onChange={(e) => setAllowDuplicate(e.target.checked)} disabled={uploadingFiles} sx={{ color: '#6366F1', '&.Mui-checked': { color: '#4F46E5' } }} />}
+                        label={<Typography sx={{ fontSize: '13px', color: '#475569' }}>Izinkan Duplikasi Dokumen (Abaikan pengecekan file yang sama)</Typography>}
+                        sx={{ mb: 3 }}
+                    />
 
                     <Box sx={{
                         border: `2px dashed ${isDragging ? '#6366F1' : '#CBD5E1'}`, 
