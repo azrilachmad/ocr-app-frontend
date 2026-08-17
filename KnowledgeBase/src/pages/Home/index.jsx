@@ -13,9 +13,10 @@ import {
     Assessment as ReportIcon, Lightbulb as InsightIcon,
     PictureAsPdf as PdfIcon, Close as CloseIcon,
     Category as CatIcon, Update as UpdateIcon,
-    ArrowForward as ArrowIcon, CloudUpload as UploadIcon
+    ArrowForward as ArrowIcon, CloudUpload as UploadIcon,
+    Delete as DeleteIcon
 } from '@mui/icons-material';
-import { logout, getCategories, searchKB, getKBStats, getPopularArticles, processOCR, saveDocument } from '../../services/api';
+import { logout, getCategories, searchKB, getKBStats, getPopularArticles, processOCR, saveDocument, deleteDocument } from '../../services/api';
 import { useAuth } from '../../App';
 
 const ICON_MAP = {
@@ -174,6 +175,20 @@ const Home = () => {
             const res = await searchKB(searchQuery);
             setSearchResults(res.data?.data || null);
         } catch (err) { console.error(err); } finally { setSearching(false); }
+    };
+    const handleDelete = async (e, fileId, fileName) => {
+        e.stopPropagation();
+        if (window.confirm(`Apakah Anda yakin ingin menghapus dokumen "${fileName}"? File fisik dan datanya akan dihapus permanen.`)) {
+            try {
+                await deleteDocument(fileId);
+                // Refresh data
+                getPopularArticles().then(res => setPopularDocs(res.data?.data || [])).catch(console.error);
+                refreshStats();
+            } catch (error) {
+                console.error("Failed to delete document:", error);
+                alert("Gagal menghapus dokumen: " + (error.response?.data?.message || error.message));
+            }
+        }
     };
 
     return (
@@ -515,8 +530,8 @@ const Home = () => {
                                 sx={{
                                     p: 2.5, borderRadius: 2, border: '1px solid #E2E8F0', cursor: 'pointer',
                                     display: 'flex', alignItems: 'center', gap: 2,
-                                    transition: 'all 0.2s', overflow: 'hidden',
-                                    '&:hover': { borderColor: '#6366F1', transform: 'translateX(4px)', boxShadow: '0 4px 12px rgba(99,102,241,0.08)' }
+                                    transition: 'all 0.2s', overflow: 'hidden', position: 'relative',
+                                    '&:hover': { borderColor: '#6366F1', transform: 'translateX(4px)', boxShadow: '0 4px 12px rgba(99,102,241,0.08)', '& .delete-btn': { opacity: 1 } }
                                 }}>
                                 <Box sx={{
                                     width: 40, height: 40, borderRadius: 2, flexShrink: 0,
@@ -539,6 +554,16 @@ const Home = () => {
                                         {doc.documentType} • {doc.fileSize || 'N/A'} • {new Date(doc.scannedAt).toLocaleDateString('id-ID')}{doc.user?.name ? ` • oleh ${doc.user.name}` : ''}
                                     </Typography>
                                 </Box>
+                                {['admin', 'superadmin'].includes(user?.role) && (
+                                    <IconButton
+                                        className="delete-btn"
+                                        size="small"
+                                        sx={{ color: '#EF4444', opacity: 0, transition: 'opacity 0.2s', bgcolor: 'rgba(254,226,226,0.5)', '&:hover': { bgcolor: '#FEE2E2' }, flexShrink: 0 }}
+                                        onClick={(e) => handleDelete(e, doc.id, doc.fileName)}
+                                    >
+                                        <DeleteIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                )}
                                 <Button size="small" sx={{ fontSize: '12px', color: '#6366F1', flexShrink: 0, minWidth: 'auto', whiteSpace: 'nowrap' }}>
                                     Lihat <ArrowIcon sx={{ fontSize: 14, ml: 0.3 }} />
                                 </Button>

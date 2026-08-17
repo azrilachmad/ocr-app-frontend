@@ -49,5 +49,6 @@ export const deleteChatSession = (sessionId) => api.delete(`/chat/sessions/${ses
 // OCR & Document Saving for Direct KB Uploads
 export const processOCR = (formData) => api.post('/ocr/process', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 export const saveDocument = (id) => api.post(`/documents/${id}/save`, {});
+export const deleteDocument = (id) => api.delete(`/documents/${id}`);
 
 export default api;
