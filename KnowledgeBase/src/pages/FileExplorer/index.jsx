@@ -9,10 +9,11 @@ import {
     ArrowBack, Search as SearchIcon, GridView, ViewList,
     PictureAsPdf, TableChart, Description as DocIcon,
     Download as DownloadIcon, Folder as FolderIcon,
-    InsertDriveFile as FileIcon, Person as PersonIcon
+    InsertDriveFile as FileIcon, Person as PersonIcon,
+    Delete as DeleteIcon
 } from '@mui/icons-material';
-import { getFiles, getCategories } from '../../services/api';
-
+import { getFiles, getCategories, deleteDocument } from '../../services/api';
+import { useAuth } from '../../App';
 const FILE_ICONS = {
     pdf: <PictureAsPdf sx={{ fontSize: 32, color: '#EF4444' }} />,
     xlsx: <TableChart sx={{ fontSize: 32, color: '#10B981' }} />,
@@ -32,7 +33,11 @@ const FileExplorer = () => {
     const [filterType, setFilterType] = useState('');
     const [filterCategory, setFilterCategory] = useState('');
 
-    useEffect(() => {
+    const { user } = useAuth();
+    const isPrivileged = ['admin', 'superadmin'].includes(user?.role);
+
+    const fetchFilesData = () => {
+        setLoading(true);
         Promise.all([
             getFiles({ search: searchQuery || undefined, documentType: filterCategory || undefined }),
             getCategories()
@@ -43,7 +48,24 @@ const FileExplorer = () => {
             })
             .catch(console.error)
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchFilesData();
     }, [searchQuery, filterType, filterCategory]);
+
+    const handleDelete = async (e, fileId, fileName) => {
+        e.stopPropagation();
+        if (window.confirm(`Apakah Anda yakin ingin menghapus dokumen "${fileName}"? File fisik dan datanya akan dihapus permanen.`)) {
+            try {
+                await deleteDocument(fileId);
+                fetchFilesData(); // Refresh list
+            } catch (error) {
+                console.error("Failed to delete document:", error);
+                alert("Gagal menghapus dokumen: " + (error.response?.data?.message || error.message));
+            }
+        }
+    };
 
     const handleViewDetail = (fileId) => {
         navigate(`/articles/doc-${fileId}`);
@@ -124,8 +146,8 @@ const FileExplorer = () => {
                         {files.map(file => (
                             <Paper key={file.id} elevation={0} sx={{
                                 p: 3, borderRadius: 2, border: '1px solid #E2E8F0', textAlign: 'center',
-                                cursor: 'pointer', transition: 'all 0.2s', minWidth: 0, overflow: 'hidden',
-                                '&:hover': { borderColor: '#6366F1', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', transform: 'translateY(-2px)' }
+                                cursor: 'pointer', transition: 'all 0.2s', minWidth: 0, overflow: 'hidden', position: 'relative',
+                                '&:hover': { borderColor: '#6366F1', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', transform: 'translateY(-2px)', '& .delete-btn': { opacity: 1 } }
                             }}
                                 onClick={() => handleViewDetail(file.id)}
                             >
@@ -145,6 +167,16 @@ const FileExplorer = () => {
                                     <Typography sx={{ fontSize: '10px', color: '#B0B8C4', mt: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.3 }}>
                                         <PersonIcon sx={{ fontSize: 12 }} /> {file.uploadedBy}
                                     </Typography>
+                                )}
+                                {isPrivileged && (
+                                    <IconButton
+                                        className="delete-btn"
+                                        size="small"
+                                        sx={{ position: 'absolute', top: 8, right: 8, color: '#EF4444', opacity: 0, transition: 'opacity 0.2s', bgcolor: 'rgba(254,226,226,0.5)', '&:hover': { bgcolor: '#FEE2E2' } }}
+                                        onClick={(e) => handleDelete(e, file.id, file.fileName)}
+                                    >
+                                        <DeleteIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
                                 )}
                             </Paper>
                         ))}
@@ -182,6 +214,11 @@ const FileExplorer = () => {
                                     <Tooltip title={`Diproses oleh ${file.uploadedBy}`} arrow>
                                         <Chip icon={<PersonIcon sx={{ fontSize: 14 }} />} label={file.uploadedBy} size="small" variant="outlined" sx={{ fontSize: '11px', height: 22, borderColor: '#E2E8F0' }} />
                                     </Tooltip>
+                                )}
+                                {isPrivileged && (
+                                    <IconButton size="small" sx={{ color: '#EF4444' }} onClick={(e) => handleDelete(e, file.id, file.fileName)}>
+                                        <DeleteIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
                                 )}
                                 <IconButton size="small" sx={{ color: '#6366F1' }}>
                                     <DownloadIcon sx={{ fontSize: 18 }} />
