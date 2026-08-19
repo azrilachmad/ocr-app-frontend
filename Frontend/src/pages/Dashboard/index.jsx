@@ -551,11 +551,22 @@ const Dashboard = () => {
                     </Box>
 
                     {/* Legend */}
-                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    <Box sx={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: '1fr 1fr', 
+                      gap: 2, 
+                      maxHeight: 220, 
+                      overflowY: 'auto',
+                      pr: 1,
+                      '&::-webkit-scrollbar': { width: '4px' },
+                      '&::-webkit-scrollbar-thumb': { bgcolor: '#CBD5E1', borderRadius: '4px' }
+                    }}>
                       {typeData.map((item, index) => (
                         <Box key={item.type} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: typeColors[index % typeColors.length] }} />
-                          <Typography sx={{ fontSize: '13px', color: '#374151' }}>{item.type}</Typography>
+                          <Box sx={{ minWidth: 10, width: 10, height: 10, borderRadius: '50%', bgcolor: typeColors[index % typeColors.length] }} />
+                          <Typography sx={{ fontSize: '13px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.type}>
+                            {item.type}
+                          </Typography>
                           <Typography sx={{ fontSize: '13px', color: '#6B7280', ml: 'auto' }}>{item.percentage}%</Typography>
                         </Box>
                       ))}
