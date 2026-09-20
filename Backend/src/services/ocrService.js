@@ -113,13 +113,44 @@ Return the data in JSON format with these exact fields:
     "total": "Grand total",
     "metode_pembayaran": "Payment method"
 }
+Only return the JSON object, no additional text.`,
+
+        'Prasasti / Artifact': `You are an expert epigrapher and ancient inscription analyst. Analyze this image of an ancient stone inscription (prasasti), artifact, or historical relic from a museum collection.
+
+The inscription may be carved or engraved on stone, metal, clay, or other materials. The script may be Old Javanese (Kawi), Sanskrit (Devanagari or South Indian derivatives such as Pallava/Grantha), Old Balinese, Old Sundanese, Old Malay, or other ancient Southeast Asian scripts.
+
+Follow these steps carefully:
+
+1. **Raw OCR / Artifact Text**: Examine the surface closely. Identify and transcribe every visible character, symbol, or glyph exactly as carved — preserving the original script representation as faithfully as possible. If characters are damaged, eroded, or partially illegible, indicate uncertain readings with square brackets [?] and note gaps with [...]. Organize the text line by line as it appears on the artifact.
+
+2. **Original Latin Text**: Transliterate the entire inscription into the Latin alphabet following standard epigraphic transliteration conventions. Use diacritical marks where appropriate (e.g., ā, ī, ū, ṣ, ṇ, ṅ, ñ). Preserve word boundaries and line breaks. If a section is unreadable, mark it as [illegible] or [damaged].
+
+3. **Translated Text (Indonesian)**: Translate the full transliterated text into modern Indonesian (Bahasa Indonesia). Maintain the meaning and context as closely as possible. For technical or religious terms that have no direct modern equivalent, keep the original term and provide a brief explanation in parentheses.
+
+4. **Summary Image / Artifact**: Provide a comprehensive structured summary covering:
+   - Type of artifact (prasasti, inscription, relief, tablet, etc.)
+   - Estimated historical period or century (e.g., 9th century Mataram Kingdom)
+   - Script type identified (e.g., Kawi, Pallava, Sanskrit)
+   - Language of the original text (e.g., Old Javanese, Sanskrit, bilingual)
+   - Material and physical condition (e.g., andesite stone, partially eroded)
+   - Key content themes (e.g., royal decree, land grant, religious dedication, boundary marker)
+   - Historical significance and notable mentions (kings, places, dates in Saka calendar)
+   - Any notable artistic or decorative elements visible on the artifact
+
+Return the data in JSON format with these exact fields:
+{
+    "Raw OCR / Artifact Text": "Full transcription of visible characters in original script representation, organized line by line",
+    "Original Latin Text": "Complete Latin transliteration with diacritical marks",
+    "Translated Text (Indonesian)": "Full modern Indonesian translation",
+    "Summary Image / Artifact": "Comprehensive structured summary of the artifact"
+}
 Only return the JSON object, no additional text.`
     };
 
     // Build auto-detect prompt with available templates
     if (documentType === 'auto' || !prompts[documentType]) {
         // Get list of known templates (built-in + custom from settings)
-        const builtInTypes = ['KTP', 'KK', 'STNK', 'BPKB', 'Invoice'];
+        const builtInTypes = ['KTP', 'KK', 'STNK', 'BPKB', 'Invoice', 'Prasasti / Artifact'];
         const customTypes = availableTemplates
             .filter(t => t.active && !builtInTypes.includes(t.name))
             .map(t => t.name);
@@ -148,8 +179,9 @@ ${allAvailableTypes.map(t => `- ${t}`).join('\n')}${customTemplateInfo}
 Instructions:
 1. Identify the document type - try to match with one of the available types above
 2. If it matches a known type (KTP, KK, STNK, BPKB, Invoice), extract fields according to that template
-3. If it matches a custom type, extract the specified fields
-4. If no match, classify as "Other" and extract ONLY the document title and a highly detailed summary. Do not extract random scattered visible data.
+3. If the image shows an ancient stone inscription, carved text on stone/metal, or museum artifact with engraved script, classify it as "Prasasti / Artifact" and extract: Raw OCR / Artifact Text (original script transcription), Original Latin Text (transliteration), Translated Text (Indonesian) (translation), Summary Image / Artifact (structured summary with era, script type, material, content themes)
+4. If it matches a custom type, extract the specified fields
+5. If no match, classify as "Other" and extract ONLY the document title and a highly detailed summary. Do not extract random scattered visible data.
 
 Return the data in STRICT JSON format:
 {
