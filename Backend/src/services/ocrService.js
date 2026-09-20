@@ -115,34 +115,22 @@ Return the data in JSON format with these exact fields:
 }
 Only return the JSON object, no additional text.`,
 
-        'Prasasti / Artifact': `You are an expert epigrapher and ancient inscription analyst. Analyze this image of an ancient stone inscription (prasasti), artifact, or historical relic from a museum collection.
+        'Prasasti / Artifact': `Act as a strict OCR data extraction engine for ancient inscriptions. Analyze this image of an ancient stone inscription (prasasti) or artifact.
 
-The inscription may be carved or engraved on stone, metal, clay, or other materials. The script may be Old Javanese (Kawi), Sanskrit (Devanagari or South Indian derivatives such as Pallava/Grantha), Old Balinese, Old Sundanese, Old Malay, or other ancient Southeast Asian scripts.
+CRITICAL RULES - YOU MUST OBEY:
+1. NEVER output conversational text, explanations, apologies, or meta-commentary (e.g. "I cannot read this", "This appears to be...", "Due to erosion...").
+2. "Raw OCR / Artifact Text" MUST contain ONLY the ancient script characters (Kawi, Sanskrit, etc.) exactly as seen on the stone. DO NOT write Latin descriptions here. If you can only identify a few characters, output those characters and use [...] for the rest.
+3. "Original Latin Text" MUST contain ONLY the Latin transliteration of the lines. DO NOT add explanations.
+4. "Translated Text (Indonesian)" MUST contain ONLY the translation.
+5. "Summary Image / Artifact" MUST be a plain text paragraph of exactly 2-3 sentences. DO NOT use bullet points and DO NOT output JSON formatting inside this field.
+6. The number of text lines in Raw, Latin, and Translated fields MUST MATCH the physical lines visible on the stone.
 
-Follow these steps carefully:
-
-1. **Raw OCR / Artifact Text**: Examine the surface closely. Identify and transcribe every visible character, symbol, or glyph exactly as carved — preserving the original script representation as faithfully as possible. If characters are damaged, eroded, or partially illegible, indicate uncertain readings with square brackets [?] and note gaps with [...]. Organize the text line by line as it appears on the artifact.
-
-2. **Original Latin Text**: Transliterate the entire inscription into the Latin alphabet following standard epigraphic transliteration conventions. Use diacritical marks where appropriate (e.g., ā, ī, ū, ṣ, ṇ, ṅ, ñ). Preserve word boundaries and line breaks. If a section is unreadable, mark it as [illegible] or [damaged].
-
-3. **Translated Text (Indonesian)**: Translate the full transliterated text into modern Indonesian (Bahasa Indonesia). Maintain the meaning and context as closely as possible. For technical or religious terms that have no direct modern equivalent, keep the original term and provide a brief explanation in parentheses.
-
-4. **Summary Image / Artifact**: Provide a comprehensive structured summary covering:
-   - Type of artifact (prasasti, inscription, relief, tablet, etc.)
-   - Estimated historical period or century (e.g., 9th century Mataram Kingdom)
-   - Script type identified (e.g., Kawi, Pallava, Sanskrit)
-   - Language of the original text (e.g., Old Javanese, Sanskrit, bilingual)
-   - Material and physical condition (e.g., andesite stone, partially eroded)
-   - Key content themes (e.g., royal decree, land grant, religious dedication, boundary marker)
-   - Historical significance and notable mentions (kings, places, dates in Saka calendar)
-   - Any notable artistic or decorative elements visible on the artifact
-
-Return the data in JSON format with these exact fields:
+Return the data in STRICT JSON format with exactly these string fields:
 {
-    "Raw OCR / Artifact Text": "Full transcription of visible characters in original script representation, organized line by line",
-    "Original Latin Text": "Complete Latin transliteration with diacritical marks",
-    "Translated Text (Indonesian)": "Full modern Indonesian translation",
-    "Summary Image / Artifact": "Comprehensive structured summary of the artifact"
+    "Raw OCR / Artifact Text": "[Ancient characters only, separated by newlines]",
+    "Original Latin Text": "[Latin transliteration only, separated by newlines]",
+    "Translated Text (Indonesian)": "[Indonesian translation only, separated by newlines]",
+    "Summary Image / Artifact": "[Plain text 2-3 sentence summary. No JSON, no bullets.]"
 }
 Only return the JSON object, no additional text.`
     };
