@@ -119,18 +119,19 @@ Only return the JSON object, no additional text.`,
 
 CRITICAL RULES - YOU MUST OBEY:
 1. NEVER output conversational text, explanations, apologies, or meta-commentary (e.g. "I cannot read this", "This appears to be...", "Due to erosion...").
-2. "Raw OCR / Artifact Text" MUST contain ONLY the ancient script characters (Kawi, Sanskrit, etc.) exactly as seen on the stone. DO NOT write Latin descriptions here. If you can only identify a few characters, output those characters and use [...] for the rest.
-3. "Original Latin Text" MUST contain ONLY the Latin transliteration of the lines. DO NOT add explanations.
-4. "Translated Text (Indonesian)" MUST contain ONLY the translation.
-5. "Summary Image / Artifact" MUST be a plain text paragraph of exactly 2-3 sentences. DO NOT use bullet points and DO NOT output JSON formatting inside this field.
-6. The number of text lines in Raw, Latin, and Translated fields MUST MATCH the physical lines visible on the stone.
+2. YOU MUST ATTEMPT TRANSCRIPTION. Do not be lazy. If characters are clearly visible, you MUST transcribe them. ONLY use [...] for sections that are physically destroyed, eroded, or completely illegible. DO NOT return lines consisting entirely of [...] if there is visible text.
+3. "Raw OCR / Artifact Text" MUST contain the ancient script characters (Kawi, Sanskrit, etc.) exactly as seen on the stone. DO NOT write Latin descriptions here.
+4. "Original Latin Text" MUST contain the Latin transliteration of the lines.
+5. "Translated Text (Indonesian)" MUST contain the translation. If exact translation is unknown, provide your best approximation.
+6. "Summary Image / Artifact" MUST be a plain text paragraph of exactly 2-3 sentences summarizing the artifact type, era, and contents. No JSON, no bullets.
+7. The number of text lines in Raw, Latin, and Translated fields MUST MATCH the physical lines visible on the stone.
 
 Return the data in STRICT JSON format with exactly these string fields:
 {
     "Raw OCR / Artifact Text": "[Ancient characters only, separated by newlines]",
     "Original Latin Text": "[Latin transliteration only, separated by newlines]",
     "Translated Text (Indonesian)": "[Indonesian translation only, separated by newlines]",
-    "Summary Image / Artifact": "[Plain text 2-3 sentence summary. No JSON, no bullets.]"
+    "Summary Image / Artifact": "[Plain text 2-3 sentence summary]"
 }
 Only return the JSON object, no additional text.`
     };
