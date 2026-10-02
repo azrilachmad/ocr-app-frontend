@@ -110,7 +110,7 @@ router.get('/categories', authenticate, async (req, res, next) => {
         const categories = results.map((row, idx) => ({
             id: idx + 1,
             name: row.documentType || 'Lainnya',
-            slug: (row.documentType || 'lainnya').toLowerCase().replace(/\s+/g, '-'),
+            slug: (row.documentType || 'lainnya').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
             description: `Dokumen tipe ${row.documentType || 'Lainnya'} yang sudah di-scan`,
             icon: ICON_MAP[row.documentType] || 'Article',
             color: COLOR_MAP[row.documentType] || '#6366F1',
@@ -132,22 +132,39 @@ router.get('/categories', authenticate, async (req, res, next) => {
 router.get('/categories/:slug/articles', authenticate, async (req, res, next) => {
     try {
         const slug = req.params.slug;
-        // Convert slug back to document type name
-        const documentType = slug.replace(/-/g, ' ');
+        
+        // Find exact document type matching this slug
+        const typeRows = await Document.findAll({
+            where: { status: { [Op.in]: ['saved', 'verified'] } },
+            attributes: ['documentType'],
+            group: ['documentType'],
+            raw: true
+        });
+        
+        const matchedType = typeRows.find(row => {
+            const rowSlug = (row.documentType || 'lainnya').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            return rowSlug === slug;
+        });
+
+        if (!matchedType) {
+            return res.status(404).json({ success: false, message: 'Category not found' });
+        }
+
+        const exactDocumentType = matchedType.documentType;
 
         const documents = await Document.findAll({
             where: {
                 status: { [Op.in]: ['saved', 'verified'] },
-                documentType: { [Op.like]: `%${documentType}%` }
+                documentType: exactDocumentType
             },
             order: [['scannedAt', 'DESC']]
         });
 
         // Wrap in category-like structure for frontend compatibility
         const category = {
-            name: documents[0]?.documentType || slug,
+            name: exactDocumentType,
             slug: slug,
-            description: `Dokumen tipe ${documents[0]?.documentType || slug}`,
+            description: `Dokumen tipe ${exactDocumentType}`,
             articles: documents.map(doc => ({
                 id: doc.id,
                 title: doc.fileName,
