@@ -30,6 +30,17 @@ const DocumentType = sequelize.define('DocumentType', {
         defaultValue: []
         // Format: [{ name: 'NIK', required: true }, ...]
     },
+    extractionMode: {
+        type: DataTypes.ENUM('field_only', 'document_rules', 'hybrid'),
+        defaultValue: 'field_only',
+        field: 'extraction_mode',
+        comment: 'Controls how AI reads and extracts document data'
+    },
+    instructions: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Custom AI rules/instructions for document reading'
+    },
     active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true

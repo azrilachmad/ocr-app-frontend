@@ -136,6 +136,14 @@ Return the data in STRICT JSON format with exactly these string fields:
 Only return the JSON object, no additional text.`
     };
 
+    // Check if it's a custom template (not built-in and not auto)
+    if (documentType !== 'auto' && !prompts[documentType]) {
+        const matchedTemplate = availableTemplates.find(t => t.name === documentType && t.active);
+        if (matchedTemplate) {
+            return buildCustomTemplatePrompt(matchedTemplate);
+        }
+    }
+
     // Build auto-detect prompt with available templates
     if (documentType === 'auto' || !prompts[documentType]) {
         // Get list of known templates (built-in + custom from settings)
@@ -187,6 +195,62 @@ Only return the JSON object, no additional text.`;
     }
 
     return prompts[documentType];
+};
+
+/**
+ * Build a prompt for a custom document type based on its extraction mode
+ * @param {object} template - The document type template with fields, extractionMode, instructions
+ * @returns {string} - The constructed prompt
+ */
+const buildCustomTemplatePrompt = (template) => {
+    const { name, fields = [], extractionMode = 'field_only', instructions } = template;
+    const fieldNames = fields.map(f => f.name || f);
+
+    if (extractionMode === 'document_rules' && instructions) {
+        // Mode: Document Rules — AI follows custom instructions, determines output fields itself
+        return `Analyze this document image of type "${name}".
+
+Follow these specific instructions/rules for reading and extracting data:
+
+${instructions}
+
+Based on the instructions above, extract all relevant information from the document.
+Return the data in STRICT JSON format as key-value pairs.
+Only return the JSON object, no additional text.`;
+    }
+
+    if (extractionMode === 'hybrid' && instructions) {
+        // Mode: Hybrid — AI follows custom instructions but outputs into defined fields
+        return `Analyze this document image of type "${name}".
+
+Follow these specific instructions/rules for reading the document:
+
+${instructions}
+
+Extract the data into the following specific fields:
+${fieldNames.map(f => `- "${f}"`).join('\n')}
+
+Return the data in STRICT JSON format with these exact fields:
+{
+${fieldNames.map(f => `    "${f}": "extracted value"`).join(',\n')}
+}
+Only return the JSON object, no additional text.`;
+    }
+
+    // Mode: Field Only (default) — extract based on defined fields
+    if (fieldNames.length > 0) {
+        return `Analyze this "${name}" document image and extract all visible information.
+Return the data in JSON format with these exact fields:
+{
+${fieldNames.map(f => `    "${f}": "extracted value"`).join(',\n')}
+}
+Only return the JSON object, no additional text.`;
+    }
+
+    // Fallback: no fields defined
+    return `Analyze this "${name}" document image and extract all visible information.
+Return the data as a JSON object with appropriate field names.
+Only return the JSON object, no additional text.`;
 };
 
 

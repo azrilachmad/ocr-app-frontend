@@ -124,7 +124,7 @@ const getAllDocumentTypes = async (req, res, next) => {
  */
 const createDocumentType = async (req, res, next) => {
     try {
-        const { name, description, fields, active } = req.body;
+        const { name, description, fields, active, extractionMode, instructions } = req.body;
 
         if (!name) {
             return res.status(400).json({
@@ -138,7 +138,9 @@ const createDocumentType = async (req, res, next) => {
             name,
             description,
             fields: fields || [],
-            active: active !== undefined ? active : true
+            active: active !== undefined ? active : true,
+            extractionMode: extractionMode || 'field_only',
+            instructions: instructions || null
         });
 
         const docJson = documentType.toJSON();
@@ -181,12 +183,14 @@ const updateDocumentType = async (req, res, next) => {
             });
         }
 
-        const { name, description, fields, active } = req.body;
+        const { name, description, fields, active, extractionMode, instructions } = req.body;
 
         if (name !== undefined) documentType.name = name;
         if (description !== undefined) documentType.description = description;
         if (fields !== undefined) documentType.fields = Array.isArray(fields) ? JSON.stringify(fields) : fields;
         if (active !== undefined) documentType.active = active;
+        if (extractionMode !== undefined) documentType.extractionMode = extractionMode;
+        if (instructions !== undefined) documentType.instructions = instructions;
 
         await documentType.save();
 

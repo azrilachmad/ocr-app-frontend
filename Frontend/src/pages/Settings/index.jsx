@@ -18,7 +18,11 @@ import {
     Checkbox,
     Chip,
     CircularProgress,
-    Divider
+    Divider,
+    Radio,
+    RadioGroup,
+    FormControlLabel,
+    FormControl
 } from '@mui/material';
 import {
     Psychology as AiIcon,
@@ -27,7 +31,10 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     ExpandMore as ExpandMoreIcon,
-    ExpandLess as ExpandLessIcon
+    ExpandLess as ExpandLessIcon,
+    Rule as RuleIcon,
+    ViewList as FieldIcon,
+    MergeType as HybridIcon
 } from '@mui/icons-material';
 import {
     getDocumentTypes,
@@ -98,7 +105,7 @@ const SettingsPage = () => {
     const [expandedDocTypes, setExpandedDocTypes] = useState({});
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingDocType, setEditingDocType] = useState(null);
-    const [newDocType, setNewDocType] = useState({ name: '', description: '', fields: [] });
+    const [newDocType, setNewDocType] = useState({ name: '', description: '', fields: [], extractionMode: 'field_only', instructions: '' });
     const [newFieldName, setNewFieldName] = useState('');
     const [newFieldRequired, setNewFieldRequired] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -153,10 +160,16 @@ const SettingsPage = () => {
     const handleOpenDialog = (docType = null) => {
         if (docType) {
             setEditingDocType(docType);
-            setNewDocType({ name: docType.name, description: docType.description, fields: [...docType.fields] });
+            setNewDocType({
+                name: docType.name,
+                description: docType.description,
+                fields: [...(docType.fields || [])],
+                extractionMode: docType.extractionMode || 'field_only',
+                instructions: docType.instructions || ''
+            });
         } else {
             setEditingDocType(null);
-            setNewDocType({ name: '', description: '', fields: [] });
+            setNewDocType({ name: '', description: '', fields: [], extractionMode: 'field_only', instructions: '' });
         }
         setDialogOpen(true);
     };
@@ -164,7 +177,7 @@ const SettingsPage = () => {
     const handleCloseDialog = () => {
         setDialogOpen(false);
         setEditingDocType(null);
-        setNewDocType({ name: '', description: '', fields: [] });
+        setNewDocType({ name: '', description: '', fields: [], extractionMode: 'field_only', instructions: '' });
         setNewFieldName('');
         setNewFieldRequired(false);
     };
@@ -199,7 +212,9 @@ const SettingsPage = () => {
                 const updated = await updateDocTypeApi(editingDocType.id, {
                     name: newDocType.name,
                     description: newDocType.description,
-                    fields: newDocType.fields
+                    fields: newDocType.fields,
+                    extractionMode: newDocType.extractionMode,
+                    instructions: newDocType.instructions || null
                 });
                 setDocumentTypes(prev => prev.map(dt =>
                     dt.id === editingDocType.id ? { ...updated, fields: typeof updated.fields === 'string' ? JSON.parse(updated.fields) : updated.fields } : dt
@@ -210,7 +225,9 @@ const SettingsPage = () => {
                     name: newDocType.name,
                     description: newDocType.description,
                     fields: newDocType.fields,
-                    active: true
+                    active: true,
+                    extractionMode: newDocType.extractionMode,
+                    instructions: newDocType.instructions || null
                 });
                 setDocumentTypes(prev => [...prev, { ...created, fields: typeof created.fields === 'string' ? JSON.parse(created.fields) : created.fields }]);
                 setSnackbar({ open: true, message: 'Document type created successfully!', severity: 'success' });
@@ -361,7 +378,8 @@ const SettingsPage = () => {
                                                         {docType.name}
                                                     </Typography>
                                                     <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>
-                                                        {docType.description} - {docType.fields?.length || 0} fields configured
+                                                        {docType.description}{docType.description ? ' - ' : ''}
+                                                        {docType.extractionMode === 'document_rules' ? 'Document Rules' : docType.extractionMode === 'hybrid' ? 'Hybrid' : `${docType.fields?.length || 0} fields configured`}
                                                     </Typography>
                                                 </Box>
                                             </Box>
@@ -394,34 +412,61 @@ const SettingsPage = () => {
                                                 borderRadius: '0 0 8px 8px',
                                                 bgcolor: 'white'
                                             }}>
-                                                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-                                                    {(docType.fields || []).map((field, index) => (
-                                                        <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <Checkbox
-                                                                checked
-                                                                size="small"
-                                                                sx={{
-                                                                    color: '#6366F1',
-                                                                    '&.Mui-checked': { color: '#6366F1' }
-                                                                }}
-                                                            />
-                                                            <Typography sx={{ fontSize: '14px', color: '#374151' }}>
-                                                                {field.name}
-                                                            </Typography>
-                                                            <Chip
-                                                                label={field.required ? 'Required' : 'Optional'}
-                                                                size="small"
-                                                                sx={{
-                                                                    ml: 'auto',
-                                                                    fontSize: '11px',
-                                                                    height: 22,
-                                                                    bgcolor: field.required ? '#FEE2E2' : '#F3F4F6',
-                                                                    color: field.required ? '#DC2626' : '#6B7280'
-                                                                }}
-                                                            />
-                                                        </Box>
-                                                    ))}
+                                                {/* Extraction Mode Badge */}
+                                                <Box sx={{ mb: 2 }}>
+                                                    <Chip
+                                                        icon={docType.extractionMode === 'document_rules' ? <RuleIcon /> : docType.extractionMode === 'hybrid' ? <HybridIcon /> : <FieldIcon />}
+                                                        label={docType.extractionMode === 'document_rules' ? 'Document Rules' : docType.extractionMode === 'hybrid' ? 'Hybrid (Rules + Fields)' : 'Field Only'}
+                                                        size="small"
+                                                        sx={{
+                                                            bgcolor: docType.extractionMode === 'document_rules' ? '#DBEAFE' : docType.extractionMode === 'hybrid' ? '#FEF3C7' : '#F3F4F6',
+                                                            color: docType.extractionMode === 'document_rules' ? '#2563EB' : docType.extractionMode === 'hybrid' ? '#D97706' : '#6B7280',
+                                                            fontWeight: 500
+                                                        }}
+                                                    />
                                                 </Box>
+
+                                                {/* Instructions Preview */}
+                                                {docType.instructions && (docType.extractionMode === 'document_rules' || docType.extractionMode === 'hybrid') && (
+                                                    <Box sx={{ mb: 2, p: 2, bgcolor: '#F9FAFB', borderRadius: 1, border: '1px solid #E5E7EB' }}>
+                                                        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', mb: 0.5 }}>Instructions / Rules:</Typography>
+                                                        <Typography sx={{ fontSize: '13px', color: '#374151', whiteSpace: 'pre-wrap', maxHeight: 100, overflow: 'auto' }}>
+                                                            {docType.instructions}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+
+                                                {/* Fields */}
+                                                {(docType.extractionMode !== 'document_rules') && (docType.fields || []).length > 0 && (
+                                                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                                                        {(docType.fields || []).map((field, index) => (
+                                                            <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                <Checkbox
+                                                                    checked
+                                                                    size="small"
+                                                                    sx={{
+                                                                        color: '#6366F1',
+                                                                        '&.Mui-checked': { color: '#6366F1' }
+                                                                    }}
+                                                                />
+                                                                <Typography sx={{ fontSize: '14px', color: '#374151' }}>
+                                                                    {field.name}
+                                                                </Typography>
+                                                                <Chip
+                                                                    label={field.required ? 'Required' : 'Optional'}
+                                                                    size="small"
+                                                                    sx={{
+                                                                        ml: 'auto',
+                                                                        fontSize: '11px',
+                                                                        height: 22,
+                                                                        bgcolor: field.required ? '#FEE2E2' : '#F3F4F6',
+                                                                        color: field.required ? '#DC2626' : '#6B7280'
+                                                                    }}
+                                                                />
+                                                            </Box>
+                                                        ))}
+                                                    </Box>
+                                                )}
                                             </Box>
                                         </Collapse>
                                     </Box>
@@ -456,73 +501,158 @@ const SettingsPage = () => {
 
                         <Divider sx={{ mb: 2 }} />
 
-                        <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#111827', mb: 2 }}>
-                            Fields ({newDocType.fields.length})
+                        {/* Extraction Mode Section */}
+                        <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#111827', mb: 1 }}>
+                            Extraction Mode
+                        </Typography>
+                        <Typography sx={{ fontSize: '12px', color: '#6B7280', mb: 1.5 }}>
+                            Choose how AI reads and extracts data from this document type
                         </Typography>
 
-                        {/* Add Field Input */}
-                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                            <TextField
-                                size="small"
-                                placeholder="Field name"
-                                value={newFieldName}
-                                onChange={(e) => setNewFieldName(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleAddField()}
-                                sx={{ flex: 1 }}
-                            />
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Checkbox
-                                    size="small"
-                                    checked={newFieldRequired}
-                                    onChange={(e) => setNewFieldRequired(e.target.checked)}
-                                />
-                                <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>Required</Typography>
-                            </Box>
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                onClick={handleAddField}
-                                sx={{ textTransform: 'none' }}
+                        <FormControl component="fieldset" sx={{ mb: 2, width: '100%' }}>
+                            <RadioGroup
+                                value={newDocType.extractionMode}
+                                onChange={(e) => setNewDocType({ ...newDocType, extractionMode: e.target.value })}
                             >
-                                Add
-                            </Button>
-                        </Box>
-
-                        {/* Fields List */}
-                        <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
-                            {newDocType.fields.map((field, index) => (
-                                <Box
-                                    key={index}
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        p: 1.5,
-                                        bgcolor: '#F9FAFB',
-                                        borderRadius: 1,
-                                        mb: 1
-                                    }}
-                                >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Checkbox checked size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />
-                                        <Typography sx={{ fontSize: '14px' }}>{field.name}</Typography>
-                                        <Chip
-                                            label={field.required ? 'Required' : 'Optional'}
-                                            size="small"
-                                            sx={{
-                                                fontSize: '11px',
-                                                height: 20,
-                                                bgcolor: field.required ? '#FEE2E2' : '#E5E7EB',
-                                                color: field.required ? '#DC2626' : '#6B7280'
-                                            }}
-                                        />
-                                    </Box>
-                                    <IconButton size="small" onClick={() => handleRemoveField(index)}>
-                                        <DeleteIcon fontSize="small" sx={{ color: '#DC2626' }} />
-                                    </IconButton>
+                                <Box sx={{ p: 1.5, mb: 1, border: '1px solid', borderColor: newDocType.extractionMode === 'field_only' ? '#6366F1' : '#E5E7EB', borderRadius: 1.5, bgcolor: newDocType.extractionMode === 'field_only' ? '#EEF2FF' : 'transparent' }}>
+                                    <FormControlLabel
+                                        value="field_only"
+                                        control={<Radio size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />}
+                                        label={
+                                            <Box>
+                                                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>Field Only</Typography>
+                                                <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Reads based on defined fields. Output matches the fields you set.</Typography>
+                                            </Box>
+                                        }
+                                        sx={{ m: 0 }}
+                                    />
                                 </Box>
-                            ))}
-                        </Box>
+                                <Box sx={{ p: 1.5, mb: 1, border: '1px solid', borderColor: newDocType.extractionMode === 'document_rules' ? '#2563EB' : '#E5E7EB', borderRadius: 1.5, bgcolor: newDocType.extractionMode === 'document_rules' ? '#DBEAFE' : 'transparent' }}>
+                                    <FormControlLabel
+                                        value="document_rules"
+                                        control={<Radio size="small" sx={{ color: '#2563EB', '&.Mui-checked': { color: '#2563EB' } }} />}
+                                        label={
+                                            <Box>
+                                                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>Document Rules</Typography>
+                                                <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Reads based on custom instructions. AI determines output fields.</Typography>
+                                            </Box>
+                                        }
+                                        sx={{ m: 0 }}
+                                    />
+                                </Box>
+                                <Box sx={{ p: 1.5, border: '1px solid', borderColor: newDocType.extractionMode === 'hybrid' ? '#D97706' : '#E5E7EB', borderRadius: 1.5, bgcolor: newDocType.extractionMode === 'hybrid' ? '#FEF3C7' : 'transparent' }}>
+                                    <FormControlLabel
+                                        value="hybrid"
+                                        control={<Radio size="small" sx={{ color: '#D97706', '&.Mui-checked': { color: '#D97706' } }} />}
+                                        label={
+                                            <Box>
+                                                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>Hybrid (Combined)</Typography>
+                                                <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Custom instructions for reading + defined output fields.</Typography>
+                                            </Box>
+                                        }
+                                        sx={{ m: 0 }}
+                                    />
+                                </Box>
+                            </RadioGroup>
+                        </FormControl>
+
+                        {/* Instructions/Rules Textarea - shown for document_rules and hybrid */}
+                        {(newDocType.extractionMode === 'document_rules' || newDocType.extractionMode === 'hybrid') && (
+                            <>
+                                <Divider sx={{ mb: 2 }} />
+                                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#111827', mb: 1 }}>
+                                    Document Instructions / Rules
+                                </Typography>
+                                <Typography sx={{ fontSize: '12px', color: '#6B7280', mb: 1.5 }}>
+                                    Write specific instructions for how AI should read and interpret this document type
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    minRows={4}
+                                    maxRows={10}
+                                    placeholder={`Example:\n- Read the ancient Kawi script on this prasasti stone\n- Transliterate to Latin alphabet\n- Translate to Indonesian\n- Provide a brief historical summary`}
+                                    value={newDocType.instructions}
+                                    onChange={(e) => setNewDocType({ ...newDocType, instructions: e.target.value })}
+                                    sx={{ mb: 2, '& .MuiOutlinedInput-root': { fontSize: '13px' } }}
+                                />
+                            </>
+                        )}
+
+                        {/* Fields Section - shown for field_only and hybrid */}
+                        {(newDocType.extractionMode === 'field_only' || newDocType.extractionMode === 'hybrid') && (
+                            <>
+                                <Divider sx={{ mb: 2 }} />
+
+                                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#111827', mb: 2 }}>
+                                    Fields ({newDocType.fields.length})
+                                </Typography>
+
+                                {/* Add Field Input */}
+                                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                                    <TextField
+                                        size="small"
+                                        placeholder="Field name"
+                                        value={newFieldName}
+                                        onChange={(e) => setNewFieldName(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && handleAddField()}
+                                        sx={{ flex: 1 }}
+                                    />
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <Checkbox
+                                            size="small"
+                                            checked={newFieldRequired}
+                                            onChange={(e) => setNewFieldRequired(e.target.checked)}
+                                        />
+                                        <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>Required</Typography>
+                                    </Box>
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        onClick={handleAddField}
+                                        sx={{ textTransform: 'none' }}
+                                    >
+                                        Add
+                                    </Button>
+                                </Box>
+
+                                {/* Fields List */}
+                                <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
+                                    {newDocType.fields.map((field, index) => (
+                                        <Box
+                                            key={index}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                p: 1.5,
+                                                bgcolor: '#F9FAFB',
+                                                borderRadius: 1,
+                                                mb: 1
+                                            }}
+                                        >
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Checkbox checked size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />
+                                                <Typography sx={{ fontSize: '14px' }}>{field.name}</Typography>
+                                                <Chip
+                                                    label={field.required ? 'Required' : 'Optional'}
+                                                    size="small"
+                                                    sx={{
+                                                        fontSize: '11px',
+                                                        height: 20,
+                                                        bgcolor: field.required ? '#FEE2E2' : '#E5E7EB',
+                                                        color: field.required ? '#DC2626' : '#6B7280'
+                                                    }}
+                                                />
+                                            </Box>
+                                            <IconButton size="small" onClick={() => handleRemoveField(index)}>
+                                                <DeleteIcon fontSize="small" sx={{ color: '#DC2626' }} />
+                                            </IconButton>
+                                        </Box>
+                                    ))}
+                                </Box>
+                            </>
+                        )}
                     </Box>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, pt: 0 }}>
