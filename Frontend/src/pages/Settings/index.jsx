@@ -34,7 +34,8 @@ import {
     ExpandLess as ExpandLessIcon,
     Rule as RuleIcon,
     ViewList as FieldIcon,
-    MergeType as HybridIcon
+    MergeType as HybridIcon,
+    DragIndicator as DragIndicatorIcon
 } from '@mui/icons-material';
 import {
     getDocumentTypes,
@@ -43,56 +44,7 @@ import {
     deleteDocumentType as deleteDocTypeApi
 } from '../../services/apiService';
 
-// Default document types (fallback if API fails)
-const defaultDocumentTypes = [
-    {
-        id: 1,
-        name: 'KTP (Kartu Tanda Penduduk)',
-        description: 'Indonesian Identity Card',
-        active: true,
-        fields: [
-            { name: 'NIK', required: true },
-            { name: 'Nama Lengkap', required: true },
-            { name: 'Tempat Lahir', required: false },
-            { name: 'Tanggal Lahir', required: true },
-            { name: 'Jenis Kelamin', required: true },
-            { name: 'Alamat', required: true },
-        ]
-    },
-    {
-        id: 2,
-        name: 'KK (Kartu Keluarga)',
-        description: 'Family Card',
-        active: true,
-        fields: [
-            { name: 'No. KK', required: true },
-            { name: 'Nama Kepala Keluarga', required: true },
-            { name: 'Alamat', required: true },
-        ]
-    },
-    {
-        id: 3,
-        name: 'STNK (Surat Tanda Nomor Kendaraan)',
-        description: 'Vehicle Registration',
-        active: true,
-        fields: [
-            { name: 'No. Polisi', required: true },
-            { name: 'Nama Pemilik', required: true },
-            { name: 'Merk', required: true },
-        ]
-    },
-    {
-        id: 4,
-        name: 'BPKB (Buku Pemilik Kendaraan Bermotor)',
-        description: 'Vehicle Ownership Book',
-        active: true,
-        fields: [
-            { name: 'No. BPKB', required: true },
-            { name: 'No. Polisi', required: true },
-            { name: 'Nama Pemilik', required: true },
-        ]
-    }
-];
+
 
 const SettingsPage = () => {
     // Loading states
@@ -108,6 +60,8 @@ const SettingsPage = () => {
     const [newDocType, setNewDocType] = useState({ name: '', description: '', fields: [], extractionMode: 'field_only', instructions: '' });
     const [newFieldName, setNewFieldName] = useState('');
     const [newFieldRequired, setNewFieldRequired] = useState(false);
+    const [draggedFieldIndex, setDraggedFieldIndex] = useState(null);
+    const [dragOverFieldIndex, setDragOverFieldIndex] = useState(null);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [docTypeToDelete, setDocTypeToDelete] = useState(null);
 
@@ -126,11 +80,11 @@ const SettingsPage = () => {
                         fields: typeof dt.fields === 'string' ? JSON.parse(dt.fields) : (dt.fields || [])
                     })));
                 } else {
-                    setDocumentTypes(defaultDocumentTypes);
+                    setDocumentTypes([]);
                 }
             } catch (error) {
                 console.error('Failed to fetch document types:', error);
-                setDocumentTypes(defaultDocumentTypes);
+                setDocumentTypes([]);
             }
             setIsLoading(false);
         };
@@ -198,6 +152,28 @@ const SettingsPage = () => {
             ...prev,
             fields: prev.fields.filter((_, i) => i !== index)
         }));
+    };
+
+    const handleFieldChange = (index, key, value) => {
+        setNewDocType(prev => {
+            const newFields = [...prev.fields];
+            newFields[index] = { ...newFields[index], [key]: value };
+            return { ...prev, fields: newFields };
+        });
+    };
+
+    const handleDragEnd = () => {
+        if (draggedFieldIndex !== null && dragOverFieldIndex !== null && draggedFieldIndex !== dragOverFieldIndex) {
+            setNewDocType(prev => {
+                const newFields = [...prev.fields];
+                const draggedItem = newFields[draggedFieldIndex];
+                newFields.splice(draggedFieldIndex, 1);
+                newFields.splice(dragOverFieldIndex, 0, draggedItem);
+                return { ...prev, fields: newFields };
+            });
+        }
+        setDraggedFieldIndex(null);
+        setDragOverFieldIndex(null);
     };
 
     const handleSaveDocType = async () => {
@@ -617,35 +593,54 @@ const SettingsPage = () => {
                                 </Box>
 
                                 {/* Fields List */}
-                                <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
+                                <Box sx={{ maxHeight: 250, overflow: 'auto', p: 0.5 }}>
                                     {newDocType.fields.map((field, index) => (
                                         <Box
                                             key={index}
+                                            draggable
+                                            onDragStart={() => setDraggedFieldIndex(index)}
+                                            onDragOver={(e) => { e.preventDefault(); setDragOverFieldIndex(index); }}
+                                            onDragEnd={handleDragEnd}
                                             sx={{
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
                                                 p: 1.5,
-                                                bgcolor: '#F9FAFB',
+                                                bgcolor: draggedFieldIndex === index ? '#EEF2FF' : '#F9FAFB',
+                                                border: dragOverFieldIndex === index && draggedFieldIndex !== index ? '2px dashed #6366F1' : '1px solid #E5E7EB',
                                                 borderRadius: 1,
-                                                mb: 1
+                                                mb: 1,
+                                                cursor: 'grab',
+                                                '&:active': { cursor: 'grabbing' },
+                                                transition: 'all 0.2s ease'
                                             }}
                                         >
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Checkbox checked size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />
-                                                <Typography sx={{ fontSize: '14px' }}>{field.name}</Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                                                <DragIndicatorIcon sx={{ color: '#9CA3AF', fontSize: 20 }} />
+                                                <TextField 
+                                                    size="small"
+                                                    variant="standard"
+                                                    value={field.name}
+                                                    onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
+                                                    InputProps={{ disableUnderline: true, sx: { fontSize: '14px', fontWeight: 500, color: '#374151' } }}
+                                                    sx={{ flex: 1 }}
+                                                />
                                                 <Chip
                                                     label={field.required ? 'Required' : 'Optional'}
                                                     size="small"
+                                                    onClick={() => handleFieldChange(index, 'required', !field.required)}
                                                     sx={{
                                                         fontSize: '11px',
-                                                        height: 20,
-                                                        bgcolor: field.required ? '#FEE2E2' : '#E5E7EB',
-                                                        color: field.required ? '#DC2626' : '#6B7280'
+                                                        height: 22,
+                                                        bgcolor: field.required ? '#FEE2E2' : '#F3F4F6',
+                                                        color: field.required ? '#DC2626' : '#6B7280',
+                                                        cursor: 'pointer',
+                                                        fontWeight: 500,
+                                                        '&:hover': { opacity: 0.8 }
                                                     }}
                                                 />
                                             </Box>
-                                            <IconButton size="small" onClick={() => handleRemoveField(index)}>
+                                            <IconButton size="small" onClick={() => handleRemoveField(index)} sx={{ ml: 1 }}>
                                                 <DeleteIcon fontSize="small" sx={{ color: '#DC2626' }} />
                                             </IconButton>
                                         </Box>
