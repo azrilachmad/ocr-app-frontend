@@ -159,14 +159,21 @@ Only return the JSON object, no additional text.`
             const customDescriptions = availableTemplates
                 .filter(t => t.active && !builtInTypes.includes(t.name))
                 .map(t => {
+                    let parsedFields = [];
+                    if (typeof t.fields === 'string') {
+                        try { parsedFields = JSON.parse(t.fields); } catch(e) {}
+                    } else if (Array.isArray(t.fields)) {
+                        parsedFields = t.fields;
+                    }
+
                     let details = '';
                     if (t.extractionMode === 'document_rules' && t.instructions) {
                         details = ` (Extraction rules: ${t.instructions})`;
                     } else if (t.extractionMode === 'hybrid' && t.instructions) {
-                        const fieldsDesc = t.fields && t.fields.length > 0 ? ` into fields: ${t.fields.map(f => f.name || f).join(', ')}` : '';
+                        const fieldsDesc = parsedFields.length > 0 ? ` into fields: ${parsedFields.map(f => f.name || f).join(', ')}` : '';
                         details = ` (Extraction rules: ${t.instructions})${fieldsDesc}`;
                     } else {
-                        const fieldsDesc = t.fields && t.fields.length > 0 ? ` with fields: ${t.fields.map(f => f.name || f).join(', ')}` : '';
+                        const fieldsDesc = parsedFields.length > 0 ? ` with fields: ${parsedFields.map(f => f.name || f).join(', ')}` : '';
                         details = fieldsDesc;
                     }
                     return `- ${t.name}: ${t.description || 'Custom document type'}${details}`;
@@ -175,7 +182,10 @@ Only return the JSON object, no additional text.`
             customTemplateInfo = `\n\nAdditional custom document templates available:\n${customDescriptions}`;
         }
 
+        const currentDate = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
         return `Analyze this document image. First, identify what type of document it is.
+Current Date: ${currentDate} (Use this date to determine if any document/contract/id is expired).
 
 Available document types in the system (prioritize matching with these):
 ${allAvailableTypes.map(t => `- ${t}`).join('\n')}${customTemplateInfo}
@@ -210,12 +220,23 @@ Only return the JSON object, no additional text.`;
  * @returns {string} - The constructed prompt
  */
 const buildCustomTemplatePrompt = (template) => {
-    const { name, fields = [], extractionMode = 'field_only', instructions } = template;
-    const fieldNames = fields.map(f => f.name || f);
+    const { name, extractionMode = 'field_only', instructions } = template;
+    
+    let parsedFields = [];
+    if (typeof template.fields === 'string') {
+        try { parsedFields = JSON.parse(template.fields); } catch(e) {}
+    } else if (Array.isArray(template.fields)) {
+        parsedFields = template.fields;
+    }
+    
+    const fieldNames = parsedFields.map(f => f.name || f);
+
+    const currentDate = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     if (extractionMode === 'document_rules' && instructions) {
         // Mode: Document Rules — AI follows custom instructions, determines output fields itself
         return `Analyze this document image of type "${name}".
+Current Date: ${currentDate} (Use this date to determine if a document/contract is expired or active).
 
 Follow these specific instructions/rules for reading and extracting data:
 
@@ -229,6 +250,7 @@ Only return the JSON object, no additional text.`;
     if (extractionMode === 'hybrid' && instructions) {
         // Mode: Hybrid — AI follows custom instructions but outputs into defined fields
         return `Analyze this document image of type "${name}".
+Current Date: ${currentDate} (Use this date to determine if a document/contract is expired or active).
 
 Follow these specific instructions/rules for reading the document:
 
@@ -247,6 +269,8 @@ Only return the JSON object, no additional text.`;
     // Mode: Field Only (default) — extract based on defined fields
     if (fieldNames.length > 0) {
         return `Analyze this "${name}" document image and extract all visible information.
+Current Date: ${currentDate} (Use this date to determine if a document/contract is expired or active).
+
 Return the data in JSON format with these exact fields:
 {
 ${fieldNames.map(f => `    "${f}": "extracted value"`).join(',\n')}
@@ -299,8 +323,20 @@ const processDocument = async (filePath, documentType = 'auto', options = {}) =>
         };
         const mimeType = mimeTypes[ext] || 'image/jpeg';
 
+        // Prepare generation configuration
+        const generationConfig = {};
+        if (options.temperature !== undefined) {
+            generationConfig.temperature = parseFloat(options.temperature);
+        }
+        if (options.topP !== undefined) {
+            generationConfig.topP = parseFloat(options.topP);
+        }
+
         // Get the model from user settings
-        const model = genAI.getGenerativeModel({ model: aiModel });
+        const model = genAI.getGenerativeModel({ 
+            model: aiModel,
+            generationConfig 
+        });
 
         // Prepare the prompt
         let prompt;

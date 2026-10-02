@@ -73,7 +73,7 @@ const buildAiOptions = async (userId, requestedMode = 'template') => {
 
     const availableTemplates = await DocumentType.findAll({
         where: { active: true },
-        attributes: ['name', 'description', 'fields', 'extractionMode', 'instructions']
+        attributes: ['name', 'description', 'fields', 'extractionMode', 'instructions', 'active']
     });
 
     return {
@@ -81,7 +81,9 @@ const buildAiOptions = async (userId, requestedMode = 'template') => {
         aiModel: userSettings.aiModel,
         availableTemplates: availableTemplates.map(t => t.toJSON()),
         mode: requestedMode,
-        languageDetection: userSettings.languageDetection
+        languageDetection: userSettings.languageDetection,
+        temperature: userSettings.temperature,
+        topP: userSettings.topP
     };
 };
 
