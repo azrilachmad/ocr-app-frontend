@@ -626,6 +626,7 @@ const UploadPhase = ({
                         </Box>
 
                         {/* Google Drive Import — File Browser + URL Paste */}
+                        {false && (
                         <Box sx={{ mt: 3 }}>
                             <Divider sx={{ mb: 2.5 }}>
                                 <Typography sx={{ fontSize: '12px', color: '#9CA3AF', px: 2 }}>or import from Google Drive</Typography>
@@ -725,9 +726,10 @@ const UploadPhase = ({
                                                 Public/shared files can be added without signing in.
                                             </Alert>
                                         )}
-                                    </Box>
+                                </Box>
                                 )}
                             </Box>
+                        )}
                     </CardContent>
                 </Card>
 
