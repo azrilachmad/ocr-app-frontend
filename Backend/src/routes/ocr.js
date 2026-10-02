@@ -73,7 +73,7 @@ const buildAiOptions = async (userId, requestedMode = 'template') => {
 
     const availableTemplates = await DocumentType.findAll({
         where: { active: true },
-        attributes: ['name', 'description', 'fields']
+        attributes: ['name', 'description', 'fields', 'extractionMode', 'instructions']
     });
 
     return {

@@ -159,10 +159,17 @@ Only return the JSON object, no additional text.`
             const customDescriptions = availableTemplates
                 .filter(t => t.active && !builtInTypes.includes(t.name))
                 .map(t => {
-                    const fieldsDesc = t.fields && t.fields.length > 0
-                        ? ` with fields: ${t.fields.map(f => f.name || f).join(', ')}`
-                        : '';
-                    return `- ${t.name}: ${t.description || 'Custom document type'}${fieldsDesc}`;
+                    let details = '';
+                    if (t.extractionMode === 'document_rules' && t.instructions) {
+                        details = ` (Extraction rules: ${t.instructions})`;
+                    } else if (t.extractionMode === 'hybrid' && t.instructions) {
+                        const fieldsDesc = t.fields && t.fields.length > 0 ? ` into fields: ${t.fields.map(f => f.name || f).join(', ')}` : '';
+                        details = ` (Extraction rules: ${t.instructions})${fieldsDesc}`;
+                    } else {
+                        const fieldsDesc = t.fields && t.fields.length > 0 ? ` with fields: ${t.fields.map(f => f.name || f).join(', ')}` : '';
+                        details = fieldsDesc;
+                    }
+                    return `- ${t.name}: ${t.description || 'Custom document type'}${details}`;
                 })
                 .join('\n');
             customTemplateInfo = `\n\nAdditional custom document templates available:\n${customDescriptions}`;
