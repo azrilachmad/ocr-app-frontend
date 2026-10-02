@@ -140,7 +140,7 @@ const settingsValidation = {
         body('aiModel')
             .optional()
             .trim()
-            .isIn(['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'])
+            .isIn(['gemini-3.8-flash', 'gemini-3.1-pro', 'gemini-3.8-flash-lite-tts', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'])
             .withMessage('Invalid AI model selected.'),
         handleValidation
     ],

@@ -28,6 +28,17 @@ const Settings = sequelize.define('Settings', {
         defaultValue: 0.85,
         field: 'confidence_threshold'
     },
+    temperature: {
+        type: DataTypes.DECIMAL(3, 2),
+        defaultValue: 0.20,
+        allowNull: true
+    },
+    topP: {
+        type: DataTypes.DECIMAL(3, 2),
+        defaultValue: 0.80,
+        field: 'top_p',
+        allowNull: true
+    },
     languageDetection: {
         type: DataTypes.STRING(10),
         defaultValue: 'ID',

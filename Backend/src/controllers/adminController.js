@@ -755,7 +755,7 @@ const DEFAULT_CONFIG = {
     allowed_file_types: { value: 'jpg,jpeg,png,pdf,webp', description: 'Comma-separated list of allowed file extensions' },
     max_scans_per_day: { value: '100', description: 'Maximum scans per user per day' },
     auto_delete_unsaved_days: { value: '7', description: 'Auto-delete unsaved scans after N days' },
-    allowed_ai_models: { value: 'gemini-2.5-flash,gemini-2.5-pro,gemini-2.5-flash', description: 'Comma-separated list of allowed AI models' },
+    allowed_ai_models: { value: 'gemini-3.8-flash,gemini-3.1-pro,gemini-3.8-flash-lite-tts,gemini-2.5-flash', description: 'Comma-separated list of allowed AI models' },
     maintenance_mode: { value: 'false', description: 'Enable maintenance mode (disable scanning)' }
 };
 
@@ -1080,7 +1080,7 @@ const stopImpersonate = async (req, res, next) => {
 const updateUserApiKey = async (req, res, next) => {
     try {
         const userId = req.params.id;
-        const { apiKey, aiModel, confidenceThreshold, languageDetection, autoCorrect } = req.body;
+        const { apiKey, aiModel, confidenceThreshold, languageDetection, autoCorrect, temperature, topP } = req.body;
 
         const user = await User.findByPk(userId);
         if (!user) {
@@ -1097,6 +1097,8 @@ const updateUserApiKey = async (req, res, next) => {
         if (apiKey !== undefined) updateData.apiKey = apiKey || null;
         if (aiModel !== undefined) updateData.aiModel = aiModel;
         if (confidenceThreshold !== undefined) updateData.confidenceThreshold = confidenceThreshold / 100;
+        if (temperature !== undefined) updateData.temperature = temperature;
+        if (topP !== undefined) updateData.topP = topP;
         if (languageDetection !== undefined) updateData.languageDetection = languageDetection;
         if (autoCorrect !== undefined) updateData.autoCorrect = autoCorrect;
 
@@ -1126,8 +1128,10 @@ const getUserApiKey = async (req, res, next) => {
             data: {
                 hasApiKey: !!(settings && settings.apiKey),
                 apiKey: settings?.apiKey || '',
-                aiModel: settings?.aiModel || 'gemini-2.5-flash',
+                aiModel: settings?.aiModel || 'gemini-3.8-flash',
                 confidenceThreshold: settings?.confidenceThreshold !== undefined ? Math.round(Number(settings.confidenceThreshold) * 100) : 85,
+                temperature: settings?.temperature !== undefined ? parseFloat(settings.temperature) : 0.20,
+                topP: settings?.topP !== undefined ? parseFloat(settings.topP) : 0.80,
                 languageDetection: settings?.languageDetection || 'ID',
                 autoCorrect: settings?.autoCorrect !== false
             }

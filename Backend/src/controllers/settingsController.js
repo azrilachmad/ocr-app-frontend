@@ -17,7 +17,7 @@ const getSettings = async (req, res, next) => {
 
         const { SystemConfig } = require('../models');
         const allowedModelsConfig = await SystemConfig.findOne({ where: { key: 'allowed_ai_models' } });
-        const allowedModels = allowedModelsConfig ? allowedModelsConfig.value.split(',').map(m => m.trim()) : ['gemini-2.5-flash'];
+        const allowedModels = allowedModelsConfig ? allowedModelsConfig.value.split(',').map(m => m.trim()) : ['gemini-3.8-flash'];
 
         res.json({
             success: true,
@@ -41,7 +41,7 @@ const updateSettings = async (req, res, next) => {
             where: { userId: req.userId }
         });
 
-        const { aiModel, apiKey, confidenceThreshold, languageDetection, autoCorrect } = req.body;
+        const { aiModel, apiKey, confidenceThreshold, languageDetection, autoCorrect, temperature, topP } = req.body;
 
         let scaledThreshold = undefined;
         if (confidenceThreshold !== undefined) {
@@ -54,6 +54,8 @@ const updateSettings = async (req, res, next) => {
                 aiModel,
                 apiKey,
                 confidenceThreshold: scaledThreshold,
+                temperature,
+                topP,
                 languageDetection,
                 autoCorrect
             });
@@ -61,6 +63,8 @@ const updateSettings = async (req, res, next) => {
             if (aiModel !== undefined) settings.aiModel = aiModel;
             if (apiKey !== undefined) settings.apiKey = apiKey;
             if (scaledThreshold !== undefined) settings.confidenceThreshold = scaledThreshold;
+            if (temperature !== undefined) settings.temperature = temperature;
+            if (topP !== undefined) settings.topP = topP;
             if (languageDetection !== undefined) settings.languageDetection = languageDetection;
             if (autoCorrect !== undefined) settings.autoCorrect = autoCorrect;
 
@@ -259,9 +263,9 @@ const testAiConnection = async (req, res, next) => {
 
         const { SystemConfig } = require('../models');
         const allowedModelsConfig = await SystemConfig.findOne({ where: { key: 'allowed_ai_models' } });
-        let allowedModels = allowedModelsConfig ? allowedModelsConfig.value.split(',').map(m => m.trim()) : ['gemini-2.5-flash'];
+        let allowedModels = allowedModelsConfig ? allowedModelsConfig.value.split(',').map(m => m.trim()) : ['gemini-3.8-flash'];
 
-        const aiModel = requestedModel || allowedModels[0] || 'gemini-2.5-flash';
+        const aiModel = requestedModel || allowedModels[0] || 'gemini-3.8-flash';
 
         if (!apiKey) {
             return res.status(400).json({
@@ -302,7 +306,7 @@ const testAiConnection = async (req, res, next) => {
         } else if (error.message.includes('QUOTA_EXCEEDED')) {
             errorMessage = 'API quota exceeded. Please try again later.';
         } else if (error.message.includes('model')) {
-            errorMessage = `Model "${req.body.aiModel || 'gemini-2.5-flash'}" is not available. Please select a different model.`;
+            errorMessage = `Model "${req.body.aiModel || 'gemini-3.8-flash'}" is not available. Please select a different model.`;
         }
 
         res.status(400).json({

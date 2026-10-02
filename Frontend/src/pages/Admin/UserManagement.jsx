@@ -59,7 +59,7 @@ const UserManagement = () => {
     const [apiKeyLoading, setApiKeyLoading] = useState(false);
     const [showApiKey, setShowApiKey] = useState(false);
     const [userAiSettings, setUserAiSettings] = useState({
-        apiKey: '', aiModel: 'gemini-2.5-flash',
+        apiKey: '', aiModel: 'gemini-3.8-flash',
         confidenceThreshold: 85, languageDetection: 'ID', autoCorrect: true
     });
 
@@ -172,14 +172,16 @@ const UserManagement = () => {
             const response = await getUserApiKey(user.id);
             setUserAiSettings({
                 apiKey: response.data.apiKey || '',
-                aiModel: response.data.aiModel || 'gemini-2.5-flash',
-                confidenceThreshold: response.data.confidenceThreshold ?? 85,
+                aiModel: response.data.aiModel || 'gemini-3.8-flash',
+                confidenceThreshold: response.data.confidenceThreshold !== undefined ? response.data.confidenceThreshold : 85,
+                temperature: response.data.temperature !== undefined ? parseFloat(response.data.temperature) : 0.20,
+                topP: response.data.topP !== undefined ? parseFloat(response.data.topP) : 0.80,
                 languageDetection: response.data.languageDetection || 'ID',
                 autoCorrect: response.data.autoCorrect !== false
             });
         } catch (err) {
             showSnackbar('Failed to load AI settings.', 'error');
-            setUserAiSettings({ apiKey: '', aiModel: 'gemini-2.5-flash', confidenceThreshold: 85, languageDetection: 'ID', autoCorrect: true });
+            setUserAiSettings({ apiKey: '', aiModel: 'gemini-3.8-flash', confidenceThreshold: 85, temperature: 0.20, topP: 0.80, languageDetection: 'ID', autoCorrect: true });
         } finally {
             setApiKeyLoading(false);
         }
@@ -665,11 +667,11 @@ const UserManagement = () => {
                                         value={userAiSettings.aiModel}
                                         onChange={(e) => setUserAiSettings(s => ({ ...s, aiModel: e.target.value }))}
                                     >
-                                        <MenuItem value="gemini-2.5-flash">gemini-2.5-flash</MenuItem>
-                                        <MenuItem value="gemini-2.5-pro">gemini-2.5-pro</MenuItem>
-                                        <MenuItem value="gemini-2.0-flash">gemini-2.0-flash</MenuItem>
-                                        <MenuItem value="gemini-1.5-pro">gemini-1.5-pro</MenuItem>
-                                        <MenuItem value="gemini-1.5-flash">gemini-1.5-flash</MenuItem>
+                                        <MenuItem value="gemini-3.8-flash">gemini-3.8-flash (Latest Workhorse)</MenuItem>
+                                        <MenuItem value="gemini-3.1-pro">gemini-3.1-pro (Complex Reasoning)</MenuItem>
+                                        <MenuItem value="gemini-3.8-flash-lite-tts">gemini-3.8-flash-lite-tts (Cost-efficient)</MenuItem>
+                                        <MenuItem value="gemini-2.5-flash">gemini-2.5-flash (Legacy)</MenuItem>
+                                        <MenuItem value="gemini-2.5-pro">gemini-2.5-pro (Legacy)</MenuItem>
                                     </Select>
                                 </FormControl>
                             </Box>
@@ -677,13 +679,60 @@ const UserManagement = () => {
                             {/* Confidence Threshold */}
                             <Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                    <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>Confidence Threshold</Typography>
+                                    <Box>
+                                        <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>Confidence Threshold</Typography>
+                                        <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Batas keyakinan AI minimal untuk menerima hasil OCR.</Typography>
+                                    </Box>
                                     <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#6366F1' }}>{userAiSettings.confidenceThreshold}%</Typography>
                                 </Box>
                                 <Slider
                                     value={userAiSettings.confidenceThreshold}
                                     onChange={(e, val) => setUserAiSettings(s => ({ ...s, confidenceThreshold: val }))}
                                     min={0} step={5} max={100}
+                                    sx={{
+                                        color: '#6366F1',
+                                        '& .MuiSlider-thumb': { width: 18, height: 18, bgcolor: 'white', border: '3px solid #6366F1' },
+                                        '& .MuiSlider-track': { height: 6 },
+                                        '& .MuiSlider-rail': { height: 6, bgcolor: '#E5E7EB' }
+                                    }}
+                                />
+                            </Box>
+
+                            {/* Temperature */}
+                            <Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                    <Box>
+                                        <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>Temperature</Typography>
+                                        <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Lebih rendah = lebih presisi (Optimal untuk OCR: 0.0 - 0.2)</Typography>
+                                    </Box>
+                                    <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#6366F1' }}>{userAiSettings.temperature}</Typography>
+                                </Box>
+                                <Slider
+                                    value={userAiSettings.temperature}
+                                    onChange={(e, val) => setUserAiSettings(s => ({ ...s, temperature: val }))}
+                                    min={0} step={0.05} max={1}
+                                    sx={{
+                                        color: '#6366F1',
+                                        '& .MuiSlider-thumb': { width: 18, height: 18, bgcolor: 'white', border: '3px solid #6366F1' },
+                                        '& .MuiSlider-track': { height: 6 },
+                                        '& .MuiSlider-rail': { height: 6, bgcolor: '#E5E7EB' }
+                                    }}
+                                />
+                            </Box>
+
+                            {/* Top P */}
+                            <Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                    <Box>
+                                        <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>Top-p (Nucleus Sampling)</Typography>
+                                        <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Membatasi pool variasi token (Optimal untuk OCR: 0.8 - 0.95)</Typography>
+                                    </Box>
+                                    <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#6366F1' }}>{userAiSettings.topP}</Typography>
+                                </Box>
+                                <Slider
+                                    value={userAiSettings.topP}
+                                    onChange={(e, val) => setUserAiSettings(s => ({ ...s, topP: val }))}
+                                    min={0} step={0.05} max={1}
                                     sx={{
                                         color: '#6366F1',
                                         '& .MuiSlider-thumb': { width: 18, height: 18, bgcolor: 'white', border: '3px solid #6366F1' },
