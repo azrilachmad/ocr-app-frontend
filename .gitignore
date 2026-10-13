@@ -1,34 +1,63 @@
+# =============================================================================
 # Dependencies
+# =============================================================================
 node_modules/
 */node_modules/
+.pnp
+.pnp.js
 
-# Build outputs
+# =============================================================================
+# Build & Compiled Outputs
+# =============================================================================
 dist/
 build/
 */dist/
 */build/
+dist-ssr/
+*.js.map
+*.tsbuildinfo
 
-# Environment files (contains sensitive data)
+# =============================================================================
+# Environment & Sensitive Files
+# =============================================================================
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+*.env
+*.env.*
+!.env.example
+!.env.docker.example
+!**/.env.example
 Backend/.env
 Frontend/.env
+KnowledgeBase/.env
 
-# Lock files (optional - some prefer to commit these)
+# =============================================================================
+# Package Manager Lockfiles (Optional per repo policy)
+# =============================================================================
 yarn.lock
 package-lock.json
+pnpm-lock.yaml
 
-# Logs
+# =============================================================================
+# Logs & Debug Output
+# =============================================================================
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+*_output.log
+*_output.json
+.eslintcache
+.npm
+test_cookies.txt
+debug_content.json
+debug.txt
 
-# OS generated files
+# =============================================================================
+# Operating System & IDE Files
+# =============================================================================
 .DS_Store
 .DS_Store?
 ._*
@@ -36,34 +65,51 @@ yarn-error.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# IDE / Editor
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
-# Uploads folder (user uploaded files)
+# =============================================================================
+# Runtime Storage & User Uploads
+# =============================================================================
 Backend/uploads/
 uploads/
+*/uploads/
 
-# Coverage reports
-coverage/
-
-# Temporary files
+# =============================================================================
+# Temporary & Cache Files
+# =============================================================================
 tmp/
 temp/
 *.tmp
-docs/  
+~$*
+coverage/
+.cache/
+
+# =============================================================================
+# Non-Deployment Project Folders & Internal Assets (POC / Pitch / Samples)
+# =============================================================================
+resource/
+video-showcase/
+reference/
+sample/
+docs/
 test/
 
-# Debug
-.npm
-.eslintcache
+# =============================================================================
+# Large Media & Video Render Outputs
+# =============================================================================
+*.mp4
+*.avi
+*.mov
 
-# Compiled output
-*.js.map
-
-# AI Assistant Data
+# =============================================================================
+# AI Assistant & IDE Metadata
+# =============================================================================
 .agents/
